@@ -1,0 +1,41 @@
+version 1.1.1 (2018-04-11)
+
+New features and changed behaviour
+    o  none
+    
+Other
+    o  tweaks to DESCRIPTION for CRAN
+
+version 1.1.0 (2018-04-07)
+
+New features and changed behaviour
+    o  movement kernel exposed
+    o  bd.array() probability of (b,d)
+    o  improved simulation functions
+    o  start may be named numeric vector
+    
+Other
+    o  first CRAN submission
+    o  consolidates CJS and JSSA C code (e.g. prwisecrcpp)
+    o  timevaryingcov<- disabled until next release secr
+
+version 1.0.2 (2018-03-26)
+
+New features and changed behaviour
+    o  movement kernel unsuppressed
+
+version 1.0.1 (2018-03-25)
+
+New features and changed behaviour
+    o  movement kernel [temporarily suppressed]
+    o  plotKernel()
+    o  movementmodel argument replaces staticHR
+    o  experimental timevarying individual covariates
+
+version 1.0.0 (2018-03-11)
+
+Known bugs
+    o  CI of predicted b[1]
+
+Other
+    o  renumbered 1.0.0 (previously unreleased 2.2.3)

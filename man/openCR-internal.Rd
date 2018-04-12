@@ -1,0 +1,84 @@
+\name{Internal}
+
+\alias{prwi}
+\alias{prwisecr}
+\alias{PCH1}
+\alias{PCH1secr}
+\alias{pradelloglik}
+
+\title{Internal Functions}
+
+\description{ Functions called by \code{openCR.fit} when \code{details$R == TRUE}}
+
+\usage{
+
+prwi(type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJSp1)
+
+prwisecr(type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
+    PIA, PIAJ, binomN, Tsk, intervals, CJSp1, moveargsi, movemodel, usermodel, 
+    kernel = NULL, mqarray = NULL, cellsize = NULL)
+
+PCH1(type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
+
+PCH1secr(type, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, gk0, binomN, Tsk, 
+    intervals,  moveargsi, movemodel, usermodel, kernel, mqarray, cellsize) 
+
+pradelloglik (type, w, openval, PIAJ, intervals)
+
+}
+
+\arguments{
+  \item{type}{character}
+  \item{n}{integer index of capture history}
+  \item{x}{integer index of latent class}
+  \item{jj}{integer number of primary sessions}
+  \item{cumss}{integer vector cumulative number of secondary sessions at start of each primary session}
+  \item{nmix}{integer number of latent classes}
+  \item{w}{array of capture histories}
+  \item{fi}{integer first primary session}
+  \item{li}{integer last primary session}
+  \item{openval}{dataframe of real parameter values (one unique combination per row)}
+  \item{PIA}{parameter index array (secondary sessions)}
+  \item{PIAJ}{parameter index array (primary sessions)}
+  \item{intervals}{integer vector}
+  \item{CJSp1}{logical; should CJS likelihood include first primary session?}
+  
+  \item{moveargsi}{integer 2-vector for index of move.a, move.b (negative if unused)}
+  \item{movemodel}{character}
+  \item{usermodel}{function to fill kernel}
+  \item{kernel}{dataframe with columns x,y relative coordinates of kernel cell centres}
+  \item{mqarray}{integer matrix}
+  \item{cellsize}{numeric length of side of kernel cell}
+  
+  \item{gk}{real array}
+  \item{Tsk}{array detector usage}
+
+  \item{openval0}{openval for naive animals}
+  \item{PIA0}{PIA for naive animals}
+  \item{gk0}{gk for naive animals}
+  
+  \item{nc}{number of capture histories}
+  \item{kk}{number of detectors}
+  \item{mm}{number of points on habitat mask}
+  \item{binomN}{code for distribution of counts (see \code{\link{secr.fit}})}
+  
+}
+
+\details{
+
+To be completed
+
+}
+
+\value{
+
+Numeric components of likelihood.
+
+}
+
+\seealso{
+
+\code{\link{openCR.fit}}
+
+}
+

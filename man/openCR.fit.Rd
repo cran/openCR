@@ -1,0 +1,356 @@
+\name{openCR.fit}
+\alias{openCR.fit}
+
+\title{  Fit Open Population Capture--Recapture Model }
+
+\description{
+
+  Nonspatial or spatial open-population analyses are performed on data
+formatted for `secr'. Several parameterisations are provided for the
+nonspatial Jolly-Seber Schwarz-Arnason model (`JSSA', also known as
+`POPAN'). Corresponding spatial models are designated
+`JSSAsecr'. Cormack-Jolly-Seber (CJS) models are also fitted.
+
+}
+
+\usage{
+
+openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1), 
+    distribution = c("poisson", "binomial"), mask = NULL, 
+    detectfn = c("HHN","HHR","HEX","HAN","HCG","HVP"), 
+    binomN = 0, movementmodel = c("static", "uncorrelated", "normal", "exponential"), 
+    start = NULL, link = list(), fixed = list(), timecov = NULL, 
+    sessioncov = NULL, dframe = NULL, details = list(), 
+    method = "Newton-Raphson", trace = NULL, ncores = 1, ...)
+}
+
+\arguments{
+
+  \item{capthist}{ \code{capthist} object from `secr'}
+
+  \item{type}{character string for type of analysis (see Details)}
+
+  \item{model}{ list with optional components, each symbolically
+  defining a linear predictor for the relevant real parameter using
+  \code{formula} notation. See Details for names of real parameters. }
+  
+  \item{distribution}{character distribution of number of individuals detected}
+
+  \item{mask}{ single-session \code{\link{mask}} object; required for spatial (secr) models }
+
+  \item{detectfn}{character code}
+
+  \item{binomN}{ integer code for distribution of counts (see \code{\link[secr]{secr.fit}}) }
+
+  \item{movementmodel}{character; model for movement between primary sessions (see Details) }
+
+  \item{start}{ vector of initial values for beta parameters, or fitted
+    model(s) from which they may be derived }
+  
+  \item{link}{ list with named components, each a character string in
+  \{"log", "logit", "loglog", "identity", "sin", "mlogit"\} for the link function
+  of the relevant real parameter }
+
+ \item{fixed}{ list with optional components corresponding to each
+ `real' parameter, the scalar value to which parameter is to be fixed }
+
+  \item{timecov}{ optional dataframe of values of occasion-specific
+  covariate(s). }
+
+  \item{sessioncov}{ optional dataframe of values of session-specific
+  covariate(s). }
+
+\item{dframe}{ optional data frame of design data for detection
+  parameters (seldom used) }
+
+  \item{details}{ list of additional settings (see Details) }
+
+  \item{method}{ character string giving method for maximizing log
+    likelihood }
+  
+  \item{trace}{ logical, if TRUE then output each evaluation of the
+  likelihood, and other messages}
+
+  \item{ncores}{integer number of cores for parallel processing }
+  
+  \item{\dots}{ other arguments passed to join() }
+}
+
+\details{
+
+The permitted nonspatial models are CJS, Pradel, Pradelg, JSSAbCL, JSSAfCL, JSSAgCL, JSSAlCL, JSSAb, JSSAf, JSSAg, JSSAl, JSSAB and JSSAN. The permitted spatial models are CJSsecr, JSSAsecrbCL, JSSAsecrfCL, JSSAsecrgCL, JSSAsecrlCL, JSSAsecrb, JSSAsecrf, JSSAsecrg, JSSAsecrl, JSSAsecrB and JSSAsecrN. See the \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for a table of the `real' parameters associated with each model type.
+
+Parameterisations of the JSSA models differ in how they include
+recruitment: the core parameterisations express recruitment either as a
+per capita rate (`f'), as a finite rate of increase for the population
+(`l' for lambda) or as per-occasion entry probability (`b' for the
+classic JSSA beta parameter, aka PENT in MARK). Each of these models may
+be fitted by maximising either the full likelihood, or the likelihood
+conditional on capture in the Huggins (1989) sense, distinguished by the
+suffix `CL'. Full-likelihood JSSA models may also be parameterized in
+terms of the time-specific absolute recruitment (BN, BD) or the
+time-specific population size(N) or density (D).
+
+Data are provided as \pkg{secr} `capthist' objects, with some
+restrictions. For nonspatial analyses, `capthist' may be
+single-session or multi-session, with any of the main detector types. For
+spatial analyses `capthist' should be a single-session dataset of a point \link{detector} type (`multi', `proximity' or `count') (see also
+details$distribution below). In openCR the occasions of a single-session
+dataset are treated as open-population temporal samples except that occasions separated by an interval of zero (0) are from the same primary session (multi-session
+input is collapsed to single-session if necessary).
+
+\code{model} formulae may include the pre-defined terms
+`b', `B', `session',`Session', `h2', and `h3' as in \pkg{secr}. `session'
+is the name given to primary sampling times in `secr', so a fully
+time-specific CJS model is \code{list(p ~ session, phi
+~ session)}. `b' refers to a within-session (learned) response to
+capture and `B' to a transient (Markovian) response. `bsession' is used 
+for a multi-session learned response.`Session' is for a
+trend over sessions. `h2' and `h3' allow finite mixture models. Formulae
+may also include named occasion-specific and session-specific covariates in the dataframe
+arguments `timecov' and `sessioncov' (occasion = secondary session of robust design).
+Individual covariates present as an attribute of
+the `capthist' input may be used in CJS and ..CL models. Groups are not
+supported in this version, but may be implemented via a factor-level
+covariate in ..CL models.
+
+\code{distribution} specifies the distribution of the number of
+individuals detected; this may be conditional on the population size (or number in the
+masked area) ("binomial") or unconditional ("poisson").
+\code{distribution} affects the sampling variance of the estimated
+density. The default is "binomial". For variance comparable with
+\pkg{secr} estimates this should be changed to "poisson".
+
+[Movement models are under development]
+
+The mlogit link function is used for the JSSA (POPAN) entry parameter 
+`b' (PENT in MARK) and for mixture proportions, regardless of \code{link}.
+
+Spatial models use one of the hazard-based detection functions and require data
+from independent point detectors (\pkg{secr} detector types `multi', `proximity'
+or `count').
+
+The \dots argument may be used to pass a vector of unequal intervals to 
+join (\code{interval}), or to vary the tolerance for merging detector sites (\code{tol}).
+
+The \code{start} argument may be 
+\describe{
+\item{- a vector of beta parameter values, one for each of the NP beta parameters in the model}{}
+\item{- a named vector of beta parameter values in any order}{}
+\item{- a named list of one or more real parameter values}{}
+\item{- a single fitted secr or openCR model whose real parameters overlap with the current model}{}
+\item{- a list of two fitted models}{}
+}
+
+In the case of two fitted models, the values are melded. This is handy for initialising an 
+open spatial model from a closed spatial model and an open non-spatial model. If a beta 
+parameter appears in both models then the first is used.
+
+\code{details} is used for various specialized settings --
+
+\code{details$autoini} (default 1) is the number of the session used to determine 
+initial values of D, lambda0 and sigma (secr types only).
+
+\code{details$contrasts} may be used to specify the coding of factor predictors. 
+The value should be suitable for the 'contrasts.arg' argument of \code{\link{model.matrix}}.
+
+\code{details$control} is a list that is passed to \code{optim} - useful
+for increasing maxit for \code{method = Nelder-Mead} (see vignette).
+
+\code{details$fixedbeta} may be a vector with one element for each coefficient (beta parameter) in the model. Only 'NA' coefficients will be estimated; others will be fixed at the value given (coefficients define a linear predictor on the link scale). The number and order of coefficients may be determined by calling \code{openCR.fit} with trace = TRUE and interrupting execution after the first likelihood evaluation. 
+
+\code{details$hessian} is a character string controlling the computation
+of the Hessian matrix from which variances and covariances are obtained.
+Options are "none" (no variances), "auto" (the default) or "fdhess" (use
+the function fdHess in \pkg{nlme}).  If "auto" then the Hessian from the
+optimisation function is used.
+
+\code{details$initialage} is either numeric (the uniform age at first capture) 
+or a character value naming an individual covariate with initial ages; 
+see \code{\link{age.matrix}}.
+
+\code{details$LLonly} = TRUE causes the function to returns a single
+evaluation of the log likelihood at the initial values, followed by the 
+initial values.
+
+\code{details$maximumage} sets a maximum age; older animals are recycled into 
+this age class; see \code{\link{age.matrix}}.
+
+\code{details$multinom} = TRUE includes the multinomial constant in the 
+reported log-likelihood (default FALSE).
+
+\code{details$R == TRUE} may be used to switch from the default C++ code to 
+slower functions in native R (useful mostly for debugging; not all model types
+implemented).
+
+\code{details$squeeze == TRUE} (the default) compacts the input capthist 
+with function \code{\link{squeeze}} before analysis. The new capthist 
+includes only unique rows. Non-spatial models will fit faster, because non-spatial 
+capture histories are often non-unique.
+
+If \code{method = "Newton-Raphson"} then \code{\link[stats]{nlm}} is
+used to maximize the log likelihood (minimize the negative log
+likelihood); otherwise \code{\link[stats]{optim}} is used with the
+chosen method ("BFGS", "Nelder-Mead", etc.).  If maximization fails a
+warning is given appropriate to the method. \code{method = "none"} may 
+be used to compute or re-compute the variance-covariance matrix at 
+given starting values (i.e. providing a previously fitted model as 
+the value of \code{start}).
+
+Parameter redundancies are common in open-population models. The output
+from \code{openCR.fit} includes the singular values (eigenvalues) of the
+Hessian - a useful post-hoc indicator of redundancy (e.g., Gimenez et
+al. 2004). Eigenvalues are scaled so the largest is 1.0. Very small
+scaled values represent redundant parameters - in my experience with
+simple JSSA models a threshold of 0.00001 seems effective.
+
+[There is an undocumented option to fix specific `beta' parameters.]
+
+}
+
+\value{
+  
+If \code{details$LLonly == TRUE} then a numeric vector is returned with logLik in 
+position 1, followed by the named coefficients.
+
+Otherwise, an object of class `openCR' with components
+
+                  model = model,
+                  distribution = distribution,
+                  mask = mask,
+                  detectfn = detectfn,
+                  binomN = binomN,
+                  movementmodel = movementmodel,
+                  usermodel = usermodel,
+                  moveargsi = moveargsi,
+                  start = start,
+
+  \item{call }{function call }
+  \item{capthist }{saved input}
+  \item{type }{saved input}
+  \item{model }{saved input}
+  \item{distribution }{saved input}
+  \item{mask }{saved input}
+  \item{detectfn }{saved input}
+  \item{binomN }{saved input}
+  \item{movementmodel }{saved input}
+  \item{usermodel }{saved input}
+  \item{moveargsi }{relative locations of move.a and move.b arguments}
+  \item{start }{vector of starting values for beta parameters} 
+  \item{link }{saved input}
+  \item{fixed }{saved input}  
+  \item{timecov }{saved input}
+  \item{sessioncov }{saved input}
+  \item{dframe }{saved input}
+  \item{details }{saved input}
+  \item{method }{saved input}
+  \item{ncores }{saved input}
+  \item{design }{reduced design matrices, parameter table and parameter
+    index array for actual animals (see \code{\link{openCR.design}})}
+  \item{design0 }{reduced design matrices, parameter table and parameter
+    index array for `naive' animal (see \code{\link{openCR.design}})}
+  \item{parindx }{list with one component for each real parameter giving
+    the indices of the `beta' parameters associated with each real
+    parameter}  
+  \item{intervals}{intervals between primary sessions}
+  \item{vars }{vector of unique variable names in \code{model} }
+  \item{betanames }{names of beta parameters}
+  \item{realnames }{names of fitted (real) parameters }
+  \item{sessionlabels}{name of each primary session}
+  \item{fit }{list describing the fit (output from \code{nlm} or
+    \code{optim}) }
+  \item{beta.vcv }{variance-covariance matrix of beta parameters }  
+  \item{eigH }{vector of eigenvalue corresponding to each beta parameter }
+  \item{posterior}{posterior probabilities of class membership (mixture models), one row per individual. }
+  \item{version }{openCR version number }
+  \item{starttime }{character string of date and time at start of fit }
+  \item{proctime }{processor time for model fit, in seconds }
+  
+}
+
+\references{
+
+  Gimenez, O., Viallefont, A., Catchpole, E. A., Choquet, R. and Morgan,
+  B. J. T. (2004) Methods for investigating parameter redundancy. 
+  \emph{Animal Biodiversity and Conservation} \bold{27}, 561--572.
+
+  Huggins, R. M. (1989) On the statistical analysis of capture
+  experiments. \emph{Biometrika} \bold{76}, 133--140.
+
+  Pledger, S., Efford, M., Pollock. K., Collazo, J. and Lyons, J. (2009)
+  Stopover duration analysis with departure probability dependent on
+  unknown time since arrival. In: D. L. Thompson, E. G. Cooch and
+  M. J. Conroy (eds) \emph{Modeling Demographic Processes in Marked
+  Populations}. Springer. Pp. 349--363.
+
+  Pledger, S., Pollock, K. H. and Norris, J. L. (2010) Open
+  capture--recapture models with heterogeneity: II. Jolly-Seber
+  model. \emph{Biometrics} \bold{66}, 883--890.
+
+  Pradel, R. (1996) Utilization of capture-mark-recapture for the study
+  of recruitment and population growth rate. \emph{Biometrics}
+  \bold{52}, 703--709.
+
+  Schwarz, C. J. and Arnason, A. N. (1996) A general methodology for the
+  analysis of capture-recapture experiments in open
+  populations. \emph{Biometrics} \bold{52}, 860--873.
+
+}
+
+\note{
+
+Different parameterisations lead to different model fits when used with
+the default `model' argument in which each real parameter is constrained
+to be constant over time.
+  
+The JSSA implementation uses summation over feasible 'birth' and 'death'
+times for each capture history, following Pledger et al. (2010). This
+enables finite mixture models for individual capture probability (not
+fully tested), flexible handling of additions and losses on capture (aka
+removals) (not yet programmed), and ultimately the extension to `unknown
+age' as in Pledger et al. (2009).
+
+openCR uses the generalized matrix inverse `ginv' from the MASS
+package rather than `solve' from base R, as this seems more robust to
+singularities in the Hessian. Also, the default maximization method is `BFGS'
+rather than `Newton-Raphson' as BFGS appears more robust in the presence
+of redundant parameters.
+
+}
+
+\seealso{
+  
+  \code{\link{openCR.design}}, \code{\link{derived.openCR}},  \code{\link{par.openCR.fit}}
+
+}
+
+\examples{
+
+## CJS default
+openCR.fit(ovenCH)
+
+## POPAN Jolly-Seber Schwarz-Arnason, lambda parameterisation
+L1 <- openCR.fit(ovenCH, type = 'JSSAl')
+predict(L1)
+
+\dontrun{
+JSSA1 <- openCR.fit(ovenCH, type = 'JSSAf')
+JSSA2 <- openCR.fit(ovenCH, type = 'JSSAf', model = list(phi~t))
+JSSA3 <- openCR.fit(ovenCH, type = 'JSSAf', model = list(p~t,phi~t))
+AIC (JSSA1, JSSA2, JSSA3)
+predict(JSSA1)
+
+RMdata <- RMarkInput (join(reduce(ovenCH, by = "all")))
+require(RMark)
+openCHtest <- process.data(RMdata, model='POPAN')
+openCHPOPAN <- mark(data = openCHtest, model = 'POPAN',
+    model.parameters = list(p = list(formula = ~1),
+    pent = list(formula = ~1),
+    Phi = list(formula = ~1)))
+popan.derived(openCHtest, openCHPOPAN)
+cleanup(ask=F)
+}
+
+}
+
+\keyword{ model }

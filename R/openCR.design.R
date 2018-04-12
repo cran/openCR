@@ -1,0 +1,393 @@
+###############################################################################
+## package 'openCR'
+## openCR.design.R
+## 2011 12 29
+## 2012-06-08 robust design (J from intervals, not ncol(capthist))
+## 2012-12-20 JSSARET
+## 2017-11-19 robust design intervals
+## 2017-12-10 expanded for secondary-session effects
+## 2018-01-23 timecov added; does sessioncov work?
+## 2018-02-23 Bsession added, bsession corrected
+################################################################################
+
+openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL, 
+                           sessioncov = NULL, dframe = NULL, contrasts = NULL, 
+                           initialage = 0, maximumage = 1, ...) {
+
+## Generate design matrix, reduced parameter array, and parameter index array (PIA)
+## for each parameter
+## 'capthist' must be of class 'capthist' or 'list'
+
+    findvars <- function (cov, vars, dimcov) {
+        ## function to add covariates to a design data frame 'dframe'
+        ## uses pad1 and insertdim from utility.R
+        if (is.null(cov) | (length(cov)==0) | (length(vars)==0)) return()
+        else {
+            found <- names(cov) %in% vars
+            if (is.data.frame(cov) & any(found)) {
+                found <- names(cov)[found]
+                values <- as.data.frame(cov[,found])
+                names(values) <- found
+                if (length(values)>0) {
+                    for (variable in found) {
+                        vals <- values[,variable]
+                        dframe[,variable] <<- secr::insertdim (vals, dimcov, dims)
+                    }
+                }
+                vars <<- vars[!(vars %in% found)]
+            }
+        }
+    }
+
+    findvars.covtime <- function (covindices, vars) {
+        ## function to add time-specific covariates to a design data frame 'dframe'
+        ## covindices should be a list
+        dimcov <- c(1,2)   ## animal, secondarysession
+        ## covindices is list of numeric or character index vectors, one component per session
+        if (length(covindices[[1]]) != J)
+            stop ("require one index per primary session")
+        covnames <- names(covindices)
+        found <- covnames[covnames %in% vars]
+        vars <<- vars[!(vars %in% found)]
+        for (variable in found) {
+            firstcol <- zcov[,covindices[[1]][1]]
+            factorlevels <- NULL
+            if (is.factor(firstcol)) {
+                ## all must have same levels!!
+                factorlevels <- levels(firstcol)
+            }
+            getvals <- function (indices, zcov) {
+                notOK <- is.na(zcov[,indices])
+                if (any(notOK)) {
+                    warning ("covariate missing values set to -1")
+                    zcov[,indices][notOK] <- -1
+                }
+                mat <- as.matrix(zcov[,indices]) ## detectors x occasions
+            }
+            vals <- getvals(covindices[[variable]], zcov)
+            vals <- vals[,primarysessions(intervals)]
+            vals <- unlist(vals)  
+            if (!is.null(factorlevels))
+                vals <- factor(vals, factorlevels)
+            dframe[,variable] <<- secr::insertdim (vals, dimcov, dims)
+        }
+    }
+    #--------------------------------------------------------------------------------
+    
+    
+    
+    
+    # This setting is used for 'naive' table?
+    if (is.null(intervals) | ms(capthist)) {
+        return(list(designMatrices = list(phi = matrix(0,nrow=0,ncol=1)),
+            parameterTable = matrix(0,nrow=0,ncol=1),
+            PIA = array(0,dim=c(1,1,1,1))))
+    }
+    npar     <- length(models)                # real parameters
+    parnames <- names(models)                 # c('p','phi') for CJS
+    vars     <- unique (unlist(sapply (models, all.vars)))
+    trps     <- traps(capthist)
+    trapcov  <- covariates(trps)
+    nmix     <- secr:::get.nmix(models, capthist, NULL)
+    zcov     <- covariates(capthist)          # individual covariates
+    n        <- nrow(capthist)
+    S        <- ncol(capthist)
+    if (grepl('secr', type))
+        K <- nrow(trps)
+    else
+        K <- 1
+    intervals <- attr(capthist, 'intervals')
+    if (is.null(intervals)) intervals <- rep(1, ncol(capthist)-1)
+    J        <- sum(intervals>0) + 1 
+    primarysession <- primarysessions(intervals)
+    secondarysessions <- tabulate(primarysession)
+    firstofsession <- match(1:J, primarysession)
+    used     <- usage(trps)>0
+    
+    # if (length(used)>0 & any (duplicated(primarysession))) {  # reduce to robust design sessions 2017-11-19
+    #     used <- t(apply(used, 1, function(x) tapply(x, primarysession, max)))
+    # }
+
+    validlevels <- getvalidlevels (type, parnames, J)
+    
+    #--------------------------------------------------------------------------
+    # session covariates   (primary sessions)
+    if (!is.null(sessioncov)) {
+        scov <- sessioncov  # trick to name a vector 'scov'
+        sessioncov <- as.data.frame(scov)
+        if (nrow(sessioncov) != J)
+            stop("number of rows in 'sessioncov' should equal ",
+                 "number of primary sessions")
+    }
+    #--------------------------------------------------------------------------
+    # time covariates   (secondary sessions)
+    if (!is.null(timecov)) {
+        tcov <- timecov  # trick to name a vector 'tcov'
+        timecov <- as.data.frame(tcov)
+        if (nrow(timecov) != S)
+            stop("number of rows in 'timecov' should equal ",
+                 "number of occasions (secondary sessions")
+    }
+    
+    #--------------------------------------------------------------------------
+    dims <- c(n,S,K,nmix)       # virtual dimensions
+    dframenrow <- prod(dims)    # number of rows
+    autovars <- c('b', 'B', 'bsession', 'Bsession', 'session', 't', 'Session', 'h2', 'h3', 'age', 'Age', 'Age2')
+    #--------------------------------------------------------------------------
+    # user-specified dframe
+    if (is.null(dframe)) {
+        dframe <- data.frame(dummy=rep(1, dframenrow))
+        dframevars <- ""
+    }
+    else {
+        if (nrow(dframe) !=  dframenrow )
+            stop ("dframe should have ", n*S*K*nmix, " rows ( n*S*K*nmix )")
+        dframevars <- names(dframe)
+    }
+    #--------------------------------------------------------------------------
+
+    dframe$session <- factor(secr::insertdim (rep(1:J, secondarysessions), 2, dims))
+    dframe$Session <- secr::insertdim (rep(0:(J-1), secondarysessions), 2, dims)
+
+    ## t as synonym of session
+    if ('t' %in% vars) {
+        dframe$t <- factor(secr::insertdim (rep(1:J, secondarysessions), 2, dims))
+    }
+    ## firstage <- as.numeric(grepl('CJS', type))
+    firstage <- 0
+    if ('age' %in% vars) {
+        age <- age.matrix(capthist, initialage, firstage, maximumage)
+        dframe$age <- factor(secr::insertdim (factor(age), 1:2, dims))
+    } 
+    if ('Age' %in% vars) {
+        age <- age.matrix(capthist, initialage, firstage, maximumage)
+        dframe$Age <- secr::insertdim (age, 1:2, dims)
+    } 
+    if ('Age2' %in% vars) {
+        age <- age.matrix(capthist, initialage, firstage, maximumage)
+        dframe$Age2 <- secr::insertdim (age^2, 1:2, dims)
+    } 
+    
+    #--------------------------------------------------------------------------
+
+    ## behavioural response fields
+    makeb <- function (caphist) {      ## global response
+        temp0 <- apply(abs(caphist), 1:2, sum)
+        ## convert to n x (S+1) CH
+        t(apply(temp0, 1, prevcapt))
+    }
+    
+    ## by primary session
+    makebJ <- function (caphist) {      ## global response
+        temp0 <- apply(abs(caphist), 1:2, sum)
+        temp0 <- t(apply(temp0, 1, tapply, primarysession, sum))
+        temp0 <- t(apply(temp0, 1, prevcapt))
+        ## convert to n x (S+1) CH
+        t(apply(temp0, 1, rep, secondarysessions))
+    }
+    #--------------------------------------------------------------------------
+
+    if ('b' %in% vars) {
+        if (naive) dframe$b <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) {
+                prevcapt1 <- function(x) c(FALSE, cumsum(x[-S])>0)
+                ## apply within each primary session
+                unlist(lapply( split(x, primarysession), prevcapt1))
+            }
+            temp <- makeb(capthist)
+            dframe$b <- secr::insertdim (as.vector(temp), c(1,2), dims)
+        }
+    }
+    #------------------------------------------------
+    
+    if ('B' %in% vars) {
+        if (naive) dframe$B <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) {
+                prevcapt1 <- function(x) c(FALSE, x[-S]>0)
+                ## apply within each primary session
+                unlist(lapply( split(x, primarysession), prevcapt1))
+            }
+            temp <- makeb(capthist)
+            dframe$B <- secr::insertdim (as.vector(unlist(temp)), c(1,2), dims)
+        }
+    }
+    #------------------------------------------------
+    
+    if ('bsession' %in% vars) {
+        if (naive) dframe$bsession <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) c(FALSE, cumsum(x[-J])>0)
+            ## apply between primary sessions, then extend
+            
+            temp <- makebJ(capthist)
+            dframe$bsession <- secr::insertdim (as.vector(temp), c(1,2), dims)
+        }
+    }
+    #------------------------------------------------
+    
+    if ('Bsession' %in% vars) {
+        if (naive) dframe$bsession <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) c(FALSE, x[-J]>0)
+            temp <- makebJ(capthist)
+            dframe$Bsession <- secr::insertdim (as.vector(temp), c(1,2), dims)
+        }
+    }
+    #------------------------------------------------
+
+    ## h2 or h3
+    if (nmix > 1) {
+        mixture <- paste('h',nmix,sep='')
+        dframe[,mixture] <- secr::insertdim(factor(1:nmix), 4, dims)
+    }
+
+    #--------------------------------------------------------------------------
+    ## all autovars should have now been dealt with
+    vars <- vars[!(vars %in% c(autovars, dframevars))]
+
+    #--------------------------------------------------------------------------
+    # add zcov, sessioncov
+
+    findvars (zcov, vars, 1)
+    findvars (timecov, vars, 2)
+    findvars (sessioncov, vars, 2)  ## does this expand as required? 2018-01-23
+    tvc <- timevaryingcov(capthist)
+    if (!is.null(tvc) & (length(vars)>0)) {
+        findvars.covtime (tvc, vars)
+    }
+
+    if (length(vars)>0) {
+        if (!is.null(zcov)) {
+            if (is.data.frame(zcov))
+                znames <- names(zcov)
+            else
+                znames <- unlist(lapply(zcov, names))
+        }
+        stop ("covariate(s) ", paste(vars,collapse=","), " not found")
+    }
+
+    make.designmatrix <- function (formula, prefix, ...) {
+     # combine formula and dframe to generate design matrix
+        if (is.null(formula)) {
+            list (model = NULL, index = rep(1,dframenrow))
+        }
+        else {
+            # adjust for unidentifiable parameters
+            dframe <- adjustlevels(prefix, dframe, validlevels)
+            tempmat <- model.matrix(formula, data = dframe, contrasts.arg = contrasts, ...)
+            ## drop pmix beta0 column from design matrix
+            if (prefix=='pmix') tempmat <- tempmat[,-1,drop=FALSE]
+            temp <- secr::make.lookup (tempmat)   # retain unique rows
+            list (model=temp$lookup, index=temp$index)
+        }
+    }
+
+    dframe[is.na(dframe)] <- 0
+    # list with one component per real parameter
+    # each of these is a list with components 'model' and 'index'
+    designMatrices <- sapply (1:length(models), simplify=FALSE,
+        function (x) make.designmatrix(models[[x]], names(models[x])))
+    names(designMatrices) <- names(models)
+
+    ## dim(indices) = c(n*S*K*nmix, npar)
+    indices <- sapply (designMatrices, function(x) x$index)
+
+    indices <- matrix(unlist(indices), ncol = npar)
+
+    # retain just the 'model' components of 'designMatrices'
+    designMatrices <- lapply (designMatrices, function(x)x$model )
+
+    # prefix column names in 'designMatrices' with parameter name
+
+    for (i in 1:npar)
+        colnames(designMatrices[[i]]) <- paste (parnames[i], '.',
+            colnames(designMatrices[[i]]), sep='')
+
+    # repackage indices to define unique combinations of parameters
+    indices2 <- secr::make.lookup(indices)
+
+    #--------------------------------------------------------------------
+    # PIA = Parameter Index Array
+    #       index to row of parameterTable for a given n,s,nmix
+    # dim(parameterTable) = c(uniqueparcomb, npar)
+    #       index to row of designMatrix for each real parameter
+    #--------------------------------------------------------------------
+    PIA <- array(indices2$index, dim = dims)
+    PIAJ <- njx(PIA, primarysession)
+    
+    parameterTable <- indices2$lookup
+    colnames(parameterTable) <- parnames
+
+    #--------------------------------------------------------------------
+    # Zero the index of trap+time pairs that were 'not set'
+    # the external C code checks for this and sets p(detection) to zero
+    #--------------------------------------------------------------------
+
+    if (grepl('secr', type)) {
+        if ((!is.null(unlist(used))) & (length(used)>0)) {
+            allused <- unlist(used)
+            if (!is.null(allused)) {
+                if (any(!allused)) {
+                    PIA[ , , ,] <- PIA[ , , ,] * rep(rep(t(used),rep(n,S*K)),nmix)
+                }
+            }
+        }
+    }
+    #--------------------------------------------------------------------
+    list(designMatrices = designMatrices, parameterTable = parameterTable, PIA = PIA,
+         PIAJ = PIAJ, validlevels = validlevels)
+}
+############################################################################################
+
+## PIA has dim = c(nc, ss, kk, xx)
+## primarysession gives primary session (j) for each secondary session (s)
+# returns list with components 
+#    lookup - matrix of unique rows, each row ss * kk long, containing indices as in PIA to 
+#    the rows of realparval0
+#    index  vector of length nc * jj * xx; values are indices to rows of lookup
+
+# this could also be used in secr to speed up esa
+
+# BUT NOT WORKING 2018-02-13
+njxlookup <- function (PIA, primarysession) {
+    dims <- lapply(dim(PIA), seq, from=1)
+    names(dims) <- c('n','s','k','x')
+    df <- data.frame(pia = as.numeric(PIA), do.call(expand.grid, dims))
+    ss <- dim(PIA)[2]
+    kk <- dim(PIA)[3]
+    names(df) <- c('pia', 'n','s','k','x')
+    df$j <- formatC(primarysession[df$s], width=3, flag="0")
+    df$n <- formatC(df$n, width=4, flag="0")
+    # splitter <- apply(df[,c('n','j','x')], 1, paste, collapse='.')
+    splitter <- apply(df[,c('x','j','n')], 1, paste, collapse='.')
+    splitdf <- split(df[,c('pia','s')], splitter)
+    fixpiask <- function (x) {
+        pia <- matrix(0,ss,kk)
+        pia[x$s,] <- x$pia
+        as.numeric(pia)
+    }
+    piask <- lapply(splitdf, fixpiask)
+    njxIA <- do.call(rbind, piask)
+    lookup <- secr::make.lookup(njxIA)
+    lookup
+}
+
+# direct index to session PIA in njx array 2018-02-10
+njx <- function (PIA, primarysession) {
+    dims <- lapply(dim(PIA), seq, from=1)
+    names(dims) <- c('n','s','k','x')
+    df <- data.frame(pia = as.numeric(PIA), do.call(expand.grid, dims))
+    n <- dim(PIA)[1]
+    J <- max(primarysession)
+    xx <- dim(PIA)[4]
+    names(df) <- c('pia', 'n','s','k','x')
+    df$j <- formatC(primarysession[df$s], width=3, flag="0")
+    df$n <- formatC(df$n, width=4, flag="0")
+    splitter <- apply(df[,c('x', 'j', 'n')], 1, paste, collapse='.')  # deliberately reverse order
+    splitdf <- split(df[,c('pia','s')], splitter)
+    piaval <- sapply(splitdf, function(x) x$pia[which.min(!(x$pia != 0))])
+    array(piaval, dim = c(n, J, xx))
+}
+
