@@ -40,19 +40,21 @@ double gbinom(int count, int size, double p, int uselog)
         x = p;
         for (i=1; i< size; i++) x = x*p;
         if (uselog) x = log(x);
-        return (x);   /* faster */
+        return (x);   // faster 
     }
     else
         return (R::dbinom (count, size, p, uselog));
 }
 double gnbinom (int count, int size, double mu, int uselog)
 {
+    // prob = size / (size + mu) 
+    size = abs(size);  // in case negative 'binomN' passed 
     
-    /* prob = size / (size + mu) */
-    size = fabs(size);  /* in case negative 'binomN' passed */
-    
-    if (count == 0) {  /* faster - added 2010-10-11*/
-    if (uselog) return( log(size/(size+mu)) * log(size) );
+    if (count == 0) {  // faster - added 2010-10-11
+    // for portability cast integer to double before taking log
+    // cf Plummer R Journal 2011
+    // if (uselog) return( log(size/(size+mu)) * log(size));
+    if (uselog) return( log(size/(size+mu)) * log(static_cast<double>(size)));
     else return (pow(size/(size+mu), size));
     }
     else
@@ -60,34 +62,34 @@ double gnbinom (int count, int size, double mu, int uselog)
 }
 
 double gbinomFP (int count, double size, double p, int uselog)
-/* allow non integers */
+// allow non integers 
 {
     return ( lgamma(size+1) - lgamma(size-count+1) - lgamma(count+1) +
              count * log(p) + (size - count) * log (1-p) );
 }
 
 double countp (int count, int binomN, double lambda) {
-    /* Poisson */
+    // Poisson 
     if (binomN == 0) {
         return ( gpois (count, lambda, 0));
     }
-    /* Bernoulli */
+    // Bernoulli 
     else if (binomN == 1) {
         if (count == 0)
             return ( 1 - lambda );
         else
             return ( lambda );
     }
-    /* negative binomial */
+    // negative binomial 
     else if (binomN < 0) {
 	return ( gnbinom (count, binomN, lambda, 0) );
     }
-    /* binomial */
+    // binomial 
     else {
 	return ( gbinom (count, binomN, lambda, 0) );
     }
 }
-/*--------------------------------------------------------------------------*/
+//--------------------------------------------------------------------------
 
 double d2 (
         int k,
@@ -96,22 +98,21 @@ double d2 (
         const NumericVector& A2,
         int A1rows,
         int A2rows)
-     /*
-      return squared distance between two points given by row k in A1
-      and row m in A2, where A1 and A2 have respectively A1rows and A2rows
-      */
+  
+// return squared distance between two points given by row k in A1
+// and row m in A2, where A1 and A2 have respectively A1rows and A2rows
+      
 {
     return(
         (A1[k] - A2[m]) * (A1[k] - A2[m]) +
             (A1[k + A1rows] - A2[m + A2rows]) * (A1[k + A1rows] - A2[m + A2rows])
     );
 }
-/*--------------------------------------------------------------------------*/
+//--------------------------------------------------------------------------
 
+// parameters in openval ordered g0, phi, f, N, sigma, pmix 
 
-/* parameters in openval ordered g0, phi, f, N, sigma, pmix */
-
-/* hazard */
+// hazard 
 double hfn
      (int k, int m, int c, 
       const NumericVector& openval, int cc, 
@@ -160,41 +161,41 @@ void getp (int n, int x, int nc, int ss,
             const NumericVector& openval, int cc, 
             const IntegerVector& PIA, 
             double p[]) {
-     /* column 1 */
+     // column 1 
      int s;
      for (s = 0; s < ss; s++) {
          p[s] = openval[PIA[i3(n, s, x, nc, ss )]-1]; 
      }
  }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getphij (int n, int x, int nc, int jj, 
              const NumericVector& openval, int cc, 
              const IntegerVector& PIAJ,
              const NumericVector& intervals, 
              double phij[]) {
-    /* column 2 */
+    // column 2 
     int j;
     double phi;
     for (j = 0; j < (jj-1); j++) {
-        /* jj-1 because one fewer intervals than primary sessions */ 
+        // jj-1 because one fewer intervals than primary sessions  
         phi = openval[cc + PIAJ[i3(n, j, x, nc, jj)]-1];       
-        /* adjust for interval duration */ 
+        // adjust for interval duration  
         phij[j] = exp(log(phi) * intervals[j]);  
     }
     phij[jj-1] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getmoveargs (int n, int x, int nc, int jj, 
 		const NumericVector& openval, int cc, 
 		const IntegerVector& PIAJ,
 		const IntegerVector& moveargsi,
 		double moveargs[]) {
-    /* column moveargsi (and maybe moveargsi + 1) */
+    // column moveargsi (and maybe moveargsi + 1) 
     int j;
     for (j = 0; j < (jj-1); j++) {
-        /* jj-1 because one fewer intervals than primary sessions */ 
+        // jj-1 because one fewer intervals than primary sessions  
         moveargs[j] = openval[cc*moveargsi[0] + PIAJ[i3(n, j, x, nc, jj)]-1];  
         if (moveargsi[1]>0)
             moveargs[j+jj] = openval[cc*moveargsi[1] + PIAJ[i3(n, j, x, nc, jj)]-1];  
@@ -202,25 +203,25 @@ void getmoveargs (int n, int x, int nc, int jj,
     moveargs[jj-1] = 0;
     moveargs[2*jj-1] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getpj (int n, int x, int nc, int jj, 
              const NumericVector& openval, int cc, 
              const IntegerVector& PIAJ,
              double pj[]) {
-    /* column 2 */
+    // column 2 
     int j;
     for (j = 0; j < jj; j++) {
         pj[j] = openval[PIAJ[i3(n, j, x, nc, jj)]-1];       
     }
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getg (int type, int n, int x, int nc, int jj, 
              const NumericVector& openval, int cc, 
              const IntegerVector& PIAJ,
              double g[]) {
-    /* column 4 */
+    // column 4 
     int j;
     for (j = 0; j < jj; j++) {
         if (type != 27)
@@ -229,26 +230,26 @@ void getg (int type, int n, int x, int nc, int jj,
             g[j] = openval[cc*3 + PIAJ[i3(n,j, x, nc, jj)]-1];       
     }
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getfj (int n, int x, int nc, int jj, 
            const NumericVector& openval, int cc, 
            const IntegerVector& PIAJ, 
            const NumericVector& intervals, 
            double phij[], double fj[]) {
-    /* column 3 */
+    // column 3 
     int j;
     double f,phi;
     for (j = 0; j < (jj-1); j++) {
-        /* jj-1 because one fewer intervals than primary sessions */ 
+        // jj-1 because one fewer intervals than primary sessions  
         f = openval[cc*2 + PIAJ[i3(n, j, x, nc, jj )]-1]; 
 	phi = exp(log(phij[j]) / intervals[j]);
-        /* adjust for interval duration */ 
+        // adjust for interval duration  
         fj[j] = exp(log(phi+f) * intervals[j]) - phij[j];  
     }
     fj[jj-1] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getlj (int n, int x, int nc, int jj, 
            const NumericVector& openval, 
@@ -256,18 +257,18 @@ void getlj (int n, int x, int nc, int jj,
            const IntegerVector& PIAJ, 
            const NumericVector& intervals, 
            double lj[]) {
-    /* column 3 */
+    // column 3 
     int j;
     double l;
     for (j = 0; j < (jj-1); j++) {
-        /* jj-1 because one fewer intervals than primary sessions */ 
+        // jj-1 because one fewer intervals than primary sessions  
         l = openval[cc*2 + PIAJ[i3(n, j, x, nc, jj )]-1]; 
-        /* adjust for interval duration */ 
+        // adjust for interval duration  
         lj[j] = exp(log(l) * intervals[j]);  
     }
     lj[jj-1] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 int sumj (int uv[], int j, int k) {
     int i;
@@ -276,18 +277,18 @@ int sumj (int uv[], int j, int k) {
         return (0);
     else {
         for (i=j; i<=k; i++)
-            sum += uv[i];      /* use 0:(J-1) indices */
+            sum += uv[i];      // use 0:(J-1) indices 
 	return(sum);
     }
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getgaml (int n, int x, int nc, int jj, 
              const NumericVector& openval, int cc, 
              const IntegerVector& PIAJ, 
              const NumericVector& intervals, 
 	     double gam[]) {
-    /* column 3 */
+    // column 3 
     int j;
     double phij;
     double lamj;
@@ -300,14 +301,14 @@ void getgaml (int n, int x, int nc, int jj,
     }
     gam[0] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getgamj (int n, int x, int nc, int jj, 
              const NumericVector& openval, int cc, 
              const IntegerVector& PIAJ, 
              const NumericVector& intervals, 
 	     double gamj[]) {
-    /* column 3 */
+    // column 3 
     int j;
     double gam;
     for (j = 1; j < jj; j++) {
@@ -316,20 +317,20 @@ void getgamj (int n, int x, int nc, int jj,
     }
     gamj[0] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getkapj (int n, int x, int nc, int jj, 
              const NumericVector& openval, int cc, 
              const IntegerVector& PIAJ, 
 	     double kapj[]) {
-    /* column 3 */
+    // column 3 
     int j;
     for (j = 1; j < jj; j++) {
         kapj[j] = openval[cc*2 + PIAJ[i3(n, j, x, nc, jj)]-1];
     }
     kapj[0] = 1;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 // getgam <- function (n, x, openval, PIAJ, intervals) {
 //     J2 <- 2:(length(intervals)+1)
@@ -340,7 +341,7 @@ void getbeta0 (int n, int x, int nc, int jj,
               const NumericVector& openval, int cc, 
               const IntegerVector& PIAJ, 
               double beta[]) {
-    /* column 3 */
+    // column 3 
     int j;
     double sumbeta = 0;
     for (j = 1; j < jj; j++) {
@@ -354,12 +355,12 @@ void getbeta0 (int n, int x, int nc, int jj,
     }
 }
 
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void gettau (int n, int x, int nc, int jj,
              double openval[], int cc, int PIAJ[], 
 	     double tau[], int M) {
-    /* column 5 */
+    // column 5 
     int j;
     double sumtau = 0;
     for (j = 0; j < M; j++) {
@@ -374,19 +375,19 @@ void gettau (int n, int x, int nc, int jj,
     for (j = M+1; j < jj; j++)
         tau[j] = 0;
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 void getDj (int n, int x, int nc, int jj, 
             const NumericVector& openval, int cc, 
             const IntegerVector& PIAJ, 
             double Dj[]) {
-    /* column 3 */
+    // column 3 
     int j;
     for (j = 0; j < jj; j++) {
         Dj[j] = openval[cc*2 + PIAJ[i3(n, j, x, nc, jj )]-1]; 
     }
 }
-/*--------------------------------------------------------------------*/
+//--------------------------------------------------------------------
 
 // per capita recruitment cf Link & Barker 2005, Schwarz 'Gentle Intro'
 void getbetaf (int n, int x, int nc, int jj, 

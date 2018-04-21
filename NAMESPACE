@@ -1,5 +1,5 @@
 import (secr)
-import(parallel)
+import (parallel)
 
 importFrom (graphics, "axis", "box", "contour", "plot", "points", "segments", "mtext")
 importFrom (utils, "packageDescription", "packageVersion", "flush.console", "combn", "tail")
@@ -10,7 +10,8 @@ importFrom (plyr, "count")
 importFrom (abind, "abind")
 importFrom (stats, "AIC", "coef", "logLik", "as.formula", "model.matrix", "nlm", "optim", "vcov",
              "predict", "qnorm", "dpois", "dbinom", "dnbinom", "runif", "sd")
-importFrom ("methods", "formalArgs")
+importFrom (methods, "formalArgs")
+importFrom (Rcpp, "evalCpp")
 
 export (openCR.fit)
 export (par.openCR.fit)
@@ -60,6 +61,5 @@ S3method(predict, openCRlist)
 useDynLib (openCR, .registration = TRUE)
 ## DEBUGGING ONLY (cpp functions not documented)
 # exportPattern("*cpp")
-importFrom(Rcpp, evalCpp)
 
 

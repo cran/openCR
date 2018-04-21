@@ -195,6 +195,8 @@ runsim.RMark <- function (nrepl = 100, model = 'CJS', model.parameters = NULL,
     }
     if (!requireNamespace('RMark'))
         stop ("Please install package RMark")
+    if (all (nchar(Sys.which(c('mark.exe', 'mark64.exe', 'mark32.exe'))) < 2))
+        stop ("MARK executable not found; set e.g. MarkPath = 'c:/Mark/'")
     if (!is.null(seed)) set.seed(seed)
     lapply(1:nrepl, onesim)
 }

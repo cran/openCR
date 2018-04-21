@@ -117,52 +117,6 @@ NumericVector PCH1cpp (int type, int x, int nc, int jj,
 }
 //==============================================================================
 
-// prepare matrix n x j x m of session-specific Pr
-// void pr0njmx (int x, int ss, int nc,  int kk, int mm, int cc0, int njxc, int binomN,  
-//               const IntegerVector& PIA0njx, 
-//               const NumericVector& gk0, 
-//               const NumericVector& Tsk, 
-//               double pjm[]) {
-
-//     int c, i, k, m, njxi, s, cnjski, gi. pi;
-//     double Tski;
-//     double size;
-    
-//     for (i = 0; i < njxc*mm; i++) pjm[i] = 1.0;
-
-//     for (njxi = 0; njxi < njxc; njxi++) {
-//         for (k = 0; k < kk; k++) {
-//             for (s = 0; s < ss; s++) {
-//                 cnjski =  i3(njxi, s, k, njxc, ss);
-//                 c = PIA0njx[cnjski] - 1;
-//                 if (c >= 0) {    // consider only occasions from focal session (j)
-//                     Tski = Tsk[s * kk + k];
-//                     if (fabs(Tski-1) > 1e-10) {                  // effort <> 1.0 
-//                         if (binomN==1) 
-//                             size = (int) Tski;   
-//                         else 
-//                             size = binomN;     
-//                     }
-// 		    else size = 1;
-//                     for (m = 0; m < mm; m++) {
-//                         gi  = i3(c, k, m, cc0, kk);
-// 			pi = m * njxc + njxi;
-//                         if (binomN == 0)
-//                             pjm[pi] *= exp(-Tski *  -log(1-gk0[gi]));  // Poisson 
-//                         else {
-//                             if (size == 1)
-//                                 pjm[pi] *= 1-gk0[gi];   
-//                             else
-//                                 pjm[pi] *= pow(1-gk0[gi], size);  // Binomial or Bernoulli
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
-// //==============================================================================
-
 void pr0njmx (int n, int x, 
 	      const IntegerVector& cumss, 
 	      int nc,  int jj, int kk, int mm, int cc0, int binomN,  
@@ -185,7 +139,7 @@ void pr0njmx (int n, int x,
 		c = PIA0[ci] - 1;
 		if (c >= 0) {    
 		    Tski = Tsk[s * kk + k];                      // k x s matrix  
-		    if (fabs(Tski-1) > 1e-10) {                  // effort <> 1.0 
+		    if (abs(Tski-1) > 1e-10) {                   // effort <> 1.0 
 			if (binomN==1) 
 			    size = (int) Tski;   
 			else 
@@ -209,12 +163,6 @@ void pr0njmx (int n, int x,
 	    }
 	}
     }
-    // if (n==0) {
-    // 	for (m=0;m<mm;m++) {
-    // 	    for (j=0; j<jj; j++) Rprintf(" %8.6f ", pjm[m*jj+j]);
-    // 	    Rprintf("\n");
-    // 	}
-    // }
 }
 //==============================================================================
 

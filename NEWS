@@ -1,3 +1,14 @@
+version 1.1.2 (2018-04-17)
+
+New features and changed behaviour
+    o  none
+    
+Other
+    o  tweaks to C++ code for CRAN (fabs -> abs)
+    o  check for availability of RMark
+    o  better failure criterion in bd.array()
+    o  http://www.otago.ac.nz/density now https
+
 version 1.1.1 (2018-04-11)
 
 New features and changed behaviour

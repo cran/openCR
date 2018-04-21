@@ -75,11 +75,15 @@ m.array(gonodontisCH)
 fit <- openCR.fit(gonodontisCH)
 predict(fit)
 
-library(RMark)
-# may need to set MarkPath
-mothdf <- RMarkInput(gonodontisCH)
-mark(mothdf)
-cleanup(ask = FALSE)
+if (require(RMark)) {
+    if (all (nchar(Sys.which(c('mark.exe','mark64.exe', 'mark32.exe'))) < 2))
+        stop ("MARK executable not found; set e.g. MarkPath <- 'c:/Mark/'")
+    mothdf <- RMarkInput(gonodontisCH)
+    mark(mothdf)
+    cleanup(ask = FALSE)
+}
+else message ("RMark not found")
+
 }
 
 }

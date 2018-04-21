@@ -341,14 +341,19 @@ AIC (JSSA1, JSSA2, JSSA3)
 predict(JSSA1)
 
 RMdata <- RMarkInput (join(reduce(ovenCH, by = "all")))
-require(RMark)
-openCHtest <- process.data(RMdata, model='POPAN')
-openCHPOPAN <- mark(data = openCHtest, model = 'POPAN',
-    model.parameters = list(p = list(formula = ~1),
-    pent = list(formula = ~1),
-    Phi = list(formula = ~1)))
-popan.derived(openCHtest, openCHPOPAN)
-cleanup(ask=F)
+if (require(RMark)) {
+    if (all (nchar(Sys.which(c('mark.exe', 'mark64.exe', 'mark32.exe'))) < 2))
+        stop ("MARK executable not found; set e.g. MarkPath = 'c:/Mark/'")
+    openCHtest <- process.data(RMdata, model='POPAN')
+    openCHPOPAN <- mark(data = openCHtest, model = 'POPAN',
+        model.parameters = list(p = list(formula = ~1),
+        pent = list(formula = ~1),
+        Phi = list(formula = ~1)))
+    popan.derived(openCHtest, openCHPOPAN)
+    cleanup(ask=F)
+}
+else message ("RMark not found")
+
 }
 
 }

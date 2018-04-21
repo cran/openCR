@@ -103,7 +103,7 @@ void prw (int n, int j, int x, int nc, int jj, int kk, int mm, int cc, int binom
 	    c = PIA[wxi] - 1;
 	    if (c >= 0) {    // drops unset traps 
 		Tski = Tsk[s * kk + k];
-		if (fabs(Tski-1) > 1e-10) {                  // effort <> 1.0 
+		if (abs(Tski-1) > 1e-10) {                  // effort <> 1.0 
 		    if (binomN==1) 
 			size = (int) Tski;
 		    else 

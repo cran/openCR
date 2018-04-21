@@ -977,10 +977,5 @@ In the development above, integrations have been across the plane ($\mathbb R^2$
 <!-- $$ -->
 <!-- where $\vec \omega_{is\cdot}$ is the set of observations of individual $i$ on occasion $s$ (binary detection/nondetection or number of detections at each detector $k = 1...K$). -->
 
-
-[secr-manual.pdf]: http://www.otago.ac.nz/density/pdfs/secr-manual.pdf
-[secr-overview.pdf]: http://www.otago.ac.nz/density/pdfs/secr-overview.pdf
-[secr-datainput.pdf]: http://www.otago.ac.nz/density/pdfs/secr-datainput.pdf
-[secr-finitemixtures.pdf]: http://www.otago.ac.nz/density/pdfs/secr-datainput.pdf
-
-[CRAN]: http://cran.r-project.org/web/packages/secr
+[secr-overview.pdf]: https://www.otago.ac.nz/density/pdfs/secr-overview.pdf
+[secr-datainput.pdf]: https://www.otago.ac.nz/density/pdfs/secr-datainput.pdf

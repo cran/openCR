@@ -72,11 +72,14 @@ dipperCH <- read.inp(paste0(datadir, '/ed.inp'), grouplabel='sex',
 sessionlabels(dipperCH) <- 1981:1987   # labels only
 
 # or extracted from the RMark package with this code
-library(RMark)
-MarkPath <- 'c:/MARK'              # customize as necessary
+if (require(RMark)) {
+    if (all (nchar(Sys.which(c('mark.exe','mark64.exe', 'mark32.exe'))) < 2))
+        stop ("MARK executable not found; set e.g. MarkPath <- 'c:/Mark/'")
 data(dipper)                       # retrieve dataframe of dipper capture histories
 dipperCH2 <- unRMarkInput(dipper)  # convert to secr capthist object
 sessionlabels(dipperCH2) <- 1981:1987   # labels only
+}
+else message ("RMark not found")
 
 # The objects dipperCH and dipperCH2 differ in the order of factor levels for 'sex'
 }

@@ -44,7 +44,7 @@ Data were retrieved from DRYAD (Ergon and Lambin (2013) for \pkg{openCR}. Code f
 
 \references{
 
-Efford, M. G. (2017) Multi-session models in secr 3.0. http://www.otago.ac.nz/density/pdfs/secr-multisession.pdf
+Efford, M. G. (2017) Multi-session models in secr 3.0. https://www.otago.ac.nz/density/pdfs/secr-multisession.pdf
 
 Ergon, T., Ergon, R., Begon, M., Telfer, S. and Lambin, X. (2011) Delayed density-
 dependent onset of spring reproduction in a fluctuating population of field
