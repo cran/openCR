@@ -1,10 +1,11 @@
 ############################################################################################
 ## package 'openCR'
-## make.newdata.R
+## openCR.make.newdata.R
 ## 2011 12 09
 ## Create (neutral) design data suitable for 'predict'
 ## 2015-02-06 reconciled this current version with forked 1.2.0:
 ## 2017-12 revamped
+## 2018-04-12 allow single session
 
 ############################################################################################
 
@@ -20,8 +21,6 @@ openCR.make.newdata <- function (object, all.levels = FALSE) {
     nmix <- object$details$nmix
     if(is.null(nmix)) nmix <- 1
     J <- sum(object$intervals>0) + 1
-    if (J == 1)
-        stop ("intervals imply a single session: need more than one")
     sessions <- 1:J
     ngrp <- 1  # no groups for now
 

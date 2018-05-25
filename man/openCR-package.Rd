@@ -17,7 +17,8 @@
   recruitment is flexible (options include population growth rate \eqn{\lambda}, 
   per capita recruitment \eqn{f} and seniority \eqn{\gamma}). Spatially explicit 
   analyses may assume home-range centres are fixed or allow dispersal between
-  primary sessions according to a normal, exponential or user-defined kernel.
+  primary sessions according to a normal, exponential or user-defined
+  kernel.
 
 }
 
@@ -26,8 +27,8 @@
   \tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 1.1.2\cr
-Date: \tab 2018-04-17\cr
+Version: \tab 1.2.0\cr
+Date: \tab 2018-05-25\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 
@@ -40,7 +41,7 @@ primary and secondary sessions is coded by the `intervals' attribute
 
 A few test datasets are provided (\code{microtusCH}, \code{FebpossumCH}, \code{dipperCH}, 
 \code{gonodontisCH}, \code{fieldvoleCH}) and some from \pkg{secr} are also suitable 
-e.g. \code{ovenCH}.
+e.g. \code{ovenCH} and \code{OVpossumCH}.
 
 Models are defined using symbolic formula notation. Possible predictors
 for include both pre-defined variables (b, session etc.)  corresponding to

@@ -18,7 +18,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
 ## for each parameter
 ## 'capthist' must be of class 'capthist' or 'list'
 
-    findvars <- function (cov, vars, dimcov) {
+    findvars <- function (cov, vars, dimcov, scov = FALSE) {
         ## function to add covariates to a design data frame 'dframe'
         ## uses pad1 and insertdim from utility.R
         if (is.null(cov) | (length(cov)==0) | (length(vars)==0)) return()
@@ -31,6 +31,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
                 if (length(values)>0) {
                     for (variable in found) {
                         vals <- values[,variable]
+                        if (scov) vals <- rep(vals, secondarysessions)
                         dframe[,variable] <<- secr::insertdim (vals, dimcov, dims)
                     }
                 }
@@ -252,7 +253,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
 
     findvars (zcov, vars, 1)
     findvars (timecov, vars, 2)
-    findvars (sessioncov, vars, 2)  ## does this expand as required? 2018-01-23
+    findvars (sessioncov, vars, 2, scov = TRUE)  ## expands correctly 2018-05-07
     tvc <- timevaryingcov(capthist)
     if (!is.null(tvc) & (length(vars)>0)) {
         findvars.covtime (tvc, vars)
@@ -335,9 +336,10 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
             }
         }
     }
+    individual <- individualcovariates(PIA)
     #--------------------------------------------------------------------
     list(designMatrices = designMatrices, parameterTable = parameterTable, PIA = PIA,
-         PIAJ = PIAJ, validlevels = validlevels)
+         PIAJ = PIAJ, validlevels = validlevels, individual = individual)
 }
 ############################################################################################
 
@@ -375,19 +377,26 @@ njxlookup <- function (PIA, primarysession) {
 }
 
 # direct index to session PIA in njx array 2018-02-10
+# slow - must be a better way 2018-04-11
 njx <- function (PIA, primarysession) {
-    dims <- lapply(dim(PIA), seq, from=1)
-    names(dims) <- c('n','s','k','x')
-    df <- data.frame(pia = as.numeric(PIA), do.call(expand.grid, dims))
     n <- dim(PIA)[1]
     J <- max(primarysession)
     xx <- dim(PIA)[4]
-    names(df) <- c('pia', 'n','s','k','x')
-    df$j <- formatC(primarysession[df$s], width=3, flag="0")
-    df$n <- formatC(df$n, width=4, flag="0")
-    splitter <- apply(df[,c('x', 'j', 'n')], 1, paste, collapse='.')  # deliberately reverse order
-    splitdf <- split(df[,c('pia','s')], splitter)
-    piaval <- sapply(splitdf, function(x) x$pia[which.min(!(x$pia != 0))])
-    array(piaval, dim = c(n, J, xx))
+    # why all this complexity? 2018-04-11
+    # dims <- lapply(dim(PIA), seq, from=1)
+    # names(dims) <- c('n','s','k','x')
+    # df <- data.frame(pia = as.numeric(PIA), do.call(expand.grid, dims))
+    # names(df) <- c('pia', 'n','s','k','x')
+    # df$j <- formatC(primarysession[df$s], width=3, flag="0")
+    # df$n <- formatC(df$n, width=4, flag="0")
+    # splitter <- apply(df[,c('x', 'j', 'n')], 1, paste, collapse='.')  # deliberately reverse order
+    # splitdf <- split(df[,c('pia','s')], splitter)
+    # piaval <- sapply(splitdf, function(x) x$pia[which.min(!(x$pia != 0))])
+    # array(piaval, dim = c(n, J, xx))
+
+    # instead 2018-04-11   
+    s1 <- match(1:J, primarysession)
+    piaj <- PIA[,s1,1,]
+    array(piaj, dim = c(n,J,xx))
 }
 

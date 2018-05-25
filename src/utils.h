@@ -1,120 +1,208 @@
-#ifndef UTILS_H
-#define UTILS_H
-
 #include <Rcpp.h>
+#include <RcppParallel.h>
 using namespace Rcpp;
+using namespace RcppParallel;
 
 #define fuzz 1e-200
 #define huge 1e10
 
 int i3 (int i, int j, int k, int ii, int jj);
 int i4 (int i, int j, int k, int l, int ii, int jj, int kk);
+
+//--------------------------------------------------------------------------
+
 double gpois (int count, double lambda, int uselog);
 double gbinom(int count, int size, double p, int uselog);
-double gnbinom (int count, int size, double mu, int uselog);
 double gbinomFP (int count, double size, double p, int uselog);
-double countp (int count, int binomN, double lambda);
-double d2 (int k,
-        int m,
-        const NumericVector& A1,
-        const NumericVector& A2,
-        int A1rows,
-        int A2rows);
-double hfn
-     (int k, int m, int c, 
-      const NumericVector& openval, int cc, 
-      const NumericVector& traps,
-      const NumericVector& mask, 
-      int kk, int mm, int sigmai, int detectfn);
-void getp (int n, int x, int nc, int ss, 
-            const NumericVector& openval, int cc, 
-            const IntegerVector& PIA, 
-            double p[]);
+double pski ( int binomN, int count, double Tski, double g);
+    
+//--------------------------------------------------------------------------
 
-void getpj (int n, int x, int nc, int jj, 
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ,
-             double pj[]);
-void getphij (int n, int x, int nc, int jj, 
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ,
-             const NumericVector& intervals, 
-	      double phij[]);
-void getmoveargs (int n, int x, int nc, int jj, 
-		const NumericVector& openval, int cc, 
-		const IntegerVector& PIAJ,
-		const IntegerVector& moveargsi,
-		double moveargs[]);
-void getgamj (int n, int x, int nc, int jj, 
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ,
-             const NumericVector& intervals, 
-             double phij[]);
-void getkapj (int n, int x, int nc, int jj, 
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ,
-             double kapj[]);
-void getg (int type, int n, int x, int nc, int jj, 
-           const NumericVector& openval, int cc, 
-           const IntegerVector& PIAJ,
-           double g[]);
-void getfj (int n, int x, int nc, int jj, 
-           const NumericVector& openval, int cc, 
-           const IntegerVector& PIAJ, 
-           const NumericVector& intervals, 
-           double phij[], double fj[]);
-void getlj (int n, int x, int nc, int jj, 
-           const NumericVector& openval, 
-           int cc, 
-           const IntegerVector& PIAJ, 
-           const NumericVector& intervals, 
-           double lj[]);
-int sumj (int uv[], int j, int k);
-void getgaml (int n, int x, int nc, int jj, 
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ, 
-             const NumericVector& intervals, double gam[]);
-void getgam (int n, int x, int nc, int jj, 
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ, 
-             const NumericVector& intervals, double gam[]);
-void getbeta0 (int n, int x, int nc, int jj, 
-              const NumericVector& openval, int cc, 
-              const IntegerVector& PIAJ, 
-              double beta[]);
-void gettau (int n, int x, int nc, int jj,
-             const NumericVector& openval, int cc, 
-             const IntegerVector& PIAJ, 
-             double tau[], int M);
-void getDj (int n, int x, int nc, int jj, 
-            const NumericVector& openval, int cc, 
-            const IntegerVector& PIAJ,
-            double Dj[]);
-
-void getbeta (int type, int n, int x, int nc, int jj, 
-              const NumericVector& openval, int cc, 
-              const IntegerVector& PIAJ,
-              const NumericVector& intervals,
-              double phij[], double beta[]);
+// distance between two points given by row k in traps and row m in mask
+double dkm (int k, int m, RMatrix<double> traps, RMatrix<double> mask);
+//--------------------------------------------------------------------------
 
 void convolvemq (
-    int    mm,        /* number of points on mask */
-    int    kn,        /* number of points on kernel */
-    int    j,         /* session number 1..jj */
-    double kernelp[], /* p(move|dx,dy) for points in kernel */
-    const IntegerVector&  mqarray, /* input */
-    double pjm[]      /* return value */
+    int    mm,        // number of points on mask 
+    int    kn,        // number of points on kernel 
+    int    j,         // session number 1..jj 
+    const  RMatrix<int> mqarray, // input 
+    std::vector<double> &kernelp, // p(move|dx,dy) for points in kernel 
+    std::vector<double> &pjm     // return value 
     );
+//--------------------------------------------------------------------------
 
-void fillkernelp (
-    int kn, 
-    int jj, 
-    int kerneltype, 
-    const IntegerVector& kernel, 
-    double cellsize,
-    const IntegerVector& moveargsi,
-    double moveargs[], 
-    const CharacterVector& usermodel,
-    double kernelp[]);
+void fillkernelp (int kn, 
+                  int jj, 
+                  int kerneltype, 
+                  double cellsize,
+                  const RMatrix<int> kernel, 
+                  const RVector<int> moveargsi, 
+                  const CharacterVector fnname,
+                  const std::vector<double> &moveargs, 
+                  std::vector<double> &kernelp);
 
-#endif
+//--------------------------------------------------------------------------
+
+void fillkernelparallel (int kn, 
+                         int jj, 
+                         int kerneltype, 
+                         double cellsize,
+                         const RMatrix<int> kernel, 
+                         const RVector<int> moveargsi, 
+                         const std::vector<double> &moveargs, 
+                         std::vector<double> &kernelp);
+//--------------------------------------------------------------------------
+
+double hfn
+    (int k, int m, int c, 
+     const RMatrix<double> openval,  
+     const RMatrix<double> traps,
+     const RMatrix<double> mask, 
+     int sigmai, int detectfn);
+//--------------------------------------------------------------------------
+
+void getp (int n, int x, int nc, int ss, 
+           const RMatrix<double> openval,  
+           const RVector<int> PIA, 
+           std::vector<double> &p);
+//--------------------------------------------------------------------------
+
+void getphij (int n, int x, int nc, int jj, 
+              const RMatrix<double> openval,  
+              const RVector<int> PIAJ,
+              const RVector<double> intervals, 
+              std::vector<double> &phij);
+//--------------------------------------------------------------------------
+
+void getmoveargs (int n, int x, int nc, int jj, 
+                  const RMatrix<double> openval,  
+                  const RVector<int> PIAJ,
+                  const RVector<int> moveargsi,
+                  std::vector<double> &moveargs);
+//--------------------------------------------------------------------------
+
+void getpj (int n, int x, int nc, int jj, 
+            const RMatrix<double> openval,  
+            const RVector<int> PIAJ,
+            std::vector<double> &pj);
+//--------------------------------------------------------------------------
+
+void getg (int type, int n, int x, int nc, int jj, 
+           const RMatrix<double> openval,  
+           const RVector<int> PIAJ,
+           std::vector<double> &g);
+//--------------------------------------------------------------------------
+
+void getfj (int n, int x, int nc, int jj, 
+            const RMatrix<double> openval,  
+            const RVector<int> PIAJ,
+            const RVector<double> intervals, 
+            std::vector<double> &phij,
+            std::vector<double> &fj);
+//--------------------------------------------------------------------------
+
+void getlj (int n, int x, int nc, int jj, 
+            const RMatrix<double> openval,  
+            const RVector<int> PIAJ,
+            const RVector<double> intervals, 
+            std::vector<double> &lj);
+//--------------------------------------------------------------------------
+
+void getgaml (int n, int x, int nc, int jj, 
+              const RMatrix<double> openval,  
+              const RVector<int> PIAJ,
+              const RVector<double> intervals, 
+              std::vector<double> &gam);
+//--------------------------------------------------------------------------
+
+void getgamj (int n, int x, int nc, int jj, 
+              const RMatrix<double> openval,  
+              const RVector<int> PIAJ,
+              const RVector<double> intervals, 
+              std::vector<double> &gamj);
+//--------------------------------------------------------------------------
+
+void getkapj (int n, int x, int nc, int jj, 
+              const RMatrix<double> openval,  
+              const RVector<int> PIAJ,
+              std::vector<double> &kapj);
+//--------------------------------------------------------------------------
+
+// getgam <- function (n, x, openval, PIAJ, intervals) {
+//     J2 <- 2:(length(intervals)+1)
+//     c(0,openval[PIAJ[n, J2, x],3])
+// }
+
+void getbeta0 (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ,
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+
+void gettau (int n, int x, int nc, int jj,
+             const RMatrix<double> openval,  
+             const RVector<int> PIAJ,
+             std::vector<double> &tau,
+             int M);
+//--------------------------------------------------------------------------
+
+void getDj (int n, int x, int nc, int jj, 
+            const RMatrix<double> openval,  
+            const RVector<int> PIAJ,
+            std::vector<double> &Dj);
+//--------------------------------------------------------------------------
+
+// per capita recruitment cf Link & Barker 2005, Schwarz 'Gentle Intro'
+void getbetaf (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ,
+               std::vector<double> &phij,
+               const RVector<double> intervals, 
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+
+void getbetal (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ,
+               std::vector<double> &phij, 
+               const RVector<double> intervals, 
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+
+void getbetag (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ, 
+               std::vector<double> &phij, 
+               const RVector<double> intervals, 
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+
+void getbetak (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ, 
+               std::vector<double> &phij,
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+                   
+// return parameterisation cf Pledger et al. 2010 p 885 
+void getbetaB (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ, 
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+
+void getbetaD (int n, int x, int nc, int jj, 
+               const RMatrix<double> openval,  
+               const RVector<int> PIAJ, 
+               std::vector<double> &phij,
+               std::vector<double> &beta);
+//--------------------------------------------------------------------------
+
+void getbeta (int type, int n, int x, int nc, int jj, 
+              const RMatrix<double> openval,  
+              const RVector<int> PIAJ, 
+              const RVector<double> intervals,
+              std::vector<double> &phij,
+              std::vector<double> &beta);
+//--------------------------------------------------------------------------

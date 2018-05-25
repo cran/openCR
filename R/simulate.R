@@ -1,6 +1,6 @@
 ################################################################################
-## 
-
+## openCR 1.2.0
+## simulate.R 
 ################################################################################
 sim.nonspatial <- function(N, turnover = list(), p, nsessions, noccasions = 1, 
                            intervals = NULL, recapfactor = 1, seed = NULL, 
@@ -80,7 +80,7 @@ sim.nonspatial <- function(N, turnover = list(), p, nsessions, noccasions = 1,
 }
 ################################################################################
 
-runsim.nonspatial <- function (nrepl = 100, seed = NULL, ncores = 1, 
+runsim.nonspatial <- function (nrepl = 100, seed = NULL, ncores = NULL, 
                                fitargs = list(), extractfn = predict, ...) {
     onesim <- function(r) {
         CH <- sim.nonspatial(...)  # does not pass seed
@@ -89,14 +89,14 @@ runsim.nonspatial <- function (nrepl = 100, seed = NULL, ncores = 1,
         out <- extractfn(fit)
         attr(out, 'eigH') <- fit$eigH
         attr(out, 'fit') <- fit$fit
-        if (ncores==1)
-            message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
         out
     }
     list(...)
-    fitargs$ncores <- 1            # use multiple cores only at level of replicates
+    if (!is.null(ncores)) fitargs$ncores <- 1       # use multiple cores only at level of replicates
     message("Start  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
-    if (ncores == 1) {
+    ## note use of || for first item evaluation 2018-04-26
+    if (is.null(ncores) || (ncores == 1)) {
         if (!is.null(seed)) set.seed(seed)
         out <- lapply(1:nrepl, onesim)
     }
@@ -113,7 +113,7 @@ runsim.nonspatial <- function (nrepl = 100, seed = NULL, ncores = 1,
 }
 ################################################################################
 
-runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = 1,
+runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = NULL,
                            popargs = list(), detargs = list(), fitargs = list(),
                            extractfn = predict)  {
 
@@ -126,15 +126,15 @@ runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = 1,
         out <- extractfn(fit)
         attr(out, 'eigH') <- fit$eigH
         attr(out, 'fit') <- fit$fit
-        if (ncores==1)
-            message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
         out
     }
     popargs$seed <- NULL
     detargs$seed <- NULL
-    fitargs$ncores <- 1     # use multiple cores only at level of replicates
+    if (!is.null(ncores)) fitargs$ncores <- 1     # use multiple cores only at level of replicates
     message("Start  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
-    if (ncores == 1) {
+    ## note use of || for first item evaluation 2018-04-26
+    if (is.null(ncores) || (ncores == 1)) {
         if (!is.null(seed)) set.seed(seed)
         out <- lapply(1:nrepl, onesim)
     }
@@ -158,28 +158,35 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol =
         results
     }
     else {
-        mat <- t(sapply(sims, function(x) unlist(x[[parm]][session,])))
-        if (is.na(maxcode)) maxcode <- Inf
-        codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'code')
-        if (is.null(codes[[1]]))
-            codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'convergence')
-        if (any(is.null(codes)))
-            stop ("problem finding convergence codes")
-        if (dropifnoSE)
-            OK <- !is.na(mat[,3])
-        else
-            OK <- rep(TRUE, nrow(mat))
-        OK <- OK & (codes<= maxcode)    
-        if (!is.null(svtol)) {
-            nbeta <- function(x) length(attr(x, 'fit')$par)
-            NP <- sapply(sims, nbeta)  # nrepl vector, all same
-            eigH <- sapply(sims, attr, 'eigH')          # matrix np x nrepl
-            rank <- apply(eigH>svtol,2,sum)
-            OK <- OK & (rank == NP)
+        if (is.null(sims)) {
+            data.frame(cbind(median = NA, mean = NA, sd = NA, n = NA))
         }
-        data.frame(cbind(mean = apply(mat[OK,-1], 2, mean, na.rm = TRUE),
-                         sd = apply(mat[OK,-1], 2, sd, na.rm = TRUE),
-                         n = apply(mat[OK,-1], 2, function(x) sum(!is.na(x)))))
+        else {
+            mat <- t(sapply(sims, function(x) unlist(x[[parm]][session,])))
+            if (is.na(maxcode)) maxcode <- Inf
+            codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'code')
+            if (is.null(codes[[1]]))
+                codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'convergence')
+            if (any(is.null(codes)))
+                stop ("problem finding convergence codes")
+            if (dropifnoSE)
+                OK <- !is.na(mat[,3])
+            else
+                OK <- rep(TRUE, nrow(mat))
+            OK <- OK & (codes<= maxcode)    
+            if (!is.null(svtol)) {
+                nbeta <- function(x) length(attr(x, 'fit')$par)
+                NP <- sapply(sims, nbeta)  # nrepl vector, all same
+                eigH <- sapply(sims, attr, 'eigH')          # matrix np x nrepl
+                rank <- apply(eigH>svtol,2,sum)
+                OK <- OK & (rank == NP)
+            }
+            OKmat <- mat[OK,-1, drop = FALSE]  ## 2018-05-05
+            data.frame(cbind(median = apply(OKmat, 2, median, na.rm = TRUE),
+                             mean = apply(OKmat, 2, mean, na.rm = TRUE),
+                             sd = apply(OKmat, 2, sd, na.rm = TRUE),
+                             n = apply(OKmat, 2, function(x) sum(!is.na(x)))))
+        }
     }
 }
 ################################################################################

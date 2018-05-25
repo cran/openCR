@@ -61,7 +61,7 @@ pr0njmx <- function (n, x, cumss, jj, kk, mm, binomN, PIA0, gk0, Tsk) {
     pjm
 }
 
-PCH1secr <- function (type, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, 
+PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, 
                       gk0, binomN, Tsk, intervals, moveargsi, movemodel, usermodel,
                       kernel, mqarray, cellsize) {
     
@@ -115,6 +115,11 @@ PCH1secr <- function (type, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ,
         pdt
     }
     if (movemodel>1) w <- array(0, dim=c(nc,cumss[jj+1],kk)) else w <- NA
-    One(1)  ##  for indiv covariates: sapply(1:nc, One)
+    if (individual) {
+        sapply(1:nc, One)
+    }
+    else {
+        rep(One(1), nc)
+    }
 }
 

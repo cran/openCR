@@ -35,6 +35,10 @@ openCR.esa <- function (object, bysession = FALSE) {
     movementmodel <- object$movementmodel
     binomN <- object$binomN
     if (is.null(binomN)) binomN <- 1
+    ## openCR >= 1.2.0
+    individual <- object$design0$individual
+    ## openCR < 1.2.0
+    if (is.null(individual)) individual <- individualcovariates(object$design0$PIA)
 
     ###### movement kernel and related
     cellsize <- mqarray <- 0
@@ -77,15 +81,25 @@ openCR.esa <- function (object, bysession = FALSE) {
     usge <- usage(traps(capthist))
     if (is.null(usge)) usge <- matrix(1, nrow = k, ncol = ncol(capthist))
 
-    temp <- makegkcpp(
-        as.integer(nrow(realparval0)),     # number of rows in lookup table
-        as.integer(k),                     # detectors
-        as.integer(m),                     # mask points
-        as.integer(object$detectfn),
-        as.integer(.openCRstuff$sigmai[type]),                # column index of sigma in realparval
-        as.double(realparval0),
-        as.double(unlist(trps)),
-        as.double(unlist(mask)))
+    if (object$ncores>1)
+        temp <- makegkParallelcpp (as.integer(object$detectfn), 
+                               as.integer(.openCRstuff$sigmai[type]),
+                               as.integer(details$grain),
+                               as.matrix(realparval0),
+                               as.matrix(trps),
+                               as.matrix(object$mask))
+    else
+        temp <- makegkcpp(
+            as.integer(nrow(realparval0)),     # number of rows in lookup table
+            as.integer(k),                     # detectors
+            as.integer(m),                     # mask points
+            as.integer(object$detectfn),
+            as.integer(.openCRstuff$sigmai[type]),                # column index of sigma in realparval
+            as.double(realparval0),
+            as.double(unlist(trps)),
+            as.double(unlist(mask)))
+        
+    
     gk0 <- temp[[1]]
 
     ## mixture proportions
@@ -97,34 +111,56 @@ openCR.esa <- function (object, bysession = FALSE) {
     else {
         pmix <- matrix(1, nrow = details$nmix, ncol = nc)
     }
-##FIX##
     onea <- function (x) {
-        pch1 <-  PCH1secrcpp(
-            as.integer(type),
-            as.integer(x-1),
-            as.integer(nc),
-            as.integer(J),
-            as.integer(cumss),
-            as.integer(k),
-            as.integer(m),
-            as.double (unlist(realparval0)),
-            as.integer(nrow(realparval0)),
-            as.integer(object$design0$PIA),
-            as.integer(object$design$PIAJ),
-            as.double (gk0),
-            as.integer(binomN),
-            as.double (usge),
-            as.double (intervals),
-            as.integer(object$moveargsi),
-            as.integer(movemodel),
-            as.character(object$usermodel),
-            as.integer(nrow(kernel)),
-            as.integer(kernel),
-            as.integer(mqarray),
-            as.double(cellsize))
+        if (object$ncores == 1) {
+            pch1 <-  PCH1secrcpp(
+                as.integer(type),
+                as.integer(x-1),
+                as.integer(nc),
+                as.integer(J),
+                as.integer(cumss),
+                as.integer(k),
+                as.integer(m),
+                as.matrix(realparval0),
+                as.integer(object$design0$PIA),
+                as.integer(object$design$PIAJ),
+                as.double (gk0),
+                as.integer(binomN),
+                as.matrix (usge),
+                as.double (intervals),
+                as.integer(object$moveargsi),
+                as.integer(movemodel),
+                as.character(object$usermodel),
+                as.matrix(kernel),
+                as.matrix(mqarray),
+                as.double(cellsize))
+        }
+        else {
+            pch1 <-  PCH1secrparallelcpp(
+                as.integer(x-1),
+                as.integer(type),
+                as.integer(object$details$grain),
+                as.logical(individual),
+                as.integer(J),
+                as.integer(m),
+                as.integer(nc),
+                as.integer(cumss),
+                as.matrix (realparval0),
+                as.integer(object$design0$PIA),
+                as.integer(object$design0$PIAJ),
+                as.double (gk0),
+                as.integer(binomN),
+                as.matrix (usge),
+                as.double (intervals),
+                as.integer(object$moveargsi),
+                as.integer(movemodel),
+                as.matrix(kernel),
+                as.matrix(mqarray),
+                as.double (cellsize))
+        }
         pmix[x,] * pch1
     }
-
+    
     oneabysession <- function (x) {
         a0 <- PCH0secrjcpp (
             as.integer(type),
@@ -134,12 +170,11 @@ openCR.esa <- function (object, bysession = FALSE) {
             as.integer(cumss),
             as.integer(k),
             as.integer(m),
-            as.double (unlist(realparval0)),
             as.integer(nrow(realparval0)),
             as.integer(object$design0$PIA),
             as.double (gk0),
             as.integer(binomN),
-            as.double (usge)) 
+            as.matrix (usge)) 
         a0 <- matrix(a0, nrow = nc, ncol = J)
         1-sweep(a0, MARGIN=1, STATS=pmix[x,], FUN="*")
     }

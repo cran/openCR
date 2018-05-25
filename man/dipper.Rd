@@ -75,9 +75,9 @@ sessionlabels(dipperCH) <- 1981:1987   # labels only
 if (require(RMark)) {
     if (all (nchar(Sys.which(c('mark.exe','mark64.exe', 'mark32.exe'))) < 2))
         stop ("MARK executable not found; set e.g. MarkPath <- 'c:/Mark/'")
-data(dipper)                       # retrieve dataframe of dipper capture histories
-dipperCH2 <- unRMarkInput(dipper)  # convert to secr capthist object
-sessionlabels(dipperCH2) <- 1981:1987   # labels only
+    data(dipper)                       # retrieve dataframe of dipper capture histories
+    dipperCH2 <- unRMarkInput(dipper)  # convert to secr capthist object
+    sessionlabels(dipperCH2) <- 1981:1987   # labels only
 }
 else message ("RMark not found")
 

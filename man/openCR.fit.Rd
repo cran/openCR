@@ -21,7 +21,7 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
     binomN = 0, movementmodel = c("static", "uncorrelated", "normal", "exponential"), 
     start = NULL, link = list(), fixed = list(), timecov = NULL, 
     sessioncov = NULL, dframe = NULL, details = list(), 
-    method = "Newton-Raphson", trace = NULL, ncores = 1, ...)
+    method = "Newton-Raphson", trace = NULL, ncores = NULL, ...)
 }
 
 \arguments{
@@ -68,10 +68,10 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
   \item{method}{ character string giving method for maximizing log
     likelihood }
   
-  \item{trace}{ logical, if TRUE then output each evaluation of the
-  likelihood, and other messages}
+  \item{trace}{ logical or integer; output log likelihood at each evaluation, 
+  or at some lesser frequency as given}
 
-  \item{ncores}{integer number of cores for parallel processing }
+  \item{ncores}{integer number of cores for parallel processing (see Details) }
   
   \item{\dots}{ other arguments passed to join() }
 }
@@ -121,14 +121,15 @@ masked area) ("binomial") or unconditional ("poisson").
 density. The default is "binomial". For variance comparable with
 \pkg{secr} estimates this should be changed to "poisson".
 
-[Movement models are under development]
+Movement models are described in the \href{../doc/openCR-vignette.pdf}{vignette}.
 
 The mlogit link function is used for the JSSA (POPAN) entry parameter 
 `b' (PENT in MARK) and for mixture proportions, regardless of \code{link}.
 
-Spatial models use one of the hazard-based detection functions and require data
-from independent point detectors (\pkg{secr} detector types `multi', `proximity'
-or `count').
+Spatial models use one of the hazard-based detection functions (see \code{\link{detectfn}}) and require data
+from independent point detectors (\pkg{secr} detector types `multi', `proximity' or `count').
+
+Code is executed in multiple threads unless the user specifies \code{ncores = 1} or there is only one core available. The default value for \code{ncores} is one less than the number of cores available.
 
 The \dots argument may be used to pass a vector of unequal intervals to 
 join (\code{interval}), or to vary the tolerance for merging detector sites (\code{tol}).
@@ -164,6 +165,8 @@ of the Hessian matrix from which variances and covariances are obtained.
 Options are "none" (no variances), "auto" (the default) or "fdhess" (use
 the function fdHess in \pkg{nlme}).  If "auto" then the Hessian from the
 optimisation function is used.
+
+\code{details$ignoreusage} may be used to override usage in traps object of capthist.
 
 \code{details$initialage} is either numeric (the uniform age at first capture) 
 or a character value naming an individual covariate with initial ages; 
@@ -244,7 +247,7 @@ Otherwise, an object of class `openCR' with components
   \item{dframe }{saved input}
   \item{details }{saved input}
   \item{method }{saved input}
-  \item{ncores }{saved input}
+  \item{ncores }{saved input (NULL replaced with default)}
   \item{design }{reduced design matrices, parameter table and parameter
     index array for actual animals (see \code{\link{openCR.design}})}
   \item{design0 }{reduced design matrices, parameter table and parameter

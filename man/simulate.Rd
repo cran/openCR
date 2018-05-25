@@ -12,16 +12,17 @@
 Generate non-spatial or spatial open-population data and fit models.
 
 }
+
 \usage{
 
 sim.nonspatial (N, turnover = list(), p, nsessions, noccasions = 1, intervals = NULL, 
     recapfactor = 1, seed = NULL, savepopn = FALSE, ...)
     
-runsim.nonspatial (nrepl = 100, seed = NULL, ncores = 1, fitargs = list(), 
+runsim.nonspatial (nrepl = 100, seed = NULL, ncores = NULL, fitargs = list(), 
     extractfn = predict, ...)
 
-runsim.spatial (nrepl = 100, seed = NULL, ncores = 1, popargs = list(), detargs = list(), 
-    fitargs = list(), extractfn = predict)
+runsim.spatial (nrepl = 100, seed = NULL, ncores = NULL, popargs = list(), 
+    detargs = list(), fitargs = list(), extractfn = predict)
 
 sumsims (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol = NULL, maxcode = 3)
 
@@ -46,7 +47,7 @@ runsim.RMark (nrepl = 100, model = "CJS", model.parameters = NULL, extractfn,
   \item{\dots}{other arguments passed to \code{\link{sim.popn}} (sim.nonspatial) or \code{\link{sim.nonspatial}} (runsims)}
   
   \item{nrepl}{number of replicates}
-  \item{ncores}{ integer number of cores to be used for parallel processing}
+  \item{ncores}{ integer number of cores to be used for parallel processing (see Details)}
   \item{popargs}{list of arguments for sim.popn}
   \item{detargs}{list of arguments for sim.capthist}
   \item{fitargs}{list of arguments for openCR.fit}
@@ -70,7 +71,7 @@ For \code{sim.nonspatial} -- If \code{intervals} is specified then the number of
 
 \code{runsim.spatial} is a relatively simple wrapper for \code{\link{sim.popn}}, \code{\link{sim.capthist}}, and \code{\link{openCR.fit}}. Some arguments are set automatically: the \code{sim.capthist} argument 'renumber' is always FALSE; argument 'seed' is ignored within 'popargs' and 'detargs'; if no 'traps' argument is provided in 'detargs' then 'core' from 'popargs' will be used; detargs$popn and fitargs$capthist are derived from the preceding step. The 'type' specified in fitargs may refer to a non-spatial or spatial open-population model ('CJS', 'JSSAsecrfCL' etc.).
 
-Both \code{runsim.nonspatial} and \code{runsim.spatial} split replicates across multiple cores when 'ncores' > 1; 'ncores' is set to 1 for each replicate.
+In \code{runsim.nonspatial} and \code{runsim.spatial}, if \code{ncores} is NULL (the default) then the available cores (minus one) are used for multithreading by \code{openCR.fit}. Otherwise, (\code{ncores} specified) then replicates are split across multiple cores; 'ncores' is set to 1 for each replicate.
 
 \code{sumsims} assumes output from \code{runsim.nonspatial} and \code{runsim.spatial} with 'extractfn = predict'. Missing SE usually reflects non-identifiability of a parameter or failure of maximisation, so these replicates are dropped by default. If \code{svtol} is specified then the rank of the Hessian is determined by counting eigenvalues that exceed svtol, and replicates are dropped if the rank is less than the number of beta parameters. A value of 1e-5 is suggested for svtol in \code{\link{AIC.openCR}}, but smaller values may be appropriate for larger models (MARK has its own algorithm for this threshold).
 

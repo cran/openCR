@@ -1,7 +1,7 @@
 \name{miscellaneous}
 \alias{primarysessions}
 \alias{secondarysessions}
-\alias{timevaryingcov}
+%\alias{timevaryingcov}
 %\alias{timevaryingcov<-}
 
 \title{Data Manipulation}
@@ -16,7 +16,7 @@ Miscellaneous functions
 
 primarysessions(intervals)
 secondarysessions(intervals)
-timevaryingcov(object, ...)
+%timevaryingcov(object, ...)
 % timevaryingcov(object) <- value
 
 }
@@ -25,9 +25,9 @@ timevaryingcov(object, ...)
 
   \item{intervals}{numeric vector of intervals for time between
     secondary sessions a of robust design}
-  \item{object}{single-session capthist object}
+%  \item{object}{single-session capthist object}
 %  \item{value}{a list of named vectors}
-  \item{...}{other arguments (not used)}
+%  \item{...}{other arguments (not used)}
   
 }
 

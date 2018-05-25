@@ -1,22 +1,21 @@
 ###############################################################################
 # openCR
-## 2018-04-04 openCR 1.1.0
+## 2018-04-18 openCR 1.2.0
+## 2018-04-20 m.array removed to m.array.R
+## 2018-04-20 JS.counts removed to JS.counts.R
+## 2018-04-20 posterior.allocation removed to posterior.R
 ###############################################################################
 
 .openCRstuff <- new.env()
-#.openCRstuff$packageType <- ' pre-release'
-.openCRstuff$packageType <- ''
+.openCRstuff$packageType <- ' pre-release'
+#.openCRstuff$packageType <- ''
 .openCRstuff$iter <- 0
-.openCRstuff$secrtypes <- c('CJSsecr', 
-                            'JSSAsecrfCL', 'JSSAsecrgCL', 'JSSAsecrlCL', 'JSSAsecrbCL',
-                            'JSSAsecrf', 'JSSAsecrg', 'JSSAsecrl', 'JSSAsecrb', 
-                            'JSSAsecrB', 'JSSAsecrD')
 .openCRstuff$suspendedtypes <- c('JSSAfgCL', 'JSSAfg')
 
 
 .openCRstuff$sigmai <- rep(3, 50)   ## default 3
 .openCRstuff$sigmai[c(6,15,36)] <- 2
-.openCRstuff$sigmai[c(7,12,13,24)] <- 4
+.openCRstuff$sigmai[c(7,12,13,24,31)] <- 4
 
 replacedefaults <- function (default, user) replace(default, names(user), user)
 
@@ -196,31 +195,6 @@ last <- function(y) {
 }
 ############################################################################################
 
-MS.counts <- function(object) {
-
-    if (!inherits(object,'capthist'))
-        stop ("require capthist object")
-    if (!ms(object))
-            stop ("require object of class c('capthist', 'list')")
-    ## assume row names consistent across sessions
-    IDsess <- lapply (object, row.names)
-    removed <- unlist(lapply(object, function(x) sum(x<0)))
-    ID <- unlist(IDsess)
-    nsess <- length(IDsess)
-    IDlevels <- as.numeric(factor(ID))
-    sess <- rep(1:nsess, sapply(IDsess, length))
-    CH <- matrix(0, nrow = max(IDlevels), ncol = nsess)
-    CH[cbind(IDlevels,sess)] <- 1
-    ni <- apply(CH,2,sum)
-    ui <- apply(apply(CH,1,first),1,sum)
-    li <- apply(apply(CH,1,last),1,sum)
-    mi <- ni-ui
-    ri <- ni-li
-    zi <- cumsum(c(0,ri[-nsess]) - mi)
-    data.frame(n=ni, R=ni-removed, m=mi, r=ri, z=zi)
-}
-############################################################################################
-
 primarysessions <- function(intervals) {
     primarysession <- cumsum(c(0,intervals))
     match(primarysession, unique(primarysession))
@@ -262,75 +236,6 @@ primaryonly <- function(object) {
 #     out <- CH[f,,]
 #     out
 # }
-
-JS.counts <- function(object, primary.only = TRUE) {
-    first <- function(y) {
-        w <- 1:length(y)
-        as.numeric(w == min(which(y)))
-    }
-    last <- function(y) {
-        w <- 1:length(y)
-        as.numeric(w == max(which(y)))
-    }
-    object <- unsqueeze(object)   # 2018-02-06
-    if (inherits(object, 'capthist')) {
-        if (ms(object)) {
-            ch <- suppressWarnings(reduce(object, by = 'all', outputdetector = 'nonspatial', verify = FALSE))
-            object <- join(ch)
-        }
-        else {
-            if (primary.only) object <- primaryonly(object)
-        }
-        CH <- apply(abs(object), 1:2, sum)>0   ## sum over detectors
-    }
-    else {
-        CH <- abs(object)>0   # 0/1
-    }
-    nsess <- ncol(CH)
-    ni <- apply(CH,2,sum)
-    ui <- apply(apply(CH,1,first),1,sum)
-    li <- apply(apply(CH,1,last),1,sum)
-    mi <- ni-ui
-    ri <- ni-li
-    zi <- cumsum(c(0,ri[-nsess]) - mi)
-    removed <- apply(object,2, function(x) sum(x<0))
-    data.frame(n=ni, R=ni-removed, m=mi, r=ri, z=zi)
-}
-############################################################################################
-
-m.array <- function (object, primary.only = TRUE, never.recaptured = TRUE) {
-    if (ms(object))
-        object <- join(reduce(object, by = 'all', outputdetector = 'nonspatial', verify = FALSE))
-    else {
-        if (primary.only) object <- primaryonly(object)
-    }
-    object <- unsqueeze(object)
-    S <- ncol(object)
-    df <- as.data.frame(object)
-    df <- split(df, df$ID)
-    df <- lapply(df, function(x) {
-        x <- rbind(x, x[1,])
-        x[nrow(x),'Occasion'] <- S+1
-        cbind(x$Occasion[-nrow(x)], x$Occasion[-1])
-    })
-    df <- do.call(rbind, df)
-    tab <- table(df[,1], factor(df[,2], levels=1:(S+1)))
-    tab[lower.tri(tab, diag=TRUE)] <- NA
-    tab <- tab[-nrow(tab),,drop = FALSE]
-    n <- unlist(counts(object,'n'))[1:(S-1)]
-    lost <- unlist(counts(object,'losses'))[1:(S-1)]
-    tab <- cbind(R = n - lost,
-                 tab[,-c(1,S+1),drop = FALSE])
-    row.names(tab) <- 1:(S-1)
-    if (!is.null(sessionlabels(object))) {
-        rownames(tab) <- sessionlabels(object)[1:nrow(tab)]
-        colnames(tab)[2:ncol(tab)] <- sessionlabels(object)[2:ncol(tab)]
-    }
-    if (never.recaptured)
-        tab <- cbind(tab, NRecap = tab[,1] - apply(tab[,-1,drop = FALSE],1,sum, na.rm = TRUE))
-    as.table(tab)
-}
-############################################################################################
 
 ##### constrain to 0 < sum(p) <= 1.0
 invmlogit <- function (x, fillin = TRUE) {
@@ -763,7 +668,7 @@ squeeze <- function(x) {
             rownames(ch) <- 1:nrow(ch)
             intervals(ch) <- intervals(x)
             sessionlabels(ch) <- sessionlabels(x)
-            # timevaryingcov(ch) <- timevaryingcov(x)
+            timevaryingcov(ch) <- timevaryingcov(x)
             covariates(ch) <- df[, (SK+1):ncol(df), drop = FALSE]
             if (!is.null(freq))
                 covariates(ch)$freq <- covariates(ch)$freq * freq[1]
@@ -801,7 +706,7 @@ unsqueeze <- function(x) {
             rownames(ch) <- 1:nrow(ch)
             intervals(ch) <- intervals(x)
             sessionlabels(ch) <- sessionlabels(x)
-            # timevaryingcov(ch) <- timevaryingcov(x)
+            timevaryingcov(ch) <- timevaryingcov(x)
             covariates(ch) <- covariates(x)[i,, drop = FALSE]
             covariates(ch)$freq[] <- 1
             ch
@@ -827,7 +732,7 @@ stdcapthist <- function (capthist, type, movementmodel, nclone, squ, ...) {
     }
     
     if (ms(capthist)) {    ## collapse ms to single
-        capthist <- join(capthist, ...)
+        capthist <- join(capthist, drop.sites = !grepl('secr',type), ...)
     }
     interv <- intervals(capthist)
     sessnames <- sessionlabels(capthist)
@@ -846,7 +751,7 @@ stdcapthist <- function (capthist, type, movementmodel, nclone, squ, ...) {
     }
     intervals(capthist) <- interv   ## restore if reduce.capthist has lost them
     sessionlabels(capthist) <- sessnames
-    # timevaryingcov(capthist) <- timevarcov
+    timevaryingcov(capthist) <- timevarcov
     
     # no cloning multiplier
     if (all(nclone == 1)) {
@@ -899,196 +804,6 @@ complete.beta.vcv <- function (object) {
 }
 ###############################################################################
 
-posterior.allocation <- function (beta, data)
-    
-    # Return the probability of membership in latent classes for h2 and h3 models
-    
-{
-    nmix <- data$details$nmix
-    if(data$movemodel>1) {
-        warning ("posterior allocation not ready for movement models")
-        nmix <- 1
-    }
-    if (nmix == 1) return (rep(1,nrow(data$capthist)))
-    secr <- grepl('secr', data$type)
-    
-    #--------------------------------------------------------------------
-    # Fixed beta
-    fb <- data$details$fixedbeta
-    if (!is.null(fb)) {
-        fb[is.na(fb)] <- beta
-        beta <- fb    ## complete
-    }
-    
-    #--------------------------------------------------------------------
-    # Real parameters
-    realparval  <- makerealparameters (data$design, beta, data$parindx, data$link, data$fixed)
-    # Parameter Index Array
-    PIA <- data$design$PIA
-    PIAJ <- data$design$PIAJ
-    #--------------------------------------------------------------------
-    
-    if (secr) {
-        type <- switch(data$type, CJSsecr = 6, JSSAsecrf = 7, JSSAsecrD = 8,
-                       JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11,
-                       JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrB = 14,
-                       JSSAsecrg = 24, JSSAsecrgCL = 25, -1)
-        if (type < 0) stop ("Invalid likelihood type for posterior allocation")
-        trps <- traps(data$capthist)
-        if (!is.null(data$mask)) area <- attr(data$mask,'area')
-        else area <- 0
-        binomN <- switch (detector(trps)[1], multi = 1, proximity = 1, count = data$binomN, -1)
-        
-        if (data$multi) {
-            onehistory <- function (n, pmix) {
-                px <- numeric(nmix)
-                if ((type == 6) & data$fi[n] == data$J) rep(NA, nmix)
-                else {
-                    for (x in 1:nrow(pmix)) {
-                        px[x] <- prwisecrmulticpp(
-                            as.integer(type),
-                            as.integer(0),                       ## always just one n
-                            as.integer(x-1),
-                            as.integer(1),                       ## nc one at a time
-                            as.integer(data$J),
-                            as.integer(data$cumss),
-                            as.integer(data$k),
-                            as.integer(data$m),
-                            as.integer(data$details$nmix),
-                            as.integer(data$capthist[n,]),       ## 2-D CH
-                            as.integer(data$fi[n]),
-                            as.integer(data$li[n]),
-                            as.double (hk),                      ## hazard instead of probability
-                            as.double (realparval),
-                            as.integer(nrow(realparval)),
-                            as.integer(PIA[n,,,]),
-                            as.integer(PIAJ[n,,]),
-                            as.integer(binomN),
-                            as.double (data$usge),
-                            as.double (data$intervals),
-                            as.double (haztemp$h),               ## lookup sum_k (hazard)
-                            as.integer (haztemp$hindex[n,]),     ## index to h
-                            as.integer (data$movementmodel))
-                    }
-                    px/sum(px)
-                }
-            }
-        }
-        else{
-            onehistory <- function (n, pmix) {
-                nmix <- nrow(pmix)
-                if ((type == 6) & data$fi[n] == data$J) rep(NA, nmix)
-                else {
-                    px <- numeric(nmix)
-                    for (x in 1:nmix) {
-                        px[x] <- prwisecrcpp(
-                            as.integer(type),
-                            as.integer(0),    # n-1
-                            as.integer(x-1),
-                            as.integer(1),
-                            as.integer(data$J),
-                            as.integer(data$k),
-                            as.integer(data$m),
-                            as.integer(nmix),
-                            as.integer(data$cumss),
-                            as.integer(data$capthist[n,,]),   ## 3-D CH
-                            as.integer(data$fi[n]),
-                            as.integer(data$li[n]),
-                            as.double (gk),                ## precomputed probability
-                            as.double (realparval),
-                            as.integer(nrow(realparval)),
-                            as.integer(PIA[n,,,]),
-                            as.integer(PIAJ[n,,]),
-                            as.integer(binomN),
-                            as.double (data$usge),
-                            as.double (data$intervals),
-                            as.integer(data$movementmodel),
-                            as.integer(data$details$CJSp1)
-                        )
-                    }
-                    px/sum(px)
-                }
-            }
-        }
-        temp <- makegkcpp(
-            as.integer(nrow(realparval)),      # number of rows in lookup table
-            as.integer(data$k),                # detectors
-            as.integer(data$m),                # mask points
-            as.integer(data$detectfn),
-            as.integer(.openCRstuff$sigmai[type]),                # column index of sigma in realparval
-            as.double(realparval),
-            as.double(unlist(trps)),
-            as.double(unlist(data$mask)))
-        gk <- temp[[1]]
-        hk <- temp[[2]]
-        pmix <- fillpmix2(data$nc, nmix, PIA, realparval)
-        #S <- ncol(data$capthist)
-        
-        haztemp <- gethcpp(
-            as.integer(data$nc),
-            as.integer(nrow(realparval)),
-            as.integer(nmix),
-            as.integer(data$k),
-            as.integer(data$J),
-            as.integer(data$m),
-            as.integer(PIA),
-            as.integer(data$cumss),
-            as.double(data$usge),
-            as.double(hk))
-        names(haztemp) <- c('hc0','h','hindex')
-        haztemp$hindex <- matrix(haztemp$hindex, nrow = data$nc)
-        ## discard surplus h for speed in C   DISCARD INTERNALLY
-        haztemp$h <- haztemp$h[1:(data$m * data$details$nmix * (max(haztemp$hindex)+1))]
-    }
-    else {
-        ## NON-SPATIAL
-        type <- switch(data$type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4,
-                       JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19,
-                       Pradel = 20, JSSARET = 21, JSSAg = 22, JSSAgCL = 23, Pradelg = 26, JSSAfgCL = 27,
-                       -1)
-        if (type<0) stop ("Invalid likelihood type")
-        if (type %in% c(20,26)) {
-            stop("mixtures not expected in Pradel models")
-        }
-        
-        onehistory <- function (n, pmix) {
-            nmix <- nrow(pmix)
-            if ((type == 1) & data$fi[n] == data$J) rep(NA, nmix)
-            else {
-                px <- numeric(nmix)
-                for (x in 1:nmix) {
-                    px[x] <- prwicpp (
-                        as.integer(type),
-                        as.integer(0),
-                        as.integer(x-1),
-                        as.integer(1),
-                        as.integer(data$J),
-                        as.integer(data$cumss),
-                        as.integer(data$details$nmix),
-                        as.integer(data$capthist[n,]),
-                        as.integer(data$fi[n]),
-                        as.integer(data$li[n]),              # may be negative if censored 2018-01-17
-                        as.double (realparval),
-                        as.integer(nrow(realparval)),
-                        as.integer(PIA[n,,,]),
-                        as.integer(data$design$PIAJ[n,,]),
-                        as.double (data$intervals),
-                        as.integer(data$details$CJSp1)
-                    )
-                }
-                px/sum(px)
-            }
-        }
-    }
-    pmix <- fillpmix2(data$nc, nmix, PIA, realparval)
-    out <- data.frame(t(sapply(1:data$nc, onehistory, pmix = pmix)))
-    names(out) <- paste0('class', 1:nmix)
-    out$maxclass <- max.col(out)
-    out
-}
-
-######################################################################################################
-
 typecode <- function (type) {
     type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4,
                    JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19,
@@ -1097,6 +812,18 @@ typecode <- function (type) {
                    CJSsecr = 6, JSSAsecrf = 7, JSSAsecrD = 8,
                    JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11,
                    JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrB = 14,
-                   JSSAsecrg = 24, JSSAsecrgCL = 25, -1)
+                   JSSAsecrg = 24, JSSAsecrgCL = 25, secrCL = 30, secrD = 31, -1)
     type
+}
+
+## Based on Charles C. Berry on R-help 2008-01-13
+n.unique.rows <- function(x) {
+    order.x <- do.call(order, as.data.frame(x))
+    equal.to.previous <- rowSums(x[tail(order.x,-1),] != x[head(order.x,-1),])==0 
+    1 + sum(!equal.to.previous)
+}
+
+individualcovariates <- function (PIA) {
+    pia <- matrix(PIA, nrow = nrow(PIA))
+    n.unique.rows(pia) > 1
 }

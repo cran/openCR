@@ -1,4 +1,29 @@
-version 1.1.2 (2018-04-17)
+version 1.2.0 (2018-05-25)
+
+New features and changed behaviour
+    o  multithreaded execution of some functions (up to 4x speed gain)
+    o  openCR.fit() types 'secrCL' and 'secrD' emulate closed-population analyses of 'secr'
+    o  openCR.fit() trace may be a positive integer (frequency of reporting)
+    o  ucare.cjs() wrapper for R2ucare test functions
+    o  moving.fit() and extractFocal() functions for moving window of sessions
+    o  m.array() reports releases on final session (last.session = TRUE)
+    o  openCR.fit() details ignoreusage option
+    o  runsim.spatial() and runsim.nonspatial() ncores argument defaults to NULL for multithreading
+    o  cyclic.fit() exposed as internal function but not exported
+    o  derived() method for openCR objects acquires arguments newdata and all.levels
+
+Bugs fixed
+    o usage of count detectors not properly accounted for (noted by Richard Glennie)
+    o fixedbeta clashed with start argument (some options)
+    o session covariates not matched correctly with robust design sessions
+    o LLonly reported x -1
+    o details$hessian = FALSE failed
+
+Other
+    o Links to RcppParallel
+    o Additional check for nonidentifiable parameters in print.openCR() 
+
+version 1.1.2 (2018-04-16)
 
 New features and changed behaviour
     o  none
@@ -7,17 +32,9 @@ Other
     o  tweaks to C++ code for CRAN (fabs -> abs)
     o  check for availability of RMark
     o  better failure criterion in bd.array()
-    o  http://www.otago.ac.nz/density now https
+    o  http changed to https where possible
 
 version 1.1.1 (2018-04-11)
-
-New features and changed behaviour
-    o  none
-    
-Other
-    o  tweaks to DESCRIPTION for CRAN
-
-version 1.1.0 (2018-04-07)
 
 New features and changed behaviour
     o  movement kernel exposed

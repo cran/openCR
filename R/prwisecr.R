@@ -15,27 +15,42 @@
 
 #########################################################################################
 
-countp <- function (count, binomN, lambda) {
-    # Poisson
-    if (binomN == 0) {
-        return ( dpois (count, lambda, log = FALSE))
+ # probability of count for session s, detector k, animal i
+ # The argument 'g' is understood to be a cumulative hazard if binomN=0,
+ # a probability otherwise
+
+pski <- function(binomN, count, Tski, g) {
+    
+    result <- 1.0
+    
+    if (binomN == -1) {                              ## binary proximity detectors : Bernoulli
+        if (any(abs(Tski-1) > 1e-10)) {              ## effort not unity; adjust g 
+            g <- 1 - (1 - g)^Tski
+        }
+        if (count>0)                                 
+            result <- g
+        else 
+            result <- 1 - g
     }
-    # Bernoulli
-    else if (binomN == 1) {
-        if (count == 0)
-            return ( 1 - lambda )
+    else if (binomN == 0) {                          ## count detectors : Poisson 
+        if (count == 0) 
+            result <- exp(-Tski * g)                 ## routinely apply Tsk adjustment to cum. hazard 
         else
-            return ( lambda )
+            result <- dpois(count, Tski * g, FALSE)
     }
-    # negative binomial
-    else if (binomN < 0) {
-        return ( dnbinom (count, binomN, binomN/(binomN+lambda), log = FALSE) )
+    else if (binomN == 1) {                          ## count detectors : Binomial, size from Tsk
+        result <- dbinom (count, round(Tski), g, FALSE) 
     }
-    # binomial
-    else {
-        return ( dbinom (count, binomN, lambda, log = FALSE) )
+    else if (binomN > 1) {                           ## count detectors : Binomial, specified size 
+        if (abs(Tski-1) > 1e-10) {                   ## effort not unity, adjust g 
+            g <- 1 - (1 - g)^Tski
+        }
+        result <- dbinom (count, binomN, g, FALSE)
     }
+    else stop("binomN < 0 not allowed")
+    result
 }
+
 #########################################################################################
 
 # The mqarray is a lookup array giving the pixel in the output mask
@@ -183,18 +198,13 @@ prwi <- function (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ,
 
 prw <- function (n, j, x, nc, jj, kk, binomN, cumss, PIA, gk, Tsk, w, pjm) {
     dead <- FALSE
-    size <- 1
     for (s in (cumss[j]+1):cumss[j+1]) {
         for (k in 1:kk) {
             c <- PIA[n,s,k,x]
             if (c >= 1) {    # drops unset traps
-                Tski <- Tsk[k,s]
-                if (abs(Tski-1) > 1e-10) {  # effort <> 1.0
-                    size <- if (binomN==1) Tski else binomN
-                }
                 count <- w[n,s,k]
                 if (count<0) {count <- -count; dead <- TRUE }
-                pjm <- pjm * countp (count, size, gk[c,k,])
+                pjm <- pjm * pski(binomN,count,Tsk[k,s], gk[c,k,])   
             }
         }
         if (dead) break;   # after processing all traps on this occasion

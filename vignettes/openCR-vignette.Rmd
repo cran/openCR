@@ -1,5 +1,5 @@
 ---
-title: '**openCR** 1.1 - open population capture--recapture'
+title: '**openCR** 1.2 - open population capture--recapture'
 author: "Murray Efford"
 date: "`r Sys.Date()`"
 output: 
@@ -15,12 +15,12 @@ vignette: >
 \newcommand{\bm}[1]{\mbox{\boldmath $#1$}}
 
 ```{r settings, echo = FALSE}
-mycache <- TRUE
+mycache <- FALSE
 ```
 
 \vspace{12pt}
 
-The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. Modelling of movement between sessions is experimental and not included in this version. The interface generally resembles that of **secr** (Efford 2018) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette openCR-examples.pdf, and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. Some bugs should be expected in the initial release.
+The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. Modelling of movement between sessions is experimental in this version. The interface generally resembles that of **secr** (Efford 2018) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette openCR-examples.pdf, and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. Some bugs should be expected in the initial release.
 
 [^footnote1]: These supplementary vignettes are not included with the package. It is intended to distribute them on the website www.otago.ac.nz/density. Otherwise contact the author.
 
@@ -259,6 +259,8 @@ Table 4. Parameters of spatial **openCR** models
 | JSSAsecrl   | + | + | + | + |   |   |   | + | + |   |   |
 | JSSAsecrB   | + | + | + | + |   |   |   |   |   | + |   |
 | JSSAsecrD   | + | + | + | + |   |   |   |   |   |   | + |
+| secrCL      | + | + | + |   |   |   |   |   |   |   |   |
+| secrD       | + | + | + |   |   |   |   |   | + |   |   |
 
 # Model formulae
 
@@ -295,27 +297,49 @@ Primary session covariates are provided to `openCR.fit` in the argument 'session
 
 Covariates for detection parameters in secondary sessions are provided in the 'timecov' argument; if 'timecov' is a vector (length equal to total number of secondary sessions) rather than a dataframe then it may be referenced as 'tcov' in model formulae. 
 
-## More on modelling
+# More on modelling
 
-### Finite mixtures
+## Closed populations
+
+The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR.fit** 1.2 fits simple closed models faster than **secr** 3.1. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
+
+```{r compare, cache = mycache, warning = FALSE}
+msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
+
+secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
+openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
+
+# massage the predict.openCR results to the same format as predict.secr
+pred_openCR <- plyr::rbind.fill(predict(openCR))[c(2,1,3),-1]
+rownames(pred_openCR) <- secr$realnames
+
+# compare estimates
+predict(secr)[,-1]
+pred_openCR
+
+# compare timings in seconds
+c(secr = secr$proctime, openCR=openCR$proctime)
+```
+
+## Finite mixtures
 
 Two- and three-class finite mixtures (h2, h3) allow for individual heterogeneity in detection and turnover parameters (Pledger et al. 2003, 2010). Using one of these predictors in a formula causes a further real parameter 'pmix' to be added. pmix is the proportion in latent mixture class 2 for h2, and the proportions in classes 2 and 3 for h3 (the proportion in class 1 is obtained by subtracting from 1). The implementation in **openCR** assumes that class membership applies across all parameters. The posterior probabilities of class membership for all detected individuals are returned as the 'posterior' component of the fitted model. 
 
 Finite mixture likelihoods are prone to multimodality. Misleading estimates result when the numerical maximization settles on a local maximum (see also [secr-finitemixtures.pdf].
 
-### Age
+## Age
 
 If age is modelled as a factor then it is useful to group older animals in a maximum age class ('maximumage'). Animals are assumed to be first caught at age zero unless 'initialage' is specified. 'maximumage' and 'initialage' are optional components of the 'details' argument of `openCR.fit. 'initialage' can name an individual covariate to avoid the assumption that all animals are the same age at first detection.
 
 For a quadratic relationship with age, specify an additive model with both Age and Age2 terms (e.g., model = phi ~ Age + Age2).
 
-### Sampling intervals
+## Sampling intervals
 
 We have seen the role of the intervals attribute in defining primary and secondary sessions. Between-session intervals need to be specified only if they vary, or if you would like rates (phi, gamma, lambda, f) to be reported in time units other than the (implicitly constant) sampling interval. Scaling from the standardised parameter $\theta_j$ to the interval-specific value $\theta^\prime_j$ uses $\theta^\prime_j = \theta_j^{T_j}$ where $\theta_j$ is one of $\phi_j$ or $\lambda_j$, and $T_j$ is the duration of interval $j$.
 
 Scaling $\gamma$ follows the same pattern except that the relevant duration for $\gamma_j$ is $T_{j-1}$. Scaling per capita recruitment $f_j$ is more tricky. We use $f^\prime_j = (\phi_j + f_j)^{T_j} - \phi_j^{T_j}$.
 
-### Custom design data
+## Custom design data
 
 Occasionally there is a need for covariates that do not relate specifically to individuals, sessions or detectors, and are not included as canned predictors. For this you must construct your own dataframe of design data and pass it as the 'dframe' argument of `openCR.fit`. Design data are used as input to the `model.matrix` function (the 'data' argument); `model.matrix` generates the design matrix for each real parameter. Design data are usually constructed internally in `openCR.fit` from named covariates and other predictors that appear in model formulae; if 'dframe' is provided then the internally constructed design data are added as extra columns, overwriting any custom columns of the same name. The same design dataframe is used for all parameters.
 
@@ -354,7 +378,7 @@ AIC(fitb, fitbc)
 
 Our custom model gives exactly the same result as the canned predictor 'bsession' when type = 'CJS' because the precise secondary session of first capture is irrelevant for CJS models (recaptures are modelled only for subsequent primary sessions).
 
-### Transience
+## Transience
 
 An ad hoc adjustment for transience may be programmed as follows (cf Pradel et al. 1997).
 
@@ -412,7 +436,7 @@ addresidentcov2 <- function (ch, d = 1) {
 }
 ```
 
-### Factor coding
+## Factor coding
 
 Factor predictors take a number of discrete values (levels). These are usually represented by columns of 0's and 1's in the design matrix, where the number of columns (and coefficients) relates to the number of levels. The default in R is to use 'treatment contrasts'; one coefficient describes a reference class (level) and other coefficients represent the effect size (difference from the reference class on the link scale). By default the first level is used as the reference: for time effects (t, session) the first primary session is the reference level[^footnote9].
 
@@ -428,7 +452,7 @@ coef(fitd)
 
 [^footnote9]: This does not apply for times when a parameter can never be estimated -- for example, **openCR** understands that seniority (gamma) is not estimated for the first session and uses the second session for the reference level. 
 
-### Mean of a parameter across levels of a factor
+## Mean of a parameter across levels of a factor
 
 Suppose you wish to estimate the average of a parameter across levels of a factor such as time (session). Cooch and White (2017 Section 6.15) advocate modifying the design matrix so that one beta parameter (coefficient) relates directly to the mean. This is achieved very simply in `openCR.fit`[^footnote10] by setting the contrast function for the factor to `contr.sum` in the `details` argument[^footnote11]. With the resulting factor coding the first coefficient corresponds to the mean. Applying this to estimate the average time-specific survival rate for the dippers assuming constant recapture probability:
 ```{r contrsum, eval = TRUE, cache = mycache}
@@ -581,15 +605,15 @@ Spatial models are slow to fit. Consider these options
 
 * Use no more mask points than necessary. Typically about 1000 will do (may not apply for kernel movement models).
 * Data with many occasions (secondary sessions) should be collapsed.
-* Use `par.openCR.fit` (ncores > 1) to fit several models at once. This can save a lot of time.
-* Don't assume that ncores > 1 will speed up `openCR.fit` itself: it may run slower than with ncores = 1 because of overheads in cluster setup and communication.
+* If you are interested in several models, fit them all at once with `par.openCR.fit` and ncores > 1. This can save a lot of time.
+* Don't assume that increasing the number of cores will necessarily speed up computations; additional cores impose overheads in cluster setup and communication.
 * Use the conditional likelihood (CL) models: estimates of phi and lambda are often all you need, and `derive` can give estimates of abundance (superN, N, superD, and D) from CL models, as well as alternative measures of recruitment.
 * Avoid individual covariates with many levels. This applies especially to continuous individual covariates: normally these should be discretized (coded as a few ordered categories, but *not* converted to factor).
 * First fit the most simple model and add complexity, using a simpler related model for 'start'.
 * 'secr' data with detector type 'multi' fit much faster than 'proximity' data; use this option if it makes sense (and even maybe when it doesn't).
 * For problems with many parameters, 'cyclic fixing' may be useful (Schwarz and Arnason 1996; Pledger et al. 2003).
 
-MARK is faster than **openCR** 1.0 for nonspatial models because it uses multiple threads. Multithreaded C++ code may be used in future versions of**openCR**.
+**openCR** 1.2 is generally faster than **openCR** 1.1 because it automatically uses multiple threads to run some calculations in parallel. The speed difference can be impressive - around 4x. Multithreading uses [RcppParallel](https://rcppcore.github.io/RcppParallel/). A couple of tuning parameters are available. The number of threads is set with ncores argument in `openCR.fit`. By default, **openCR** uses one less than the number of (virtual) cores available (i.e. 7 on a quad-core desktop with hyperthreading). The `grain size' (see [RcppParallel](https://rcppcore.github.io/RcppParallel/) may be varied with details$grain, but seems to have little effect. 
 
 # Extras
 
@@ -618,13 +642,27 @@ Table 7. Multi-session data objects in **secr**.
 | OVpossumCH | Yes  | Yes | Brushtail possum *Trichosurus vulpecula* New Zealand | M. Efford unpubl. |
 | ovenCHp | Yes  | Yes | Ovenbird *Seiurus aurocapilla* USA | D. Dawson and M. Efford unpubl. |
 
+## Testing assumptions
+
+This is generally an undeveloped field for spatially explicit capture--recapture models. Demonstrating that assumptions were not satisfied may also be of no consequence: we would usually ignore such a finding if the estimator is reasonably robust. 
+
+For Cormack-Jolly-Seber (nonspatial) models there is an established suite of tests following Burnham et al. (1987). The tests have been implemented in the U-CARE software of Choquet et al. (2009), recently translated into R by Gimenez et al (2017) as package **R2ucare**. Program RELEASE (Burnham et al. 1987) also implements the core CJS tests and is available through MARK.
+
+The **openCR** function `ucare.cjs` is a wrapper for relevant functions in **R2ucare**. We briefly demonstrate it here for the dipper data of Marzolin (1988).
+
+```{r ucare}
+ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
+```
+
+This invocation of `ucare.cjs` calls the **R2ucare** functions `test3sr`, `test3sm`, `test2ct`, `test2cl` and `overall_CJS` for each sex and provides a condensed report. For interpretation see the original papers, the **R2ucare** [vignette](https://cran.r-project.org/package=R2ucare/vignettes/vignette_R2ucare.html), and Chapter 5 of the MARK book (Cooch and White 2017).
+
 ## Limitations of **openCR** {#limitations}
 
 **openCR** does not do
 
 1. Continuous random effects (consider finite mixtures as an alternative)
 2. Parameter counting to adjust AIC
-3. Overdispersion adjustment (chat, QAIC) or GOF tests
+3. Overdispersion adjustment (chat, QAIC) or goodness-of-fit tests, except for `ucare.cjs` (above).
 4. MCMC
 5. Bootstrap confidence intervals
 6. Temporary emigration parameterizations of non-spatial robust-design models
@@ -650,7 +688,7 @@ In **secr** the argument `CL` is used in `secr.fit` to switch between full- and 
 
 The predictor 't' is used in **secr** models to indicate a factor with one level for each *secondary* session. In **openCR** it is a synonym for 'session', i.e. a factor with one level for each *primary* session. This is consistent with the use of 't' in Lebreton et al. (1992) and makes for more compact model specification. In the unlikely event that you want to code a model with one level for each secondary session in **openCR**, use the 'timecov' argument.
 
-Parts of **openCR** are coded in C++, via the R package **Rcpp**, whereas **secr** uses C. This leaves a future pathway for the use of multiple threads. **openCR** also duplicates some C++ functions in native R code, which is useful for debugging. Select the R version by setting `details = list(R = TRUE)` in `openCR.fit`. This currently works for most models except those with detector type 'multi'.
+Parts of **openCR** are coded in C++, via the R package **Rcpp**, whereas **secr** uses C. The **Rcpp** interface requires less copying of data, and enables the use of multiple threads via **RcppParallel**. **openCR** also duplicates some C++ functions in native R code, which is useful for debugging. Select the R version by setting `details = list(R = TRUE)` in `openCR.fit`. This currently works for most models except those with detector type 'multi'.
 
 These features of **secr** are not available in **openCR**
 
@@ -663,6 +701,7 @@ These features of **secr** are not available in **openCR**
 7. Non-point detectors (polygon, polygonX etc. in **secr**)
 8. 'collate' function (`make.table` may do the job)
 9. Variable effort for *nonspatial* models (cf Efford, Borchers and Mowat 2013) (The 'usage' attribute of traps objects is applied in spatial **openCR** models).
+10. Negative binomial counts (binomN<0)
 
 ## Relationship to other software
 
@@ -689,8 +728,12 @@ Borchers, D. L. and Efford, M. G. (2008) Spatially explicit maximum
 likelihood methods for capture--recapture studies. *Biometrics*
 **64**, 377--385.
 
+Burnham, K. P., Anderson, D. R., White, G. C., Brownie, C. and Pollock, K. H. (1987) *Design and Analysis Methods for Fish Survival Experiments Based on Release-Recapture.* American Fisheries Society Monograph 5. Bethesda, Maryland, USA.
+
 Chandler, R. B. and Clark, J. D. (2014) Spatially explicit integrated population models. 
 *Methods in Ecology and Evolution* **5**, 1351--1360.
+
+Choquet, R., Lebreton, J.-D., Gimenez, O., Reboulet, A.-M. and Pradel, R. (2009) U-CARE: Utilities for performing goodness of fit tests and manipulating CApture-REcapture data. *Ecography* **32**, 1071--1074.
 
 Cooch, E. and White, G. (eds) (2017) *Program MARK: A Gentle
 Introduction*. 17th edition. Available online at
@@ -702,9 +745,9 @@ Crosbie, S. F. and Manly, B. F. J. (1985) Parsimonious modelling of capture--mar
 Efford, M. G. (2004) Density estimation in live-trapping
 studies. *Oikos* **106**, 598--610.
 
-Efford, M. G. (2018). secr: Spatially explicit capture-recapture models. R package version
+Efford, M. G. (2018). secr: Spatially explicit capture--recapture models. R package version
   3.1.5. https://CRAN.R-project.org/package=secr
-
+  
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:
   likelihood-based methods. In: D. L. Thomson, E. G. Cooch,
@@ -722,6 +765,8 @@ Ergon, T. and Gardner, B. (2014) Separating mortality and emigration: modelling 
 use, dispersal and survival with robust-design spatial capture--recapture data. 
 *Methods in Ecology and Evolution* **5**, 1327--1336.
 
+Fletcher, D. J. (2012) Estimating overdispersion when fitting a generalized linear model to sparse data. *Biometrika* **99**, 230--237.
+
 Gardner, B. J., Reppucci, J., Lucherini, M. and Royle, J. A. (2010) Spatially-explicit 
 inference for open populations: estimating demographic parameters from camera-trap studies. 
 *Ecology* **91**, 3376--3383.
@@ -730,6 +775,13 @@ Gimenez, O., Viallefont, A., Catchpole, E. A., Choquet, R. and Morgan,
   B. J. T. (2004) Methods for investigating parameter
   redundancy. *Animal Biodiversity and Conservation* **27**,
   561--572.
+
+Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2017) R2ucare: Goodness-of-Fit Tests
+  for Capture-Recapture Models. R package version 1.0.0. https://CRAN.R-project.org/package=R2ucare
+
+Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2018) R2ucare: An R package to perform 
+goodness-of-fit tests for capture--recapture models. *Methods in Ecology and Evolution* in press doi:
+10.1111/2041-210X.13014.
 
 Hines, J. E., Kendall, W. L. and Nichols, J. D. (2003) On the use of the robust design with transient capture--recapture models. *The Auk* **120**, 1151--1158.
 
@@ -891,7 +943,7 @@ If animals do not move between primary sessions we have
 \prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr}
 (\omega_{i,j} | \omega_{i\cdot} > 0, \vec x_b) \,.\, f(\vec x_b | \omega_{i\cdot} > 0) \; d \vec x_b \right] \nonumber \\
 &= \sum_{b=1}^J \sum_{d=b}^J \left[ \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d)
-\, a ^ {d-b-1} \prod_{j=b}^{j=d} \int_{\mathbb R^2} \mbox{Pr} (\omega_{i,j} | \vec x_b) \, d \vec x_b \right]. \nonumber
+\, a ^ {-1} \prod_{j=b}^{j=d} \int_{\mathbb R^2} \mbox{Pr} (\omega_{i,j} | \vec x_b) \, d \vec x_b \right]. \nonumber
 \end{align}
 
 The expression $f(\vec x_b$\|$\omega_{i \cdot} >0 )$ concerns the spatial distribution of detected members of the superpopulation,[^footnote18] and $p_\cdot(\vec x_b)$ refers to the overall probability of detecting a member of the superpopulation with initial location $\vec x_b$. $a = \int_{\mathbb{R}^2} p_\cdot(\vec x_b) \, d \vec x_b$.
@@ -907,7 +959,7 @@ If animals are allowed to move between primary sessions then we must consider th
 \prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr}
 (\omega_{i,j} | \omega_{i\cdot} > 0, \vec x_j) \,.\, f(\vec x_b | \omega_{i\cdot} > 0) \,.\, f(\vec x_j |  \omega_{i,j-1}, \vec x_b) \; d \vec x_j \right] \nonumber \\
 &= \sum_{b=1}^J \sum_{d=b}^J \left[ \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d)
-\, a ^ {d-b-1} \prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr} (\omega_{i,j} | \vec x_j) \,.\, f(\vec x_j |  \vec x_{j-1}, \omega_{i,j-1}) \; d \vec x_j \right].
+\, a ^ {-1} \prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr} (\omega_{i,j} | \vec x_j) \,.\, f(\vec x_j |  \vec x_{j-1}, \omega_{i,j-1}) \; d \vec x_j \right].
 \end{align}
 
 $p_\cdot(\vec x_b)$ and $a = \int_{\mathbb{R}^2} p_\cdot(\vec x_b) \, d \vec x_b$ are defined in relation to the superpopulation as before, but their calculation must allow for possible movement between primary sessions.
@@ -919,9 +971,9 @@ For the correlated model, $f(\vec x_b$\|$\vec x_{b-1}, \omega_{i,b-1})$ is defin
 
 | Centres | $\mbox {Pr} (\omega_{i}$ \| $\omega_{i\cdot}>0)$ |
 |----------|----------------------------------------|
-| Static | $a^{d-b+1} \int_{\mathbb{R}^2}  \prod _{j=b}^{j=d} p(\omega_{i,j}$\|$\vec x)\; d\vec x$ |
-| Uncorrelated |  $a^{d-b+1}  \prod _{j=b}^{j=d} \int_A  p(\omega_{i,j}$\|$\vec x) \; d\vec x$ |
-| Correlated | $a^{d-b+1} \prod_{j=b}^{j=d} \int_{\mathbb{R}^2} p(\omega_{i,j}$\|$\vec x_{i,j}) f(\vec x_{i,j}$\|$\vec x_{i,j-1}, \omega_{i,j-1}) \; d \vec x_{i,j}$ |
+| Static | $a^{-1} \int_{\mathbb{R}^2}  \prod _{j=b}^{j=d} p(\omega_{i,j}$\|$\vec x)\; d\vec x$ |
+| Uncorrelated |  $a^{-1}  \prod _{j=b}^{j=d} \int_A  p(\omega_{i,j}$\|$\vec x) \; d\vec x$ |
+| Correlated | $a^{-1} \prod_{j=b}^{j=d} \int_{\mathbb{R}^2} p(\omega_{i,j}$\|$\vec x_{i,j}) f(\vec x_{i,j}$\|$\vec x_{i,j-1}, \omega_{i,j-1}) \; d \vec x_{i,j}$ |
 
 ### Updating of $\vec x_j$
 
@@ -977,5 +1029,8 @@ In the development above, integrations have been across the plane ($\mathbb R^2$
 <!-- $$ -->
 <!-- where $\vec \omega_{is\cdot}$ is the set of observations of individual $i$ on occasion $s$ (binary detection/nondetection or number of detections at each detector $k = 1...K$). -->
 
+
+[secr-manual.pdf]: https://www.otago.ac.nz/density/pdfs/secr-manual.pdf
 [secr-overview.pdf]: https://www.otago.ac.nz/density/pdfs/secr-overview.pdf
 [secr-datainput.pdf]: https://www.otago.ac.nz/density/pdfs/secr-datainput.pdf
+

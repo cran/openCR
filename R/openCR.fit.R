@@ -16,16 +16,16 @@
 ## 2018-01-20 remember compileAttributes('d:/open populations/openCR')
 ## 2018-01-25 single coerved to multi
 ## 2018-02-02 detectfn HHR etc.
-## 2018-03-24 blocked movement kernel until fixed
+## 2018-05-01 intermediate variable allbetanames to fix problem with fixedbeta
 ################################################################################
 
 openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
                         distribution = c("poisson", "binomial"),
-                        mask = NULL, detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP'), 
+                        mask = NULL, detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP'),
                         binomN = 0, movementmodel = c('static','uncorrelated','normal','exponential'),
                         start = NULL, link = list(), fixed = list(),
                         timecov = NULL, sessioncov = NULL, dframe = NULL, details = list(),
-                        method = 'Newton-Raphson', trace = NULL, ncores = 1, ...)
+                        method = 'Newton-Raphson', trace = NULL, ncores = NULL, ...)
 
 {
     # Fit open population capture recapture model
@@ -35,7 +35,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     #  capthist   -  capture history object (includes traps object as an attribute)
     #  model      -  formulae for real parameters in terms of effects and covariates
     #  start      -  start values for maximization (numeric vector link scale);
-    #  link       -  list of parameter-specific link function names 'log', 'logit', 'loglog', 
+    #  link       -  list of parameter-specific link function names 'log', 'logit', 'loglog',
     #                'identity', 'sin', 'neglog', 'mlogit'
     #  fixed      -  list of fixed values for named parameters
     #  sessioncov -  dataframe of session-level covariates
@@ -46,17 +46,17 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     #  method     -  optimization method (indirectly chooses
     #  trace      -  logical; if TRUE output each likelihood as it is calculated
     #  ...        -  other arguments passed to join()
-    
+
     #########################################################################
     ## Use input 'details' to override various defaults
     defaultdetails <- list(hessian = 'auto', trace = FALSE, LLonly = FALSE,
                            kernelradius = 10,
                            kerneltype = 0, debug = 0, multinom = FALSE,
-                           contrasts = NULL, control = list(), 
-                           initialage = 0, maximumage = 1, 
-                           autoini = 1, CJSp1 = FALSE, R = FALSE, 
-                           squeeze = TRUE)
-    
+                           contrasts = NULL, control = list(),
+                           initialage = 0, maximumage = 1,
+                           autoini = 1, ignoreusage = FALSE, CJSp1 = FALSE, R = FALSE, 
+                           squeeze = TRUE, grain = 1)
+
     if (is.logical(details$hessian))
         details$hessian <- ifelse(details$hessian, 'auto', 'none')
     details <- replace (defaultdetails, names(details), details)
@@ -75,13 +75,35 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         usermodel <- ""
         movementmodel <- match.arg(movementmodel)
     }
-    movemodel <- switch (movementmodel, static = 0, uncorrelated = 1, normal = 2, exponential = 3, user = 4) 
+    movemodel <- switch (movementmodel, static = 0, uncorrelated = 1, normal = 2, exponential = 3, user = 4)
 
+    ##############################################
+    # Multithread option 2018-04-11
+    ##############################################
+    # if (ncores > 1) {
+    #     memo ('Preparing cluster', details$trace)
+    #     cluster <- makeCluster(ncores)
+    #     # making this explicit speeds execution 2017-05-22
+    #     clusterEvalQ(cluster, library(openCR))
+    # }
+    # else cluster <- NULL
+    defaultThreads <- defaultNumThreads()   ## RcppParallel::
+    if (is.null(ncores)) { 
+        ncores <- max(1, defaultThreads-1)
+    }
+    else {
+        if (ncores > defaultThreads) 
+            warning("number of cores exceeds number available")
+        if (ncores<1)
+            stop ("ncores < 1")
+    }
+    setThreadOptions(ncores) ## RcppParallel::
+    
     if (is.character(detectfn)) {
         detectfn <- match.arg(detectfn)
         detectfn <- secr:::detectionfunctionnumber(detectfn)
     }
-    
+
     if (is.character(dframe)) {
         dframename <- dframe; rm(dframe)
         dframe <- get(dframename, pos=-1)
@@ -96,7 +118,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
 
     if (type %in% .openCRstuff$suspendedtypes)
         stop (type, " not currently available")
-    
+
     secr <- grepl('secr', type)
     if (secr) {
         if (is.null(mask))
@@ -118,7 +140,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     ptm  <- proc.time()
     starttime <- format(Sys.time(), "%H:%M:%S %d %b %Y")
     cl   <- match.call(expand.dots = TRUE)
-
+    if (type %in% c("secrCL","secrD"))
+        intervals(capthist) <- rep(0, ncol(capthist)-1)
     intervals <- intervals(capthist)
     intervals <- intervals[intervals>0]          ## primary intervals only
     sessnames <- sessionlabels(capthist)
@@ -128,10 +151,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     nc <- nrow(capthist)
     if (nc == 0) warning ("no detection histories")
     J <- length(cumss)-1                         ## number of primary sessions
-    if (J==1) stop ("open population methods require multiple sessions; check 'intervals' attribute")
     primarysession <- primarysessions(intervals(capthist)) # rep(1:J, diff(cumss))      ## map secondary to primary
     k <- nrow(traps(capthist))                   ## number of detectors (secr only)
-
     m <- if (is.null(mask)) 0 else nrow(mask)
     marea <- if (is.null(mask)) NA else maskarea(mask)
 
@@ -153,13 +174,13 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                       JSSAf = c('p', 'phi','f','superN'),                       # 4
                       JSSAg = c('p', 'phi','gamma','superN'),                   # 22
                       JSSAk = c('p', 'phi','kappa','superN'),                   # 28
-                      
+
                       JSSAfCL = c('p', 'phi','f'),                              # 15
                       JSSAlCL = c('p', 'phi','lambda'),                         # 16
                       JSSAbCL = c('p', 'phi','b'),                              # 17
                       JSSAgCL = c('p', 'phi','gamma'),                          # 23
                       JSSAkCL = c('p', 'phi','kappa'),                          # 29
-                      
+
                       JSSAB = c('p', 'phi','BN'),                               # 18
                       JSSAN = c('p', 'phi','N'),                                # 19
                       Pradel = c('p', 'phi','lambda'),                          # 20
@@ -167,7 +188,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                       JSSARET = c('p', 'phi','b','superN','tau'),               # 21
 
                       JSSAfgCL = c('p', 'phi','f','g'),                           # 27    # experimental temporary emigration
-                      
+
                       CJSsecr = c('lambda0', 'phi','sigma'),                      # 6
                       JSSAsecrfCL = c('lambda0', 'phi','f','sigma'),              # 9
                       JSSAsecrlCL = c('lambda0', 'phi','lambda','sigma'),         # 10
@@ -179,6 +200,9 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                       JSSAsecrg = c('lambda0', 'phi','gamma','superD','sigma'),   # 24
                       JSSAsecrB = c('lambda0', 'phi','BD','sigma'),               # 14
                       JSSAsecrD = c('lambda0', 'phi','D','sigma'),                # 8
+                      secrCL = c('lambda0', 'phi', 'b','sigma'),                # 30
+                      secrD = c('lambda0', 'phi', 'b', 'superD', 'sigma'),      # 31
+                      
                       "unrecognised type")
 
     moveargsi <- c(-2,-2)
@@ -199,13 +223,18 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                 }
             }
         }
+        if (type %in% c("secrCL","secrD")) {
+            ## closed population
+            ## fix survival and recruitment
+            fixed <- replace(list(phi = 1.0, b = 1.0), names(fixed), fixed)
+        }
     }
-    
+
     if (any(pnames == 'unrecognised type'))
         stop ("'type' not recognised")
     if (detectfn %in% c(15,17:19)) pnames <- c(pnames, 'z')
     ########################################
-    
+
     # Finite mixtures
     ########################################
     nmix <- secr:::get.nmix(model, capthist, NULL)
@@ -251,14 +280,12 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                              maximumage = details$maximumage)
     allvars <- unlist(lapply(model, all.vars))
     learnedresponse <- any(c("b", "B", "bsession") %in% allvars)
-
     mixturemodel <- "h2" %in% allvars | "h3" %in% allvars
     multi <- detector(traps(capthist))[1] %in% "multi"
-    individual <- any(allvars %in% names(covariates(capthist)))
     design0 <- if (learnedresponse)
         openCR.design (capthist, model, type,
-                       timecov = timecov, 
-                       sessioncov = sessioncov, 
+                       timecov = timecov,
+                       sessioncov = sessioncov,
                        dframe = dframe,
                        naive = TRUE,
                        contrasts = details$contrasts,
@@ -278,9 +305,9 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     ##########################
     # Movement kernel
     ##########################
-    
+
     cellsize <- mqarray <- 0
-    kernel <- data.frame(rownames = NULL)
+    kernel <- mqarray <- matrix(0,1,2)  ## default
     if (secr & (movementmodel %in% c('normal','exponential','user'))) {
         ## movement kernel
         k2 <- details$kernelradius
@@ -289,33 +316,35 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         kernel <- kernel[(kernel$x^2 + kernel$y^2) <= (k2+0.5)^2, ]
         mqarray <- mqsetup (mask, kernel, cellsize)
     }
-    
+
     ###########################################
     # Choose likelihood function (see loglik.R)
     ###########################################
-    
-    if (secr) 
+
+    if (secr)
         loglikefn <- open.secr.loglikfn
-    else 
+    else
         loglikefn <- open.loglikfn
-    
+
     ##########################
     # Variable names (general)
     ##########################
-    
-    betanames <- unlist(sapply(design$designMatrices, colnames))
-    names(betanames) <- NULL
+
+    allbetanames <- unlist(sapply(design$designMatrices, colnames))
+    names(allbetanames) <- NULL
     realnames <- names(model)
-    betanames <- sub('..(Intercept))','',betanames)
-    ## allow for fixed beta parameters 2009 10 19
+    allbetanames <- sub('..(Intercept))','',allbetanames)
+    ## allow for fixed beta parameters 
     if (!is.null(details$fixedbeta))
-        betanames <- betanames[is.na(details$fixedbeta)]
+        betanames <- allbetanames[is.na(details$fixedbeta)]
+    else
+        betanames <- allbetanames
     betaw <- max(c(nchar(betanames),8))  # for 'trace' formatting
-    
+
     ###################################################
     # Option to generate start values from previous fit
     ###################################################
-    
+
     if (inherits(start, 'secr') | inherits(start, 'openCR')) {
         start <- mapbeta(start$parindx, parindx, coef(start)$beta, NULL)
     }
@@ -328,12 +357,12 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     }
     else if (is.numeric(start) & !is.null(names(start))) {
         ## optionally reorder and subset beta values by name
-        OK <- betanames %in% names(start)
+        OK <- allbetanames %in% names(start)
         if (!all(OK))
-            stop ("beta names not in start : ", paste(betanames[!OK]))
-        start <- start[betanames]
+            stop ("beta names not in start : ", paste(allbetanames[!OK], collapse=', '))
+        start <- start[allbetanames]
     }
-    
+
     ###############################
     # Start values (model-specific)
     ###############################
@@ -370,7 +399,6 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
             move.b = 1,
             pmix = 0.25
         )
-
         getdefault <- function (par) transform (default[[par]], link[[par]])
         defaultstart <- rep(0, NP)
         for ( i in 1:length(parindx) )
@@ -382,7 +410,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         if('b' %in% names(parindx))
             ## scaled by mlogit.untransform
             defaultstart[parindx[['b']]] <- 1/J
-   
+
         # if('tau' %in% names(parindx))
         #     ## scaled by mlogit.untransform
         #     defaultstart[parindx[['tau']]] <- 1/(details$M+1)
@@ -422,15 +450,17 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
             stop ("cannot fix all beta parameters")
         start <- start[is.na(fb)]  ## drop unwanted betas; remember later to adjust parameter count
     }
-    
+
     #########################
     # capthist statistics
     #########################
-    
     lost <- which(apply(capthist,1,min, drop = FALSE)<0)
     twoD <- apply(abs(capthist), 1:2, sum, drop = FALSE)
     CH <- twoD
-    twoD <- t(apply(twoD, 1, function(x) tapply(x,primarysession,max)))  # in terms of primary sessions
+    if (J==1)
+        twoD <- as.matrix(apply(twoD, 1, function(x) tapply(x,primarysession,max)))
+    else
+        twoD <- t(apply(twoD, 1, function(x) tapply(x,primarysession,max)))  # in terms of primary sessions
     fi <- apply(twoD, 1, function(x) min(which(x>0)))
     li <- apply(twoD, 1, function(x) max(which(x>0)))
     twoD[cbind(lost, li[lost])] <- -1
@@ -438,10 +468,10 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     covariates(CH) <- covariates(capthist)
     covariates(twoD) <- covariates(capthist)
     JScounts <- unlist(JS.counts(twoD))
-
     if (secr) {
         usge <- usage(traps(capthist))
-        if (is.null(usge)) usge <- matrix(1, nrow=k, ncol= cumss[J+1])  # in terms of secondary sessions
+        if (is.null(usge) | details$ignoreusage) 
+            usge <- matrix(1, nrow=k, ncol= cumss[J+1])  # in terms of secondary sessions
         ## 2017-11-26 collapse data from exclusive detectors; modified 2018-01-17
         CH <- capthist
         if (multi) {
@@ -466,6 +496,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     assign("link",     link,     pos = data)
     assign("fixed",    fixed,    pos = data)
     assign("details",  details,  pos = data)
+    assign("ncores",   ncores,   pos = data)
     assign("design",   design,   pos = data)
     assign("design0",  design0,  pos = data)
     assign("parindx",  parindx,  pos = data)
@@ -491,17 +522,6 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     assign("mixturemodel",    mixturemodel,  pos = data)
     # assign("PIA0njx",  PIA0njx,  pos = data)
 
-    ##############################################
-    # Multicore option 2017-05-16,17
-    ##############################################
-    if (ncores > 1) {
-        memo ('Preparing cluster', details$trace)
-        cluster <- makeCluster(ncores)
-        # making this explicit speeds execution 2017-05-22
-        clusterEvalQ(cluster, library(openCR))
-    }
-    else cluster <- NULL
-
     #############################
     # Single evaluation option
     #############################
@@ -512,27 +532,28 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         args <- list(beta = start,
                      oneeval = TRUE,
                      data = data)
-        LL <- - do.call(loglikefn, args)
+        LL <- do.call(loglikefn, args)
         names(LL) <- c('logLik', betanames)
+        attr(LL, 'parindx') <- parindx
         return(LL)
     }
 
     #####################
     # Maximize likelihood
     #####################
-    
+
     ## modified 2017-05-16 to assume most data are in the environment, not needing to be passed
     memo('Maximizing likelihood...', details$trace)
     if (details$trace) cat('Eval       Loglik', str_pad(betanames, width = betaw), '\n', sep = " ")
-    
+
     if (tolower(method) %in% c('newton-raphson', 'nr')) {
         args <- list (p        = start,
                       f        = loglikefn,
                       data     = data,   # environment(),
                       betaw    = betaw,
                       hessian  = tolower(details$hessian)=='auto',
-                      stepmax  = 10,
-                      cluster  = cluster)
+                      stepmax  = 10)
+                      ## cluster  = cluster)
         this.fit <- do.call (nlm, args)
         this.fit$par <- this.fit$estimate     # copy for uniformity
         this.fit$value <- this.fit$minimum    # copy for uniformity
@@ -541,10 +562,11 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                      this.fit$code, ". See ?nlm")
     }
     else if (tolower(method) %in% c('none')) {
-        # Hessian-only 
+        # Hessian-only
         memo ('Computing Hessian with fdHess in nlme', details$trace)
         loglikfn <- function (beta) {
-            args <- list(beta = beta, data = data, cluster = cluster)
+            ## args <- list(beta = beta, data = data, cluster = cluster)
+            args <- list(beta = beta, data = data)
             do.call(loglikefn, args)
         }
         grad.Hess <- nlme::fdHess(start, fun = loglikfn, .relStep = 0.001, minAbsPar=0.1)
@@ -553,14 +575,14 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                           hessian = grad.Hess$Hessian)
     }
     else {
-        
+
         args <- list(par     = start,
                      fn      = loglikefn,
                      data    = data,
                      hessian = tolower(details$hessian)=='auto',
                      control = details$control,
-                     method  = method,
-                     cluster = cluster)
+                     method  = method)
+                     # cluster = cluster)
 
         this.fit <- do.call (optim, args)
         # default method = 'BFGS', control=list(parscale=c(1,0.1,5))
@@ -587,8 +609,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
             loglikfn <- function (beta) {
                 args <- list (beta    = beta,
                               parindx    = parindx,
-                              env     = data, # environment(),
-                              cluster = cluster)
+                              env     = data) # environment(),
+                              ## cluster = cluster)
                 -do.call(loglikefn, args)
             }
             grad.Hess <- nlme::fdHess(this.fit$par, fun = loglikfn, .relStep = 0.001, minAbsPar=0.1)
@@ -596,10 +618,12 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         }
 
         hess <- this.fit$hessian
-        eigH <- eigen(this.fit$hessian)$values
-        eigH <- eigH/max(eigH)
-
+        eigH <- NA
+        NP <- length(betanames)
+        covar <- matrix(nrow = NP, ncol = NP)
         if (!is.null(hess)) {
+            eigH <- eigen(this.fit$hessian)$values
+            eigH <- eigH/max(eigH)
             covar <- try(MASS::ginv(hess))
             if (inherits(covar, "try-error")) {
                 warning ("could not invert Hessian to compute ",
@@ -618,7 +642,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         posterior <- posterior.allocation (this.fit$estimate, data)
     else
         posterior <- NULL
-    
+
     desc <- packageDescription("openCR")  ## for version number
     temp <- list (call = cl,
                   capthist = inputcapthist,
@@ -661,7 +685,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     attr (temp, 'class') <- 'openCR'
 
     ###############################################
-    if (!is.null(cluster)) stopCluster(cluster)
+    ## if (!is.null(cluster)) stopCluster(cluster)
     ###############################################
 
     memo(paste('Completed in ', round(temp$proctime,2), ' seconds at ',

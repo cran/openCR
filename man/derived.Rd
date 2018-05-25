@@ -21,8 +21,10 @@ superpopulation size and the turnover parameters.
 
 \usage{
 
-\method{derived}{openCR}(object, Dscale = 1, HTbysession = FALSE, ...)
-\method{derived}{openCRlist}(object, Dscale = 1, HTbysession = FALSE, ...)
+\method{derived}{openCR}(object, newdata = NULL, all.levels = FALSE, Dscale = 1, 
+    HTbysession = FALSE, ...)
+\method{derived}{openCRlist}(object, newdata = NULL, all.levels = FALSE, Dscale = 1, 
+    HTbysession = FALSE, ...)
 openCR.esa(object, bysession = FALSE)
 openCR.pdot(object, bysession = FALSE)
 
@@ -30,6 +32,8 @@ openCR.pdot(object, bysession = FALSE)
 
 \arguments{
   \item{object}{fitted openCR model}
+  \item{newdata}{optional dataframe of values at which to evaluate model}
+  \item{all.levels}{logical; passed to \code{\link{openCR.make.newdata}} if newdata not specified}
   \item{Dscale}{numeric to scale density}
   \item{HTbysession}{logical; Horvitz-Thompson estimates by session (see Details)}
   \item{...}{other arguments (not used)}
@@ -51,13 +55,15 @@ The code does not yet allow user-specified newdata.
 
 \value{
 
-  \code{derived} returns an object of class c(``derivedopenCR",``list"), list with components 
+  \code{derived} returns an object of class c(``derivedopenCR",``list"), list with these components:
   \item{totalobserved}{number of different individuals detected}
   \item{parameters}{character vector; names of parameters in model (excludes derived parameters)}
   \item{superN }{superpopulation size (non-spatial models only)}
   \item{superD}{superpopulation density (spatial models only)}
   \item{estimates}{data frame of counts and estimates}
   \item{Dscale}{numeric multiplier for printing densities}
+
+If \code{newdata} has multiple levels then the value is a list of such objects, one for each level.
 
   \code{openCR.pdot} returns a vector of experiment-wide detection
   probabilities under the fitted model (one for each detected animal).

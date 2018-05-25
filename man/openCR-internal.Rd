@@ -5,25 +5,32 @@
 \alias{PCH1}
 \alias{PCH1secr}
 \alias{pradelloglik}
+\alias{cyclic.fit}
 
 \title{Internal Functions}
 
-\description{ Functions called by \code{openCR.fit} when \code{details$R == TRUE}}
+\description{ 
+
+Functions called by \code{openCR.fit} when \code{details$R == TRUE}, and some others 
+
+}
 
 \usage{
 
-prwi(type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJSp1)
+prwi (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJSp1)
 
-prwisecr(type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
+prwisecr (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
     PIA, PIAJ, binomN, Tsk, intervals, CJSp1, moveargsi, movemodel, usermodel, 
     kernel = NULL, mqarray = NULL, cellsize = NULL)
 
-PCH1(type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
+PCH1 (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
 
-PCH1secr(type, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, gk0, binomN, Tsk, 
-    intervals,  moveargsi, movemodel, usermodel, kernel, mqarray, cellsize) 
+PCH1secr (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, gk0,
+    binomN, Tsk, intervals,  moveargsi, movemodel, usermodel, kernel, mqarray, cellsize) 
 
 pradelloglik (type, w, openval, PIAJ, intervals)
+
+cyclic.fit (..., maxcycle = 10, tol = 1e-5, trace = FALSE) 
 
 }
 
@@ -55,6 +62,7 @@ pradelloglik (type, w, openval, PIAJ, intervals)
 
   \item{openval0}{openval for naive animals}
   \item{PIA0}{PIA for naive animals}
+  \item{individual}{logical; TRUE if model uses individual covariates}
   \item{gk0}{gk for naive animals}
   
   \item{nc}{number of capture histories}
@@ -62,17 +70,29 @@ pradelloglik (type, w, openval, PIAJ, intervals)
   \item{mm}{number of points on habitat mask}
   \item{binomN}{code for distribution of counts (see \code{\link{secr.fit}})}
   
+  \item{\dots}{named arguments passed to \code{\link{openCR.fit}} or \code{predict} (see extractFocal)}
+  \item{maxcycle}{integer maximum number of cycles (maximizations of a given parameter)}
+  \item{tol}{absolute tolerance for improvement in log likelihood}
+  \item{trace}{logical; if TRUE a status message is given at each maximization}
+  
 }
 
 \details{
 
-To be completed
+  \code{cyclic.fit} implements cyclic fixing more or less as described by
+  Schwarz and Arnason (1996) and used by Pledger et al. (2010). The
+  intention is to speed up maximization when there are many (beta)
+  parameters. However, fitting is slower than with a single call to
+  \code{\link{openCR.fit}}, and the function is here only as a curiosity
+  (it is not exported in 1.2.0).
 
 }
 
 \value{
 
-Numeric components of likelihood.
+\code{cyclic.fit} returns a fitted model object of class `openCR'.
+
+Other functions return numeric components of the log likelihood.
 
 }
 
@@ -82,3 +102,24 @@ Numeric components of likelihood.
 
 }
 
+\references{
+
+Pledger, S., Pollock, K. H. and Norris, J. L. (2010) Open
+  capture--recapture models with heterogeneity: II. Jolly-Seber
+  model. \emph{Biometrics} \bold{66}, 883--890.
+
+Schwarz, C. J. and Arnason, A. N. (1996) A general methodology for the
+  analysis of capture-recapture experiments in open
+  populations. \emph{Biometrics} \bold{52}, 860--873.
+
+}
+
+\examples{
+
+\dontrun{
+
+openCR:::cyclic.fit(capthist = dipperCH, model = list(p~t, phi~t), tol = 1e-5, trace = TRUE)
+
+}
+
+}

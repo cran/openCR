@@ -11,12 +11,10 @@ predict.openCRlist <- function (object, newdata = NULL, se.fit = TRUE,
 
 predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
                             savenew = FALSE, ...) {
-    
     if (is.null(object$fit)) {
         warning ("empty (NULL) object")
         return(NULL)
     }
-    
     if (is.null(newdata)) newdata <- openCR.make.newdata (object, ...)
     beta <- complete.beta(object)
     beta.vcv <- complete.beta.vcv(object)
@@ -138,14 +136,16 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
             # n1 <- sum(freq[abs(object$capthist[,1] > 0)])
             # predict[[i]][,c('estimate','lcl','ucl')] <- predict[[i]][,c('estimate','lcl','ucl')]+ n1
         }
-        
         sessnames <- object$sessionlabels
         if (!is.null(sessnames) ) {
             if (length(sessnames) == nrow(predict[[i]]))
                 row.names(predict[[i]]) <- sessnames
+            else if (nrow(predict[[i]])==1)
+                row.names(predict[[i]]) <- sessnames[length(sessnames) %/% 2 + 1]
         }
     }
     if (savenew) attr(predict, 'newdata') <- newdata
+    
     predict
 }
 ############################################################################################

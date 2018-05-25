@@ -125,10 +125,12 @@ print.openCR <- function (x, newdata = NULL, alpha = 0.05, svtol = 1e-5, ...) {
 
     if (!is.null(x$fit$hessian)) {
         cat ('\n')
-        cat ("Eigenvalues : ", x$eigH, '\n')
+        cat ("Eigenvalues : ", round(x$eigH, -log10(svtol)), '\n')
         rankH <- length(which(x$eigH > svtol))
-        cat ("Numerical rank of Hessian :", rankH, ' ( svtol =', svtol, ')\n\n')
-        cat ('Variance-covariance matrix of beta parameters', '\n')
+        cat ("Numerical rank of Hessian :", rankH, ' ( svtol =', svtol, ')\n')
+        nreal <- sum(apply(x$design$parameterTable,2,function(x) length(unique(x))))
+        if (rankH < nreal) cat ("Warning: at least one real parameter is not identifiable\n")
+        cat ('\nVariance-covariance matrix of beta parameters', '\n')
         print (x$beta.vcv, ...)
     }
     else
@@ -274,42 +276,42 @@ openCRlist <- function(...) {
 
 ############################################################################################
 
-
-'timevaryingcov<-' <- function (object, value) {
-    if (is.null(value))
-        structure (object, timevaryingcov = NULL)
-    else {
-        if (ms(object)) {
-            if (inherits(object, 'capthist'))
-                stop ("cannot set timevaryingcov on multi-session capthist")
-            temp <- object
-            if (!(is.list(value[[1]]) & (length(value) == length(object))))
-                value <- list(value)
-            for (i in 1:length(object))
-                timevaryingcov(temp[[i]]) <- value[[i]]
-            temp
-        }
-        else {
-            if (!is.list(value) | is.null(names(value)))
-                stop("value should be a list of one or more named vectors")
-            if (!is.null(usage(object))) {
-                ## traps object with usage
-                OK <- sapply(value, function(x) ncol(usage(object)) == length(x))
-                if (any(!OK))
-                    warning ("mismatch between number of occasions in usage and timevaryingcov")
-            }
-            else if (inherits(object, 'capthist')) {
-                ## capthist object
-                nsessions <- length(unique(primarysessions(intervals(object))))
-                OK <- sapply(value, function(x) nsessions == length(x))
-                if (any(!OK))
-                    warning ("mismatch between number of primary sessions in object and timevaryingcov")
-            }
-            
-            if (is.character(value))
-                if (!all(value %in% names(covariates(object))))
-                    warning ("mismatch between character vector and covariate names")
-            structure (object, timevaryingcov = value)
-        }
-    }
-}
+# 2018-05-13 timevaryingcov handled in secr
+# 'timevaryingcov<-' <- function (object, value) {
+#     if (is.null(value))
+#         structure (object, timevaryingcov = NULL)
+#     else {
+#         if (ms(object)) {
+#             if (inherits(object, 'capthist'))
+#                 stop ("cannot set timevaryingcov on multi-session capthist")
+#             temp <- object
+#             if (!(is.list(value[[1]]) & (length(value) == length(object))))
+#                 value <- list(value)
+#             for (i in 1:length(object))
+#                 timevaryingcov(temp[[i]]) <- value[[i]]
+#             temp
+#         }
+#         else {
+#             if (!is.list(value) | is.null(names(value)))
+#                 stop("value should be a list of one or more named vectors")
+#             if (!is.null(usage(object))) {
+#                 ## traps object with usage
+#                 OK <- sapply(value, function(x) ncol(usage(object)) == length(x))
+#                 if (any(!OK))
+#                     warning ("mismatch between number of occasions in usage and timevaryingcov")
+#             }
+#             else if (inherits(object, 'capthist')) {
+#                 ## capthist object
+#                 nsessions <- length(unique(primarysessions(intervals(object))))
+#                 OK <- sapply(value, function(x) nsessions == length(x))
+#                 if (any(!OK))
+#                     warning ("mismatch between number of primary sessions in object and timevaryingcov")
+#             }
+#             
+#             if (is.character(value))
+#                 if (!all(value %in% names(covariates(object))))
+#                     warning ("mismatch between character vector and covariate names")
+#             structure (object, timevaryingcov = value)
+#         }
+#     }
+# }

@@ -1,57 +1,67 @@
-#include <Rcpp.h>
 #include "utils.h"
+#include <Rcpp.h>
+#include <RcppParallel.h>
 
 using namespace Rcpp;
+using namespace RcppParallel;
 
 //==============================================================================
 
+// Pradel model
 // NOT ROBUST DESIGN 
 // assumes all primary sessions comprise one secondary session so S=J 
+
+//==============================================================================
+int sumj (std::vector<int> &uv, int j, int k) {
+    int i;
+    int sum = 0;
+    if (j>k)
+        return (0);
+    else {
+        for (i=j; i<=k; i++)
+            sum += uv[i];      // use 0:(J-1) indices 
+        return(sum);
+    }
+}
+//--------------------------------------------------------------------------
 
 // [[Rcpp::export]]
 NumericVector pradelloglikcpp (
         int    type,        // 20 = Pradel, 26 = Pradelg 
-        const IntegerVector& w,           // counts (1:jj, 1:5) 
+        const IntegerVector w,           // counts (1:jj, 1:5) 
         int    nc,          // number of capture histories 
         int    jj,          // number of sessions 
         int    nmix,        // number of mixtures 
-        const NumericVector& openval,     // Parameter values - turnover 
-        int    cc,          // number of parameter combinations 
-        const IntegerVector& PIAJ,         // lookup which parameter combination to use n, J, mix 
-        const NumericVector& intervals    // vector of jj-1 between-occasion intervals 
+        const NumericMatrix openval,     // Parameter values - turnover 
+        const IntegerVector PIAJ,         // lookup which parameter combination to use n, J, mix 
+        const NumericVector intervals    // vector of jj-1 between-occasion intervals 
 )
     
 { 
+    const RMatrix<double> openvalR(openval); /// Parameter values - turnover 
+    const RVector<int> PIAJR(PIAJ);          // lookup which parameter combination to use n, J, mix 
+    const RVector<double> intervalsR(intervals);    // vector of jj-1 between-occasion intervals 
+
     int    j,k;          // indices &  miscellaneous 
     int    x = 0;
     double prd;
     double BL = 0;
-    double *p = NULL;
-    double *phij = NULL;
-    double *gamj = NULL;
-    double *mu = NULL;
-    double *chi = NULL;
-    double *xi = NULL;
-    int *ni;
-    int *u;
-    int *v;
-    int *d;
     NumericVector value (2, 0.0);   
     
     // int    c, wxi;
     // double pmix[3];             latent class membership probability 
     // int gpar = 3;
-    
-    p    = (double *) R_alloc (jj, sizeof(double));
-    phij = (double *) R_alloc (jj, sizeof(double));
-    gamj = (double *) R_alloc (jj, sizeof(double));
-    mu  = (double *) R_alloc(jj, sizeof (double));
-    chi = (double *) R_alloc(jj, sizeof (double));
-    xi  = (double *) R_alloc(jj, sizeof (double));
-    ni  = (int *)  R_alloc(jj, sizeof (int));
-    u   = (int *)  R_alloc(jj, sizeof (int));
-    v   = (int *)  R_alloc(jj, sizeof (int));
-    d   = (int *)  R_alloc(jj, sizeof (int));
+     
+    std::vector<double> p(jj);
+    std::vector<double> phij(jj);
+    std::vector<double> gamj(jj);
+    std::vector<double> mu(jj);
+    std::vector<double> chi(jj);
+    std::vector<double> xi(jj);
+    std::vector<int> ni(jj);
+    std::vector<int> u(jj);
+    std::vector<int> v(jj);
+    std::vector<int> d(jj);
 
     for (j=0; j< jj; j++) {
         ni[j] = w[j];
@@ -65,29 +75,27 @@ NumericVector pradelloglikcpp (
     //---------------------------------------------------------
     // mixture proportions                                     
     
-    /*
-     gpar = 3;
-     for (i=0; i < nmix; i++) pmix[i] = 1;  default 
-     if (nmix>1) {
-     // one extra real parameter 
-     gpar++;
-     for (x=0; x<nmix; x++) {
-     wxi = i3(0,0,x,1,jj);
-     c = PIAJ[wxi] - 1;
-     pmix[x] = openval[cc * (gpar-1) + c]; 
-     }
-     */
-    
+     // gpar = 3;
+     // for (i=0; i < nmix; i++) pmix[i] = 1;  default 
+     // if (nmix>1) {
+     // // one extra real parameter 
+     // gpar++;
+     // for (x=0; x<nmix; x++) {
+     // wxi = i3(0,0,x,1,jj);
+     // c = PIAJ[wxi] - 1;
+     // pmix[x] = openval(c, gpar-1); 
+     // }
+
     //---------------------------------------------------------
     
     // MIXTURES NOT USED YET 2011-12-15 x defaults to 0 
-    getp   (0, x, nc, jj, openval, cc, PIAJ, p);
-    getphij (0, x, nc, jj, openval, cc, PIAJ, intervals, phij);
+    getp   (0, x, nc, jj, openvalR, PIAJR, p);
+    getphij (0, x, nc, jj, openvalR, PIAJR, intervalsR, phij);
  
     if (type==20)
-	getgaml (0, x, nc, jj, openval, cc, PIAJ, intervals, gamj);
+	getgaml (0, x, nc, jj, openvalR, PIAJR, intervalsR, gamj);
     else
-	getgamj (0, x, nc, jj, openval, cc, PIAJ, intervals, gamj);
+	getgamj (0, x, nc, jj, openvalR, PIAJR, intervalsR, gamj);
     
     chi[jj-1] = 1;
     for (j = jj-2; j>=0; j--) {

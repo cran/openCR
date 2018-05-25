@@ -24,7 +24,7 @@ The format is a multi-session secr capthist object. Attribute `ampm' codes for t
 
 \details{
 
-Ergon and Lambin (2013) provided a robust design dataset from a trapping study on field voles *Microtus agrestis* in a clearcut within Kielder Forest, northern England -- see also Ergon et al. (2011), Ergon and Gardner (2014) and Reich and Gardner (2014). The study aimed to describe sex differences in space-use, survival and dispersal among adult voles. Data were from one trapping grid in summer 2000. 
+Ergon and Lambin (2013) provided a robust design dataset from a trapping study on field voles \emph{Microtus agrestis} in a clearcut within Kielder Forest, northern England -- see also Ergon et al. (2011), Ergon and Gardner (2014) and Reich and Gardner (2014). The study aimed to describe sex differences in space-use, survival and dispersal among adult voles. Data were from one trapping grid in summer 2000. 
 
 Trapping was on a rectangular grid of 192 multi-catch (Ugglan Special) traps at 7-metre spacing. Traps were baited with whole barley grains and carrots; voles were marked with individually numbered ear tags. 
 

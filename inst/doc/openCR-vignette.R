@@ -1,5 +1,5 @@
 ## ----settings, echo = FALSE----------------------------------------------
-mycache <- TRUE
+mycache <- FALSE
 
 ## ----setup, message = FALSE, eval = TRUE, warning = FALSE-------------------------------
 library(openCR)                   # also loads secr
@@ -12,6 +12,23 @@ m.array(dipperCH, never.recap = T)   # compare Lebreton et al. 1992 Table 10
 dipper.phi.t <- openCR.fit(dipperCH, type = 'CJS', model = phi~t)
 predict(dipper.phi.t)
 plot(dipper.phi.t, par = 'phi', ylim = c(0,1), pch = 16, col = 'red')
+
+## ----compare, cache = mycache, warning = FALSE------------------------------------------
+msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
+
+secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
+openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
+
+# massage the predict.openCR results to the same format as predict.secr
+pred_openCR <- plyr::rbind.fill(predict(openCR))[c(2,1,3),-1]
+rownames(pred_openCR) <- secr$realnames
+
+# compare estimates
+predict(secr)[,-1]
+pred_openCR
+
+# compare timings in seconds
+c(secr = secr$proctime, openCR=openCR$proctime)
 
 ## ----makedf, cache = mycache------------------------------------------------------------
 makedf.b <- function (ch, spatial = FALSE, nmix = 1) {
@@ -117,4 +134,7 @@ fitnm <- openCR.fit(ovenCH, type = 'JSSAlCL', model = list(phi ~ t, lambda~t),
                     method = "Nelder-Mead", details = list(control = list(maxit = 2000)),
                     start = fitnr)
 AIC(fitnm,fitnr)
+
+## ----ucare------------------------------------------------------------------------------
+ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
 

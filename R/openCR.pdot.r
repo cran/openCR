@@ -64,8 +64,7 @@ openCR.pdot <- function (object, bysession = FALSE) {
             as.integer(J),
             as.integer(cumss),
             as.integer(details$nmix),
-            as.double(unlist(realparval0)),
-            as.integer(nrow(realparval0)),
+            as.matrix(realparval0),
             as.integer(design0$PIA),
             as.integer(design0$PIAJ),
             as.double(intervals))
