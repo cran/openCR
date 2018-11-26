@@ -182,7 +182,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.integer(data$nc),
                     as.integer(data$details$CJSp1),
                     as.integer(data$details$grain),
-                    as.matrix (pmix),
+                    ## as.matrix (pmix),
                     as.double (data$intervals),
                     as.integer(data$cumss),
                     as.integer(data$capthist),
@@ -192,9 +192,11 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.integer(PIA),
                     as.integer(data$design$PIAJ))
 
-                sump <- sump + freq * log(temp)
+                ## sump <- sump + freq * log(temp)
+                sump <- sump + pmix[x,] * temp
             }
             sump  ## return vector of individual LL contributions
+            freq * log(sump)  ## return vector of individual LL contributions
         }
 
 
@@ -211,7 +213,6 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         # else {
         #         temp <- parSapply(cluster, 1:data$nc, onehistory, pmix = pmix, USE.NAMES = FALSE )
         # }
-
         comp[1] <- sum(temp)
         #####################################################################
         # Component 2: Probability of missed animals (all-zero histories)
@@ -334,7 +335,6 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     if (data$learnedresponse)
         realparval0 <- makerealparameters (data$design0, beta, data$parindx, data$link, data$fixed)
     else realparval0 <- realparval
-
     #-----------------------------------------
     # check valid parameter values
     if (!all(is.finite(realparval))) {
@@ -420,8 +420,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.matrix (data$usge),
                     as.double (data$intervals),
                     as.integer(data$moveargsi),
-                    as.integer(-1),                  ## not multicatch
-                    as.integer(-1),                  ## not multicatch
+                    as.matrix(-1),                  ## not multicatch
+                    as.matrix(-1),                  ## not multicatch
                     as.integer(data$details$CJSp1),
                     as.integer(data$movemodel),
                     as.character(data$usermodel),
@@ -503,7 +503,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     allhistsecrparallel <- function () {
         sump <- numeric(data$nc)
         for (x in 1:nrow(pmix)) {
-            hx <- matrix(haztemp$h[x,,], nrow = data$m)
+            hx <- if (data$multi) matrix(haztemp$h[x,,], nrow = data$m) else -1 ## lookup sum_k (hazard)
+            hi <- if (data$multi) haztemp$hindex else -1                        ## index to hx
             temp <-  allhistsecrparallelcpp(
                 as.integer(x-1),
                 as.integer(type),
@@ -512,29 +513,28 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 as.integer(binomN),
                 as.integer(data$details$CJSp1),
                 as.integer(data$details$grain),
-                as.matrix (pmix),
                 as.double (data$intervals),
                 as.integer(data$cumss),
-                as.matrix (data$capthist),     ## 2-D CH
+                as.matrix (data$capthist),     
                 as.integer(data$fi),
                 as.integer(data$li),
-                as.double (hk),                ## precomputed probability
+                as.double (if (data$multi) hk else gk),   ## precomputed probability or hazard
                 as.matrix (realparval),
                 as.integer(PIA),
                 as.integer(data$design$PIAJ),
                 as.matrix (data$usge),
-                as.matrix (hx),                ## lookup sum_k (hazard)
-                as.matrix (haztemp$hindex),     ## index to h
+                as.matrix (hx),                
+                as.matrix (hi),      
                 as.integer(data$movemodel),
                 as.integer(data$moveargsi),
                 as.matrix (data$kernel),
                 as.matrix (data$mqarray),
-                as.double (data$cellsize)
-            )
-            sump <- sump + freq * log(temp)
+                as.double (data$cellsize))
+            sump <- sump + pmix[x,] * temp
         }
-        sump
+        freq * log(sump)
     }
+
     #-----------------------------------------
 
     ## number of threads was set in openCR.fit
@@ -552,36 +552,33 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     #-----------------------------------------
 
     if (data$multi) {
-        haztemp <- gethcpp(
-            as.integer(data$nc),
-            as.integer(nrow(realparval)),
-            as.integer(data$details$nmix),
-            as.integer(data$k),
-            as.integer(data$J),
-            as.integer(data$m),
-            as.integer(PIA),
-            as.integer(data$cumss),
-            as.double(data$usge),
-            as.double(hk))
-        names(haztemp) <- c('hc0','h','hindex')
-        haztemp$hindex <- matrix(haztemp$hindex, nrow = data$nc)
-        ## discard surplus h for speed in C   DISCARD INTERNALLY
-        haztemp$h <- haztemp$h[1:(data$m * data$details$nmix * (max(haztemp$hindex)+1))]
+        ## R alternative
+        if (data$details$R)
+            haztemp <- gethR(data$m, PIA, data$usge, hk)
+        else
+            haztemp <- gethcpp(
+                as.integer(data$nc),
+                as.integer(nrow(realparval)),
+                as.integer(data$details$nmix),
+                as.integer(data$k),
+                as.integer(data$cumss[data$J+1]),
+                as.integer(data$m),
+                as.integer(PIA),
+                as.matrix(data$usge),
+                as.double(hk))
         haztemp$h <- array(haztemp$h, dim = c(data$details$nmix, data$m, max(haztemp$hindex)+1))
     }
     else {
         haztemp <- list(h = array(-1, dim=c(data$details$nmix,1,1)), hindex = matrix(-1))
     }
     #####################################################################
-
     ## Vector to store components of log likelihood
     comp <- numeric(5)
-
     #####################################################################
     # Component 1: Probability of observed histories
-
-    if (data$ncores>1)
+    if (data$ncores>1) {
         temp <- allhistsecrparallel()
+    }
     else {
         if (data$multi) {
             temp <- sapply(1:data$nc, onehistorymulti, pmix = pmix, hk = hk, USE.NAMES = FALSE )
@@ -608,6 +605,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         pdot <- rep(0, data$nc)
         for (x in 1:data$details$nmix) {   # loop over latent classes
             if (data$details$R) {
+                
                 pch1 <-  PCH1secr(
                     type,
                     as.logical(data$design0$individual),

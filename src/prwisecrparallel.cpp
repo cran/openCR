@@ -6,6 +6,7 @@ using namespace Rcpp;
 using namespace RcppParallel;
 
 //==============================================================================
+// 2018-11-12 deleted pmix argument
 
 struct Somesecrhistories : public Worker {
     
@@ -16,7 +17,6 @@ struct Somesecrhistories : public Worker {
     int   nc;
     int   binomN;
     int   CJSp1;                   
-    const RMatrix<double> pmix;
     const RVector<double> intervals;
     const RVector<int>    cumss;
     const RVector<int>    w;
@@ -43,7 +43,6 @@ struct Somesecrhistories : public Worker {
     // The RMatrix class can be automatically converted to from the Rcpp matrix type
     Somesecrhistories(
         int x, int type, int mm, int nc, int binomN,  int CJSp1,                    
-        const NumericMatrix pmix,
         const NumericVector intervals,
         const IntegerVector cumss,
         const IntegerVector w,
@@ -64,7 +63,7 @@ struct Somesecrhistories : public Worker {
         NumericVector output)    
         : 
         x(x), type(type), mm(mm), nc(nc), binomN(binomN), CJSp1(CJSp1), 
-        pmix(pmix), intervals(intervals), cumss(cumss), w(w), fi(fi), li(li), gk(gk), 
+        intervals(intervals), cumss(cumss), w(w), fi(fi), li(li), gk(gk), 
         openval(openval), PIA(PIA), PIAJ(PIAJ), Tsk(Tsk), h(h), hindex(hindex), 
         movemodel(movemodel), moveargsi(moveargsi), kernel(kernel), mqarray(mqarray), 
         cellsize(cellsize), output(output) {
@@ -73,12 +72,11 @@ struct Somesecrhistories : public Worker {
         jj = intervals.size() + 1;   // number of primary sessions
         kn = kernel.nrow();          // number of cells in kernel
         cc = openval.nrow();         // number of parameter combinations
-
     }
 
     void prwimulti (int j, int n, std::vector<double> &pjm) {
         int c, gi, k, m, s, wi, wxi;
-        double Tski;
+        double Tski, H;
         bool dead = false;
         
         // over secondary sessions (occasions) in this primary session 
@@ -90,9 +88,9 @@ struct Somesecrhistories : public Worker {
             // Not captured in any trap on occasion s 
             if (k < 0) {
                 for (m=0; m<mm; m++) {
-                    if (h(m, hindex(n,s)) > fuzz)
-                        // pjm[m] *= p0(m, hindex(n,s));     
-                        pjm[m] *= exp(-h(m, hindex(n,s))); 
+                    H = h(m, hindex(n,s));
+                    if (H > fuzz)
+                        pjm[m] *= exp(-H);
                 }
             }
             // Captured in trap k on occasion s
@@ -102,10 +100,10 @@ struct Somesecrhistories : public Worker {
                 c = PIA[wxi] - 1;
                 if (c >= 0) {    // drops unset traps 
                     for (m=0; m<mm; m++) {
+                        H = h(m, hindex(n,s));
                         gi  = i3(c, k, m, cc, kk);
                         // in this context gk is understood to be hazard hk
-                        //pjm[m] *=  Tski * (1-p0(m, hindex(n,s))) *  gk[gi] / h(m, hindex(n,s));
-                        pjm[m] *=  Tski * (1-exp(-h(m, hindex(n,s)))) *  gk[gi] / h(m, hindex(n,s));
+                        pjm[m] *=  Tski * (1-exp(-H)) *  gk[gi] / H;
                     }
                 }
             }
@@ -213,8 +211,8 @@ struct Somesecrhistories : public Worker {
                         convolvemq(mm, kn, j, mqarray, kernelp, pjm);  
                     }
 		    //debug
-		    //for (int m=0; m<100; m++) 
-		    //Rprintf("n %4d b %4d d %4d m %4d pjm[m] %8.6f \n", n,b,d,m,pjm[m]);
+		    // if(n==0) for (int m=300; m<320; m++) 
+		    // Rprintf("x %4d n %4d b %4d d %4d m %4d pjm[m] %11.9f \n", x,n,b,d,m,pjm[m]);
 
 		    prwi = sumpjm(pjm) / mm;
                 }
@@ -237,6 +235,8 @@ struct Somesecrhistories : public Worker {
                 pdt += pbd * prwi;
             }
         }
+        // Rprintf("x %4d n %4d pdt %11.9f \n", x,n,pdt);
+        
         return pdt; 
     }
 
@@ -244,7 +244,7 @@ struct Somesecrhistories : public Worker {
     void operator()(std::size_t begin, std::size_t end) {
         
         for (std::size_t n = begin; n < end; n++) {
-            output[n] = pmix(x,n) * oneprwisecrcpp (n);
+            output[n] = oneprwisecrcpp (n);
         }
     }
 };
@@ -252,7 +252,6 @@ struct Somesecrhistories : public Worker {
 // [[Rcpp::export]]
 NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
                                   int binomN, int CJSp1, int grain,
-                                  const NumericMatrix pmix,
                                   const NumericVector intervals, 
                                   const IntegerVector cumss, 
                                   const IntegerVector w,
@@ -274,7 +273,7 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
     NumericVector output(nc); 
     
     // Construct and initialise
-    Somesecrhistories somehist (x, type, mm, nc, binomN, CJSp1, pmix, intervals,
+    Somesecrhistories somehist (x, type, mm, nc, binomN, CJSp1, intervals,
                             cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, 
                             h, hindex,
                             movemodel, moveargsi, kernel, mqarray, 

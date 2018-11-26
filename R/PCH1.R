@@ -41,6 +41,8 @@ PCH1 <- function (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals) {
 pr0njmx <- function (n, x, cumss, jj, kk, mm, binomN, PIA0, gk0, Tsk) {
     pjm <- array(1, dim = c(jj, mm))
     for (j in 1:jj) {
+        # browser()        
+        # s is vector of indices to secondary sessions in this primary session
         s <- (cumss[j]+1) : cumss[j+1]
         S <- length(s)
         csk <- PIA0[n,s, ,x, drop = FALSE]
@@ -49,7 +51,7 @@ pr0njmx <- function (n, x, cumss, jj, kk, mm, binomN, PIA0, gk0, Tsk) {
         gsk <- array(0, dim=c(S, kk, mm))
         gsk[cski>0] <- gk0[i]
         size <- t(Tsk[,s])      
-        if (binomN != 1) size[] <- binomN
+        ## if (binomN != 1) size[] <- binomN
         pjm[j, ] <- if (binomN == 0) 
             apply(1-gsk, 3, function(x) prod(exp(-size * -log(x))))  ## Poisson
         else if (all(size==1))

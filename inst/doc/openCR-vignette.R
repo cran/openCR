@@ -27,16 +27,24 @@ rownames(pred_openCR) <- secr$realnames
 predict(secr)[,-1]
 pred_openCR
 
+## ----timing-----------------------------------------------------------------------------
 # compare timings in seconds
-c(secr = secr$proctime, openCR=openCR$proctime)
+c(secr = secr$proctime, openCR = openCR$proctime)
+
+## ----multinom---------------------------------------------------------------------------
+# compare maximised log likelihoods
+c(secr.logLik = logLik(secr), openCR.logLik = logLik(openCR) + logmultinom(captdata))
 
 ## ----makedf, cache = mycache------------------------------------------------------------
-makedf.b <- function (ch, spatial = FALSE, nmix = 1) {
+makedf.b <- function (ch, spatial = FALSE, nmix = 1, naive = FALSE) {
     ch <- squeeze(ch)
     # Construct matrix of logical values TRUE iff caught before 
     detected <- apply(abs(ch),1:2,sum)>0
     detected <- t(apply(detected, 1, cumsum)>0)
-    b <- t(apply(detected, 1, function(x) {x[which.max(x)] <- FALSE; x}))
+    if (naive)
+        b <- rep(FALSE, prod(dim(ch)[1:2]))
+    else
+        b <- t(apply(detected, 1, function(x) {x[which.max(x)] <- FALSE; x}))
     # For a simple non-spatial case: data.frame(customb = as.vector(b))  
     # More generally:
     n <- nrow(ch)
@@ -45,11 +53,17 @@ makedf.b <- function (ch, spatial = FALSE, nmix = 1) {
     data.frame(customb = insertdim(b, 1:2, c(n,S,K,nmix)))  
 }
 
-## ----customb, cache = mycache-----------------------------------------------------------
+## ----customb, cache = mycache, warning = FALSE------------------------------------------
 ovenj <- join(ovenCH)
-fitb <- openCR.fit(ovenj, model = p ~ bsession)
+fitb <- openCR.fit(ovenj, model = p ~ b)
 fitbc <- openCR.fit(ovenj, model = p ~ customb, dframe = makedf.b(ovenj))
 AIC(fitb, fitbc)
+
+## ----customb2, cache = mycache, warning = FALSE-----------------------------------------
+fitb2 <- openCR.fit(ovenj, model = p ~ b, type = 'JSSAfCL', start = fitb)
+fitbc2 <- openCR.fit(ovenj, model = p ~ customb,  type = 'JSSAfCL', 
+                    dframe = makedf.b(ovenj), dframe0 = makedf.b(ovenj, naive = TRUE))
+AIC(fitb2, fitbc2)
 
 ## ----transient, cache = mycache---------------------------------------------------------
 makedf.resident <- function (ch, spatial = FALSE, nmix = 1) {

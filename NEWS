@@ -1,3 +1,45 @@
+version 1.3.0 (2018-11-26)
+
+New features and changed behaviour
+    o canned predictors for learned responses (b, bk etc.) redefined and extended
+    o AIC method acquires argument n to override the default effective sample size
+    o openCR.fit() no longer computes 'posterior' component for mixture models
+    o classMembership method for finite mixture models ('posterior' component removed)
+    o specifying native R routines for the likelihood forces ncores = 1
+    o print and AIC methods for summary.openCR
+    o openCR.fit() acquires argument dframe0 for pesky custom models with learned response
+    o par.openCR.fit() default trace = FALSE 
+    o rev method for reversing primary sessions of capthist objects
+
+Bugs fixed
+    o varying usage unreliable with 'multi' detector type in some circumstances
+    o summary method for openCR objects: erroneous counts in capthist component (ignored freq)
+    o finite mixture model posterior class membership crashed openCR.fit() for spatial models
+    o finite mixture models failed for 'multi' detector type
+
+Other
+    o help page for openCR.design corrected
+
+version 1.2.1 (2018-10-31)
+
+New features and changed behaviour
+    o runsim.spatial() acquires intervals argument
+    o summary method for openCR objects 
+    o sumsims() accepts output from summary.openCR
+    o sumsims() acquires argument 'true' and adds summaries of bias, coverage etc.
+    o CJSp1 = TRUE details argument respected by openCR.design etc.
+
+Bugs fixed
+    o sumsims() failed with parameters superN and superD
+    o derived method for openCR objects: erroneous f and lambda for some models when
+      intervals not 1.0
+    o print.derivedopenCR did not apply Dscale to session-specific D
+
+Other
+    o changed default starting value for superD
+    o tweaks to print method for derivedopenCR class
+    o not published on CRAN
+
 version 1.2.0 (2018-05-25)
 
 New features and changed behaviour

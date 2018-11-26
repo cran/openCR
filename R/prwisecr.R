@@ -314,13 +314,12 @@ prwisecrmulti <- function (type, n, x, jj,
     ## precompute p0 to save time
     p0 <- exp(-h)
     phij <- getphij (n, x, openval, PIAJ, intervals)
-
     if (movemodel > 1) {
         moveargsi <- pmax(moveargsi,0)
         moveargs <- getmoveargs (type, n, x, openval, PIAJ, intervals, moveargsi)
         kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize, moveargsi, moveargs)
     }
-
+#browser()
     if(type==6) {
         minb <- fi[n]
         cjs <- 1-CJSp1

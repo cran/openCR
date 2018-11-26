@@ -20,7 +20,7 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
     detectfn = c("HHN","HHR","HEX","HAN","HCG","HVP"), 
     binomN = 0, movementmodel = c("static", "uncorrelated", "normal", "exponential"), 
     start = NULL, link = list(), fixed = list(), timecov = NULL, 
-    sessioncov = NULL, dframe = NULL, details = list(), 
+    sessioncov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
     method = "Newton-Raphson", trace = NULL, ncores = NULL, ...)
 }
 
@@ -63,6 +63,9 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
 \item{dframe}{ optional data frame of design data for detection
   parameters (seldom used) }
 
+\item{dframe0}{ optional data frame of design data for detection
+  parameters of naive (undetected) animals (seldom used) }
+
   \item{details}{ list of additional settings (see Details) }
 
   \item{method}{ character string giving method for maximizing log
@@ -78,7 +81,7 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
 
 \details{
 
-The permitted nonspatial models are CJS, Pradel, Pradelg, JSSAbCL, JSSAfCL, JSSAgCL, JSSAlCL, JSSAb, JSSAf, JSSAg, JSSAl, JSSAB and JSSAN. The permitted spatial models are CJSsecr, JSSAsecrbCL, JSSAsecrfCL, JSSAsecrgCL, JSSAsecrlCL, JSSAsecrb, JSSAsecrf, JSSAsecrg, JSSAsecrl, JSSAsecrB and JSSAsecrN. See the \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for a table of the `real' parameters associated with each model type.
+The permitted nonspatial models are CJS, Pradel, Pradelg, JSSAbCL, JSSAfCL, JSSAgCL, JSSAlCL, JSSAb, JSSAf, JSSAg, JSSAl, JSSAB and JSSAN. The permitted spatial models are CJSsecr, JSSAsecrbCL, JSSAsecrfCL, JSSAsecrgCL, JSSAsecrlCL, JSSAsecrb, JSSAsecrf, JSSAsecrg, JSSAsecrl, JSSAsecrB, JSSAsecrN, secrCL, and secrD. See the \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for a table of the `real' parameters associated with each model type.
 
 Parameterisations of the JSSA models differ in how they include
 recruitment: the core parameterisations express recruitment either as a
@@ -91,22 +94,30 @@ suffix `CL'. Full-likelihood JSSA models may also be parameterized in
 terms of the time-specific absolute recruitment (BN, BD) or the
 time-specific population size(N) or density (D).
 
+`secrCL' and `secrD' are closed-population spatial models.
+
 Data are provided as \pkg{secr} `capthist' objects, with some
 restrictions. For nonspatial analyses, `capthist' may be
 single-session or multi-session, with any of the main detector types. For
-spatial analyses `capthist' should be a single-session dataset of a point \link{detector} type (`multi', `proximity' or `count') (see also
+spatial analyses `capthist' should be a single-session dataset of a point 
+\link{detector} type (`multi', `proximity' or `count') (see also
 details$distribution below). In openCR the occasions of a single-session
-dataset are treated as open-population temporal samples except that occasions separated by an interval of zero (0) are from the same primary session (multi-session
+dataset are treated as open-population temporal samples except that occasions 
+separated by an interval of zero (0) are from the same primary session (multi-session
 input is collapsed to single-session if necessary).
 
 \code{model} formulae may include the pre-defined terms
-`b', `B', `session',`Session', `h2', and `h3' as in \pkg{secr}. `session'
+`session',`Session', `h2', and `h3' as in \pkg{secr}. `session'
 is the name given to primary sampling times in `secr', so a fully
 time-specific CJS model is \code{list(p ~ session, phi
-~ session)}. `b' refers to a within-session (learned) response to
-capture and `B' to a transient (Markovian) response. `bsession' is used 
-for a multi-session learned response.`Session' is for a
-trend over sessions. `h2' and `h3' allow finite mixture models. Formulae
+~ session)}. `t' is a synonym of `session'. `Session' is for a
+trend over sessions. `h2' and `h3' allow finite mixture models. 
+
+Learned (behavioural) responses (`b', `B', etc.) were redefined and extended in 
+version 1.3.0. The \href{../doc/openCR-vignette.pdf}{vignette} should be consulted 
+for current definitions.
+
+Formulae
 may also include named occasion-specific and session-specific covariates in the dataframe
 arguments `timecov' and `sessioncov' (occasion = secondary session of robust design).
 Individual covariates present as an attribute of
@@ -129,7 +140,7 @@ The mlogit link function is used for the JSSA (POPAN) entry parameter
 Spatial models use one of the hazard-based detection functions (see \code{\link{detectfn}}) and require data
 from independent point detectors (\pkg{secr} detector types `multi', `proximity' or `count').
 
-Code is executed in multiple threads unless the user specifies \code{ncores = 1} or there is only one core available. The default value for \code{ncores} is one less than the number of cores available.
+Code is executed in multiple threads unless the user specifies \code{ncores = 1} or there is only one core available or \code{details$R == TRUE}. The default value for \code{ncores} is one less than the number of cores available.
 
 The \dots argument may be used to pass a vector of unequal intervals to 
 join (\code{interval}), or to vary the tolerance for merging detector sites (\code{tol}).
@@ -151,6 +162,8 @@ parameter appears in both models then the first is used.
 
 \code{details$autoini} (default 1) is the number of the session used to determine 
 initial values of D, lambda0 and sigma (secr types only).
+
+\code{details$CJSp1} (default FALSE) may be used to switch CJS model to include detection in the first primary session (estimable with robust design and many spatial models).
 
 \code{details$contrasts} may be used to specify the coding of factor predictors. 
 The value should be suitable for the 'contrasts.arg' argument of \code{\link{model.matrix}}.
@@ -179,7 +192,7 @@ initial values.
 \code{details$maximumage} sets a maximum age; older animals are recycled into 
 this age class; see \code{\link{age.matrix}}.
 
-\code{details$multinom} = TRUE includes the multinomial constant in the 
+\code{details$multinom = TRUE} includes the multinomial constant in the 
 reported log-likelihood (default FALSE).
 
 \code{details$R == TRUE} may be used to switch from the default C++ code to 
@@ -229,7 +242,7 @@ Otherwise, an object of class `openCR' with components
                   start = start,
 
   \item{call }{function call }
-  \item{capthist }{saved input}
+  \item{capthist }{saved input (unique histories; see covariates(capthist)$freq for frequencies)}
   \item{type }{saved input}
   \item{model }{saved input}
   \item{distribution }{saved input}
@@ -245,6 +258,7 @@ Otherwise, an object of class `openCR' with components
   \item{timecov }{saved input}
   \item{sessioncov }{saved input}
   \item{dframe }{saved input}
+  \item{dframe0 }{saved input}
   \item{details }{saved input}
   \item{method }{saved input}
   \item{ncores }{saved input (NULL replaced with default)}
@@ -264,7 +278,6 @@ Otherwise, an object of class `openCR' with components
     \code{optim}) }
   \item{beta.vcv }{variance-covariance matrix of beta parameters }  
   \item{eigH }{vector of eigenvalue corresponding to each beta parameter }
-  \item{posterior}{posterior probabilities of class membership (mixture models), one row per individual. }
   \item{version }{openCR version number }
   \item{starttime }{character string of date and time at start of fit }
   \item{proctime }{processor time for model fit, in seconds }
@@ -319,11 +332,20 @@ singularities in the Hessian. Also, the default maximization method is `BFGS'
 rather than `Newton-Raphson' as BFGS appears more robust in the presence
 of redundant parameters.
 
+Earlier versions of \code{\link{openCR.fit}} computed latent class membership 
+probabilities for each individual in finite mixture models and saved them in 
+component `posterior'. Now see \code{\link{classMembership}} for that functionality.
+
 }
 
 \seealso{
   
-  \code{\link{openCR.design}}, \code{\link{derived.openCR}},  \code{\link{par.openCR.fit}}
+  \code{\link{classMembership.openCR}}, 
+  \code{\link{derived.openCR}},  
+  \code{\link{openCR.design}}, 
+  \code{\link{par.openCR.fit}}, 
+  \code{\link{predict.openCR}}, 
+  \code{\link{summary.openCR}}
 
 }
 
@@ -345,17 +367,17 @@ predict(JSSA1)
 
 RMdata <- RMarkInput (join(reduce(ovenCH, by = "all")))
 if (require(RMark)) {
-    if (all (nchar(Sys.which(c('mark.exe', 'mark64.exe', 'mark32.exe'))) < 2))
-        stop ("MARK executable not found; set e.g. MarkPath = 'c:/Mark/'")
-    openCHtest <- process.data(RMdata, model='POPAN')
-    openCHPOPAN <- mark(data = openCHtest, model = 'POPAN',
-        model.parameters = list(p = list(formula = ~1),
-        pent = list(formula = ~1),
-        Phi = list(formula = ~1)))
-    popan.derived(openCHtest, openCHPOPAN)
-    cleanup(ask=F)
-}
-else message ("RMark not found")
+    MarkPath <- 'c:/Mark/'
+    if (!all (nchar(Sys.which(c('mark.exe', 'mark64.exe', 'mark32.exe'))) < 2)) {
+        openCHtest <- process.data(RMdata, model = 'POPAN')
+        openCHPOPAN <- mark(data = openCHtest, model = 'POPAN',
+            model.parameters = list(p = list(formula = ~1),
+            pent = list(formula = ~1),
+            Phi = list(formula = ~1)))
+        popan.derived(openCHtest, openCHPOPAN)
+        cleanup(ask = FALSE)
+    } else message ("mark.exe not found")
+} else message ("RMark not found")
 
 }
 

@@ -6,106 +6,77 @@ using namespace std;
 using namespace Rcpp;
 using namespace RcppParallel;
 
-//==============================================================================
-// multicatch only
-
 // [[Rcpp::export]]
-List gethcpp (int nc1, int cc, int nmix, int nk, int jj, int mm, 
+List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm, 
               const IntegerVector PIA, 
-              const IntegerVector cumss, 
-              const NumericVector Tsk, 
+              const NumericMatrix Tsk, 
               const NumericVector hk) {
     
-    // total hazard for animal n on session j  wrt mask point m 
-    // construct index 'hindex' to values in 'h'                
-    // 'bk' model results in within-trap variation dependent on 
-    // n.j, so h must be recalc each time                       
-    // c0 -- index of parameters for trap 0, mixture 0          
-    // hc0[c0] -- maps c0 to sequential index 'next'            
-    // next -- new index of parameters for each n,j             
-    // h -- array of computed hazard for [m,next]               
+    // This function fills a vector h representing a 4-D (x,m,n,s) array with
+    // the total hazard (summed across traps) for animal n on occasion s 
+    // wrt mask point m and latent class x
     
-    // mixtures are group-specific for full likelihood, and     
-    // individual-specific for conditional likelihood           
+    // Computation is limited to combinations of n, s with unique parameter combinations 
+    // (values in PIA and Tsk) and the returned n x s matrix 'hindex' contains the index for
+    // each n, s to the unique total in h (for given x, m).
     
-    int fullns = 0;
-    int next = 0;
-    int c,c0,i,m,n,k,x,gi,hi,s;
-    int PIAval0, PIAvalk; 
+    int c,i,m,n,k,x,gi,hi,s;
     double Tski;          
     
-    IntegerVector hc0(cc);
-    NumericVector h(nc1 * cumss[jj] * mm * nmix);
-    IntegerVector hindex(nc1 * cumss[jj]);
-    
-    // Recognise when not fully specified by n.s, c  
-    // this arises when model = bk, Bk               
-    // and when detector covariates vary by time     
-    
-    for (n=0; n < nc1; n++) {
-        for (s=0; s<cumss[jj]; s++) {
-            PIAval0 = PIA[i4(n,s,0,0, nc1, cumss[jj], nk)];
-            for (k=1; k<nk; k++) {
-                PIAvalk = PIA[i4(n,s,k,0, nc1, cumss[jj], nk)];
-                if (PIAval0 < 0) {
-                    PIAval0 = PIAvalk;
+    NumericMatrix xmat (nc1*ss, nk*(nmix+1));
+    for (n=0; n<nc1; n++) {
+        for (s=0; s<ss; s++) {
+            for (k=0; k<nk; k++) {                         
+                for(x=0; x<nmix; x++) {
+                    xmat(nc1*s+n, x*nk + k) = PIA[i4(n,s,k,x, nc1, ss, nk)];
                 }
-                else if (PIAvalk>0) {
-                    if (PIAval0 != PIAvalk) {
-                        fullns = 1;
-                        break;
-                    } 
-                }              
-            } 
-            if (fullns) break;
+                xmat(nc1*s+n, nmix*nk + k) = Tsk(k,s);		
+            }
         }
-        if (fullns) break;
+    }
+    List lookup = makelookupcpp(xmat);
+    NumericMatrix ymat = as<NumericMatrix>(lookup["lookup"]);
+    IntegerVector index = as<IntegerVector>(lookup["index"]);
+    IntegerMatrix hindex(nc1, ss);
+    int uniquerows = ymat.nrow();
+    for (n=0; n<nc1; n++) {
+        for (s=0; s<ss; s++) {
+            hindex(n,s) = index[nc1*s+n]-1;
+        }
     }
     
-    for (i=0; i<cc; i++) hc0[i] = -1;
-    next = 0;        
-    for (n=0; n < nc1; n++) {
-        for (s=0; s < cumss[jj]; s++) {
-            hi = s*nc1 + n;
-            // Case 1. within-trap variation 
-            if (fullns) {
+    int hlength = uniquerows * mm * nmix;
+    NumericVector h(hlength);
+    for (i=0; i<hlength; i++) h[i] = 0;
+    
+    // search hindex for each row index in turn, identifying first n,s with the index
+    // fill h[] for this row
+    hi = 0;
+    for (s=0; s < ss; s++) {    // scan by column (see geth2 in secr)
+        for (n=0; n < nc1; n++) {
+	    if (hindex(n,s) == hi) {
                 for (k=0; k < nk; k++) {
-                    Tski = Tsk[s * nk + k]; 
-                    for (x = 0; x < nmix; x++) {
-                        c = PIA[i4(n,s,k,x, nc1, cumss[jj], nk)]-1; 
+                    Tski = Tsk(k, s);
+                    for (x=0; x<nmix; x++) {
+                        c = PIA[i4(n,s,k,x, nc1, ss, nk)]-1;
+                        // c<0 (PIA=0) implies detector not used on this occasion
                         if (c >= 0) {
-                            for (m = 0; m < mm; m++) { 
+                            for (m=0; m<mm; m++) {
                                 gi = i3(c,k,m,cc,nk);
-                                h[i3(x,m,hi,nmix, mm)] += Tski * hk[gi];
+                                h[i3(x,m,hi, nmix, mm)] += Tski * hk[gi];
                             }
                         }
                     }
                 }
-                hindex[hi] = hi;   
-            }
-            // Case 2. no within-trap variation 
-            else {
-                c0 = PIA[i4(n,s,0,0, nc1, cumss[jj], nk)] - 1;                    
-                if (hc0[c0] < 0) {
-                    hc0[c0] = next;
-                    next ++;
-                    for (k=0; k < nk; k++) {
-                        Tski = Tsk[s * nk + k];
-                        for (x = 0; x < nmix; x++) {
-                            c = PIA[i4(n,s,k,x, nc1, cumss[jj], nk)]-1; 
-                            if (c >= 0) {
-                                for (m=0; m< mm; m++) { 
-                                    gi = i3(c,k,m,cc,nk);
-                                    h[i3(x, m, hc0[c0], nmix, mm)] += Tski * hk[gi];
-                                }
-                            }
-                        }
-                    }
-                }
-                hindex[hi] = hc0[c0];
-            }
+                hi++;
+            } 
+            if (hi >= uniquerows) break;
         }
+        if (hi >= uniquerows) break;
     }
-    return List::create(hc0,h,hindex);
+    
+    return List::create(Named("h") = h,
+                        Named("hindex") = hindex);
+    
 }
 //==============================================================================

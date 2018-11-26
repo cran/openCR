@@ -69,6 +69,7 @@ m.array(dipperCH)
 datadir <- system.file('extdata', package = 'openCR')
 dipperCH <- read.inp(paste0(datadir, '/ed.inp'), grouplabel='sex',
     grouplevels = c('Male','Female'))
+intervals(dipperCH) <- rep(1,6)    
 sessionlabels(dipperCH) <- 1981:1987   # labels only
 
 # or extracted from the RMark package with this code
@@ -77,9 +78,9 @@ if (require(RMark)) {
         stop ("MARK executable not found; set e.g. MarkPath <- 'c:/Mark/'")
     data(dipper)                       # retrieve dataframe of dipper capture histories
     dipperCH2 <- unRMarkInput(dipper)  # convert to secr capthist object
+    intervals(dipperCH2) <- rep(1,6)    
     sessionlabels(dipperCH2) <- 1981:1987   # labels only
-}
-else message ("RMark not found")
+} else message ("RMark not found")
 
 # The objects dipperCH and dipperCH2 differ in the order of factor levels for 'sex'
 }

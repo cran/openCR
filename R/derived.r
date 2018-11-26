@@ -1,6 +1,9 @@
 ## package 'openCR'
 ## derived.R
-## 2011-12-30, 2013-01-20, 2017-11-21, 2017-12-21, 2018-02-15, 2018-05-25
+## 2011-12-30, 2013-01-20, 2017-11-21, 2017-12-21, 2018-02-15, 2018-05-25, 
+## 2018-10-31 fixed bug in f, lambda
+## 2018-10-31 print.derivedopenCR applies Dscale to session-specific D
+
 ################################################################################
 
 derived.openCRlist <- function (object, newdata = NULL, all.levels = FALSE,
@@ -76,7 +79,6 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
             kappa[1] <- 1
             for (j in 1:(J-1)) {
                 kappa[j+1] <- kappa[j]/p[j] * (1-p[j]) * phi[j] * p[j+1] + tau[j] * f[j] * p[j+1]
-                # if(j==(J-1)) browser()
                 tau[j+1] <- tau[1] * prod((phi+f)[1:j])
             }
             kappa[1] <- NA
@@ -147,6 +149,7 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
                 else {
                     f <- getreal('f')
                 }
+                
                 lambdaj <- persession(phi + f)
                 fj <- persession(f)
 
@@ -173,8 +176,6 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
 
         if (is.null(fj)) fj <- getfbeta(b, phij)
 
-        # df <- data.frame(session = 1:J, JS.counts(object$capthist),
-        #                  time = cumsum(c(0,intervals)))
         df <- data.frame(newdata, JS.counts(object$capthist),
                          time = cumsum(c(0,intervals)))
         parnames <- names(predict(object))
@@ -191,12 +192,16 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
         # }
         # df$phi <- phi
 
-
         df$b <- b
-        df$lambda <- stdrate(phij+ fj)
+
+        ## bug fix 2018-10-31
+        ## df$lambda <- stdrate(phij+ fj)
+        df$lambda <- stdrate(phij) + stdrate(fj)
+        
         df$f <- df$lambda - df$phi
         df$gamma <- c(NA, (df$phi / (df$f + df$phi))[-J])
         df$kappa <- getkappa (df$p, df$phi, df$f)
+        
         ## Nonspatial
         ## superN and time-specific Nj
         if (type %in% c('JSSAN',
@@ -240,9 +245,12 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
 
         ## Spatial
         ## superD and time-specific Dj
-        if (type %in% c('JSSAsecrf','JSSAsecrfCL','JSSAsecrl','JSSAsecrlCL',
+        
+        if (type %in% c('JSSAsecrf','JSSAsecrfCL',
+                        'JSSAsecrl','JSSAsecrlCL',
                         'JSSAsecrg','JSSAsecrgCL',
-                        'JSSAsecrb','JSSAsecrbCL', 'JSSAsecrB',
+                        'JSSAsecrb','JSSAsecrbCL', 
+                        'JSSAsecrB',
                         'JSSAsecrD')) {
             if (type %in% c('JSSAsecrf','JSSAsecrb','JSSAsecrl','JSSAsecrg'))
                 superD <- getreal('superD')[1]
@@ -288,7 +296,14 @@ print.derivedopenCR <- function (x, Dscale = NULL, legend = FALSE, ...) {
     }
     args <- list(...)
     ngrp <- length(x)
-
+    if (is.null(Dscale)) Dscale <- x1$Dscale
+    D.units <- switch(paste0('D',Dscale),
+                      D1 = 'per ha',
+                      D100 = 'per km^2',
+                      D10000 = 'per 100 km^2',
+                      D100000 = 'per 1000 km^2',
+                      paste0('per ', Dscale, ' ha'))
+    
     ##--------------
     ## Header
 
@@ -298,7 +313,6 @@ print.derivedopenCR <- function (x, Dscale = NULL, legend = FALSE, ...) {
         cat ("Superpopulation size", x1$superN, "\n")
     if (!is.null(x1$superD)) {
         cat ("Superpopulation density", x1$superD  * Dscale, D.units, "\n")
-        x1$estimates$D <- x1$estimates$D * Dscale
     }
 
     ##--------------
@@ -315,6 +329,10 @@ print.derivedopenCR <- function (x, Dscale = NULL, legend = FALSE, ...) {
 
     for (n in 1:ngrp) {
         args$x <- x[[n]]$estimates
+        for (parm in c('D','BD')) {
+            if (parm %in% names(args$x)) 
+                args$x[,parm] <- args$x[,parm] * Dscale
+        }
         do.call(print.data.frame, args)
         cat ("\n")
     }
@@ -322,18 +340,10 @@ print.derivedopenCR <- function (x, Dscale = NULL, legend = FALSE, ...) {
     ##--------------
     ## Legend
 
-    if (is.null(Dscale)) Dscale <- x$Dscale
-
-    D.units <- switch(paste0('D',Dscale),
-                      D1 = 'per ha',
-                      D100 = 'per km^2',
-                      D10000 = 'per 100 km^2',
-                      D100000 = 'per 1000 km^2',
-                      paste0('per ', Dscale, ' ha'))
-
     fields <- c(
         '-------@-----------------------------------------',
         'session@primary session',
+        't@primary session',
         'n@number observed',
         'R@number released',
         'm@number already marked',
@@ -353,7 +363,7 @@ print.derivedopenCR <- function (x, Dscale = NULL, legend = FALSE, ...) {
         'BN@number of recruits',
         'BD@density of recruits',
         'N@population size',
-        paste0('D@density  ', D.units))
+        paste0('D@density ', D.units))
     leg <- data.frame(do.call(rbind, strsplit(fields, '@')))
     names(leg) <- c('Field', 'Definition')
 

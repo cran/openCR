@@ -206,3 +206,6 @@ void getbeta (int type, int n, int x, int nc, int jj,
               std::vector<double> &phij,
               std::vector<double> &beta);
 //--------------------------------------------------------------------------
+
+List makelookupcpp (const NumericMatrix x);  
+//--------------------------------------------------------------------------

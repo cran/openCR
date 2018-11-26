@@ -17,7 +17,6 @@ struct Somehistories : public Worker {
     int   CJSp1;                   
     int   jj;
     int   cc;
-    const RMatrix<double> pmix;
     const RVector<double> intervals;
     const RVector<int> cumss;
     const RVector<int> w;
@@ -34,7 +33,6 @@ struct Somehistories : public Worker {
     // The RMatrix class can be automatically converted to from the Rcpp matrix type
     Somehistories(
         int x, int type, int nc, int CJSp1, int jj, int cc,                   
-        const NumericMatrix pmix,
         const NumericVector intervals,
         const IntegerVector cumss,
         const IntegerVector w,
@@ -46,7 +44,7 @@ struct Somehistories : public Worker {
         NumericVector output)    
         : 
         x(x), type(type), nc(nc), CJSp1(CJSp1), jj(jj), cc(cc), 
-        pmix(pmix), intervals(intervals), cumss(cumss), w(w), fi(fi), li(li),
+        intervals(intervals), cumss(cumss), w(w), fi(fi), li(li),
         openval(openval), PIA(PIA), PIAJ(PIAJ), output(output) 
     {
     }
@@ -70,7 +68,9 @@ struct Somehistories : public Worker {
         getphij (n, x, nc, jj, openval, PIAJ, intervals, phij);
 
         if (type == 1) {
-            cjs = 1;
+            // cjs = 1;
+            // 2018-10-29
+            cjs = 1 - CJSp1;
         }
         else {
             getbeta (type, n, x, nc, jj, openval, PIAJ, intervals, phij, beta);
@@ -128,7 +128,7 @@ struct Somehistories : public Worker {
     void operator()(std::size_t begin, std::size_t end) {
         
         for (std::size_t n = begin; n < end; n++) {
-            output[n] = pmix(x,n) * oneprwicpp (n);
+            output[n] = oneprwicpp (n);
         }
     }
 };
@@ -136,7 +136,6 @@ struct Somehistories : public Worker {
 // [[Rcpp::export]]
 NumericVector allhistparallelcpp (int x, int type, int nc,
                                   int CJSp1, int grain,
-                                  const NumericMatrix pmix,
                                   const NumericVector intervals, 
                                   const IntegerVector cumss, 
                                   const IntegerVector w,
@@ -151,7 +150,7 @@ NumericVector allhistparallelcpp (int x, int type, int nc,
     // Construct and initialise
     Somehistories somehist (x, type, nc, CJSp1, 
                             intervals.size()+1, openval.nrow(),
-                            pmix, intervals,
+                            intervals,
                             cumss, w, fi, li, openval, PIA, PIAJ, output);
     
     // Run operator() on multiple threads

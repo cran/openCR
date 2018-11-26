@@ -1,6 +1,8 @@
 ################################################################################
-## openCR 1.2.0
+## openCR 1.2.1
 ## simulate.R 
+## 2018-05-28 intervals argument for runsim.spatial
+## 2018-11-02 revised sumsims
 ################################################################################
 sim.nonspatial <- function(N, turnover = list(), p, nsessions, noccasions = 1, 
                            intervals = NULL, recapfactor = 1, seed = NULL, 
@@ -115,13 +117,14 @@ runsim.nonspatial <- function (nrepl = 100, seed = NULL, ncores = NULL,
 
 runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = NULL,
                            popargs = list(), detargs = list(), fitargs = list(),
-                           extractfn = predict)  {
+                           extractfn = predict, intervals = NULL)  {
 
     onesim <- function(r) {
         detargs$popn <- do.call(sim.popn, popargs)
         detargs$renumber <- FALSE
         if (is.null(detargs$traps)) detargs$traps <- popargs$core
         fitargs$capthist <- do.call(sim.capthist, detargs)
+        intervals(fitargs$capthist) <- intervals
         fit <- do.call(openCR.fit, fitargs)
         out <- extractfn(fit)
         attr(out, 'eigH') <- fit$eigH
@@ -150,10 +153,11 @@ runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = NULL,
 }
 ################################################################################
 
-sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol = NULL, maxcode = 3) {
+sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, 
+                     svtol = NULL, maxcode = 3, true = NULL) {
     if (length(session)>1) {
         results <- lapply(session, sumsims, sims=sims, parm = parm, dropifnoSE = dropifnoSE,
-                          svtol = svtol, maxcode = maxcode)
+                          svtol = svtol, maxcode = maxcode, true = true)
         names(results) <- paste('session',session)
         results
     }
@@ -162,7 +166,15 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol =
             data.frame(cbind(median = NA, mean = NA, sd = NA, n = NA))
         }
         else {
-            mat <- t(sapply(sims, function(x) unlist(x[[parm]][session,])))
+            ## adapted 2018-10-28 to use output from either predict or summary
+            if (is.null(sims[[1]]$predicted))
+                predicted <- sims ## assume extractfn = predict
+            else
+                predicted <- lapply(sims, '[[', 'predicted')
+            if (!parm %in% names(predicted[[1]])) {
+                stop ("Parameter ", parm, " not reported (try ", paste(names(predicted[[1]]), collapse=', '), ")")
+            }
+            mat <- t(sapply(predicted, function(x) unlist(x[[parm]][session,])))
             if (is.na(maxcode)) maxcode <- Inf
             codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'code')
             if (is.null(codes[[1]]))
@@ -181,11 +193,26 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol =
                 rank <- apply(eigH>svtol,2,sum)
                 OK <- OK & (rank == NP)
             }
-            OKmat <- mat[OK,-1, drop = FALSE]  ## 2018-05-05
-            data.frame(cbind(median = apply(OKmat, 2, median, na.rm = TRUE),
-                             mean = apply(OKmat, 2, mean, na.rm = TRUE),
-                             sd = apply(OKmat, 2, sd, na.rm = TRUE),
-                             n = apply(OKmat, 2, function(x) sum(!is.na(x)))))
+            if (ncol(mat)>4) {    # drop 'session' column if present (not superD)
+                mat <- mat[OK, c('estimate', 'SE.estimate', 'lcl','ucl'), drop = FALSE]  ## 2018-05-05, 2018-05-28, 2018-11-02
+            }
+            mat <- as.data.frame(mat)
+            mat$RSE <- mat$SE.estimate / mat$estimate
+            mat$CI.length <- mat$ucl - mat$lcl
+            if (!is.null(true)) {
+                mat$Bias <- mat$estimate - true
+                mat$RB <- mat$Bias / true
+            }
+            out <- data.frame(median = apply(mat, 2, median, na.rm = TRUE),
+                              mean = apply(mat, 2, mean, na.rm = TRUE),
+                              sd = apply(mat, 2, sd, na.rm = TRUE),
+                              n = apply(mat, 2, function(x) sum(!is.na(x))))
+            if (!is.null(true)) {
+                nr <- nrow(out)
+                out$rRMSE <- round(c(mean((mat$estimate - true)^2, na.rm = TRUE), rep(NA,nr-1))^0.5 / true,4)
+                out$COV <- c(mean((true>mat$lcl) & (true< mat$ucl), na.rm = TRUE), rep(NA,nr-1))
+            }
+            return(out)
         }
     }
 }
@@ -202,10 +229,12 @@ runsim.RMark <- function (nrepl = 100, model = 'CJS', model.parameters = NULL,
     }
     if (!requireNamespace('RMark'))
         stop ("Please install package RMark")
-    if (all (nchar(Sys.which(c('mark.exe', 'mark64.exe', 'mark32.exe'))) < 2))
-        stop ("MARK executable not found; set e.g. MarkPath = 'c:/Mark/'")
-    if (!is.null(seed)) set.seed(seed)
-    lapply(1:nrepl, onesim)
+    if (!all (nchar(Sys.which(c('mark.exe', 'mark64.exe', 'mark32.exe'))) < 2)) {
+        if (!is.null(seed)) set.seed(seed)
+        lapply(1:nrepl, onesim)
+    } else {
+        message ("MARK executable not found; set e.g. MarkPath = 'c:/Mark/'")
+    }
 }
 ################################################################################
 

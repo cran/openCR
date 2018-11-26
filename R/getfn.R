@@ -2,6 +2,7 @@
 ## openCR
 ## getfn.R
 ## 2018-02-26 openCR 1.0.0
+## 2018-11-11 buggy if J<3; fixed for getbeta0
 ###############################################################################
 
 #------------------------------------------------------------------------
@@ -146,8 +147,10 @@ getbeta0 <- function (n, x, openval, PIAJ) {
     J <- ncol(PIAJ)
     beta <- openval[PIAJ[n, , x], 3]   
     sumexp <- sum(exp(beta[-1]))
-    beta[2:J] <- exp(beta[2:J]) / (1 + sumexp)
-    beta[1] <- 1 - sum(beta[2:J])
+    if (J>1) {
+        beta[2:J] <- exp(beta[2:J]) / (1 + sumexp)
+        beta[1] <- 1 - sum(beta[2:J])
+    }
     beta
 }
 #------------------------------------------------------------------------
@@ -226,8 +229,9 @@ getbetaD <- function (n, x, openval, PIAJ, phij) {
 #------------------------------------------------------------------------
 
 getbeta <- function (type, n, x, openval, PIAJ, intervals, phij) {
-    if (type %in% c(2, 17, 11, 13))
-        getbeta0 (n, x, openval, PIAJ)
+    if (type %in% c(2, 17, 11, 13, 
+                    30, 31, 41, 43))   ## added 2018-11-11
+        getbeta0 (n, x, openval, PIAJ) 
     else if (type %in% c(4, 15, 27, 7, 9, 39))
         getbetaf (n, x, openval, PIAJ, phij, intervals)
     else if (type %in% c(3, 16, 10, 12, 20))

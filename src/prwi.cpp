@@ -46,7 +46,9 @@ double prwicpp (int type, int n, int x, int nc, int jj,
     getg (type, n, x, nc, jj, openvalR, PIAJR, g);
 
     if (type == 1) {
-	cjs = 1;
+        // cjs = 1;
+        // 2018-10-29
+        cjs = 1 - CJSp1;
     }
     else {
 	getbeta (type, n, x, nc, jj, openvalR, PIAJR, intervalsR, phij, beta);

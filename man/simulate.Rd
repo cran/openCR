@@ -22,9 +22,10 @@ runsim.nonspatial (nrepl = 100, seed = NULL, ncores = NULL, fitargs = list(),
     extractfn = predict, ...)
 
 runsim.spatial (nrepl = 100, seed = NULL, ncores = NULL, popargs = list(), 
-    detargs = list(), fitargs = list(), extractfn = predict)
+    detargs = list(), fitargs = list(), extractfn = predict, intervals = NULL)
 
-sumsims (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol = NULL, maxcode = 3)
+sumsims (sims, parm = 'phi', session = 1, dropifnoSE = TRUE, svtol = NULL, 
+    maxcode = 3, true = NULL)
 
 runsim.RMark (nrepl = 100, model = "CJS", model.parameters = NULL, extractfn,
     seed = NULL, ...)
@@ -59,6 +60,7 @@ runsim.RMark (nrepl = 100, model = "CJS", model.parameters = NULL, extractfn,
   \item{dropifnoSE}{logical; if TRUE then replicates are omitted when SE missing for parm}
   \item{svtol}{numeric; minimum singular value (eigenvalue) considered non-zero}
   \item{maxcode}{integer; maximum accepted value of convergence code}
+  \item{true}{true value of requested parm in given session}
   
   \item{model}{character; RMark model type }
   \item{model.parameters}{list with RMark model specification (see \code{?mark})}
@@ -69,11 +71,11 @@ runsim.RMark (nrepl = 100, model = "CJS", model.parameters = NULL, extractfn,
 
 For \code{sim.nonspatial} -- If \code{intervals} is specified then the number of primary and secondary sessions is inferred from \code{intervals} and \code{nsessions} and \code{noccasions} are ignored. If \code{N} and \code{p} are vectors of length 2 then subpopulations of the given initial size are sampled with the differing capture probabilities and the resulting capture histories are combined.
 
-\code{runsim.spatial} is a relatively simple wrapper for \code{\link{sim.popn}}, \code{\link{sim.capthist}}, and \code{\link{openCR.fit}}. Some arguments are set automatically: the \code{sim.capthist} argument 'renumber' is always FALSE; argument 'seed' is ignored within 'popargs' and 'detargs'; if no 'traps' argument is provided in 'detargs' then 'core' from 'popargs' will be used; detargs$popn and fitargs$capthist are derived from the preceding step. The 'type' specified in fitargs may refer to a non-spatial or spatial open-population model ('CJS', 'JSSAsecrfCL' etc.).
+\code{runsim.spatial} is a relatively simple wrapper for \code{\link{sim.popn}}, \code{\link{sim.capthist}}, and \code{\link{openCR.fit}}. Some arguments are set automatically: the \code{sim.capthist} argument 'renumber' is always FALSE; argument 'seed' is ignored within 'popargs' and 'detargs'; if no 'traps' argument is provided in 'detargs' then 'core' from 'popargs' will be used; detargs$popn and fitargs$capthist are derived from the preceding step. The 'type' specified in fitargs may refer to a non-spatial or spatial open-population model ('CJS', 'JSSAsecrfCL' etc.). If the \code{intervals} argument specified it is used to set the intervals attribute of the simulated capthist object; turnover parameters in \code{sim.popn} are not scaled by \code{intervals}.
 
 In \code{runsim.nonspatial} and \code{runsim.spatial}, if \code{ncores} is NULL (the default) then the available cores (minus one) are used for multithreading by \code{openCR.fit}. Otherwise, (\code{ncores} specified) then replicates are split across multiple cores; 'ncores' is set to 1 for each replicate.
 
-\code{sumsims} assumes output from \code{runsim.nonspatial} and \code{runsim.spatial} with 'extractfn = predict'. Missing SE usually reflects non-identifiability of a parameter or failure of maximisation, so these replicates are dropped by default. If \code{svtol} is specified then the rank of the Hessian is determined by counting eigenvalues that exceed svtol, and replicates are dropped if the rank is less than the number of beta parameters. A value of 1e-5 is suggested for svtol in \code{\link{AIC.openCR}}, but smaller values may be appropriate for larger models (MARK has its own algorithm for this threshold).
+\code{sumsims} assumes output from \code{runsim.nonspatial} and \code{runsim.spatial} with `extractfn = predict' or `extractfn = summary'. Missing SE usually reflects non-identifiability of a parameter or failure of maximisation, so these replicates are dropped by default. If \code{svtol} is specified then the rank of the Hessian is determined by counting eigenvalues that exceed svtol, and replicates are dropped if the rank is less than the number of beta parameters. A value of 1e-5 is suggested for svtol in \code{\link{AIC.openCR}}, but smaller values may be appropriate for larger models (MARK has its own algorithm for this threshold).
 
 Replicates are also dropped by \code{sumsims} if the convergence code exceeds 'maxcode'. The maximisation functions \code{\link{nlm}} (used for method = 'Newton-Raphson', the default), and \code{\link{optim}} (all other methods) return different convergence codes; their help pages should be consulted. The default is to accept code = 3 from \code{nlm}, although the status of such maximisations is ambiguous.
 
@@ -88,6 +90,10 @@ A capthist object representing an open-population sample
 \code{runsim.nonspatial} and \code{runsim.spatial} --
 
 List with one component (output from extractfn) for each replicate. Each component also has attributes 'eigH' and 'fit' taken from the output of \code{openCR.fit}. See Examples to extract convergence codes from 'fit' attribute.
+
+\code{sumsims} --
+
+Data.frame with rows `estimate', `SE.estimate', `lcl', `ucl', `RSE', `CI.length' and columns for median, mean, SD and n. If `true' is specified there are additional rows are `Bias' and `RB', and columns for `rRMSE' and `COV'.
 
 }
 
@@ -140,13 +146,13 @@ plot(2:10, apply(sapply(outg2, function(x) x$estimates$lambda),1,mean)[-1],
 ## RMark
 
 extfn <- function(x) x$results$real$estimate[3:11]
-MarkPath <- 'c:/mark'  ## customise as needed
+MarkPath <- 'c:/mark'  # customise as needed
 turnover <- list(phi = 0.85, lambda = 1.0, recrmodel = 'discrete')
 outrm <- runsim.RMark (nrepl = 100, model = 'Pradlambda', extractfn = extfn, 
                        model.parameters = list(Lambda=list(formula=~time)),
                        N = c(200,200), turnover = turnover, p = c(0.3,0.9),
                        recapfactor = 1, nsessions = 10, noccasions = 1)
-apply(do.call(rbind, outrm),1,mean)
+extout <- apply(do.call(rbind, outrm),1,mean)
 
 ## Spatial
 

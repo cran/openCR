@@ -1,22 +1,28 @@
 \name{print.openCR}
 \alias{print.openCR}
+\alias{summary.openCR}
 
-\title{ Print openCR Object }
+\title{ Print or Summarise openCR Object }
 
 \description{
-  Print results from fitting a spatially explicit capture--recapture model.
+
+  Print results from fitting a spatially explicit capture--recapture model, or generate a list of summary data.
+
 }
 
 \usage{
 \method{print}{openCR} (x, newdata = NULL, alpha = 0.05, svtol = 1e-5,...)
+\method{summary}{openCR} (object, newdata = NULL, alpha = 0.05, svtol = 1e-5, deriv = FALSE, ...)
 }
 
 \arguments{
   \item{x}{ \code{openCR} object output from \code{openCR.fit} }
+  \item{object}{ \code{openCR} object output from \code{openCR.fit} }
   \item{newdata}{ optional dataframe of values at which to evaluate model }
   \item{alpha}{ alpha level }
   \item{svtol}{ threshold for non-null eigenvalues when computing numerical rank }
-  \item{...}{ other arguments (not used currently) }
+  \item{deriv}{logical; if TRUE then table of derived parameters is calculated}
+  \item{...}{ other arguments passed to \code{\link{derived.openCR}} by \code{summary.openCR}}
 }
 
 \details{
@@ -43,7 +49,31 @@ vcov            \tab variance-covariance matrix of beta parameters  \cr
 Real parameters \tab fitted (real) parameters evaluated at base levels of covariates \cr
 }
 
+AICc is computed with the default sample size (number of individuals) and parameter count (use.rank = FALSE).
+
 }
+
+
+\value{
+
+The \code{summary} method constructs a list of outputs similar to those printed by the \code{print} method, 
+but somewhat more concise and re-usable:
+
+\tabular{ll}{
+versiontime     \tab secr version, and date and time fitting started \cr
+traps*           \tab detector summary \cr
+capthist        \tab capthist summary (primary and secondary sessions, numbers of animals and detections)\cr
+intervals        \tab intervals between primary sessions \cr
+mask*            \tab mask summary \cr
+modeldetails    \tab miscellaneous model characteristics (type etc.) \cr
+AICtable        \tab single-line output of AIC.openCR \cr
+coef            \tab table of fitted coefficients with CI \cr
+predicted       \tab predicted values (`real' parameter estimates) \cr
+derived         \tab output of derived.openCR (optional) \cr
+}
+* spatial models only
+}
+
 \references{ 
 Burnham, K. P. and Anderson, D. R. (2002) \emph{Model selection and multimodel inference: a practical information-theoretic approach}. Second edition. New York: Springer-Verlag.
 }

@@ -1,6 +1,8 @@
 ###############################################################################
 # posterior.R
 ## 2018-04-20 openCR 1.2.0
+## 2018-11-11 debug 'not a matrix'
+## 2018-11-20 replaced by classMembership method (see posterior2.R)
 ###############################################################################
 
 posterior.allocation <- function (beta, data)
@@ -36,7 +38,7 @@ posterior.allocation <- function (beta, data)
         type <- switch(data$type, CJSsecr = 6, JSSAsecrf = 7, JSSAsecrD = 8,
                        JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11,
                        JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrB = 14,
-                       JSSAsecrg = 24, JSSAsecrgCL = 25, -1)
+                       JSSAsecrg = 24, JSSAsecrgCL = 25, secrCL = 30, secrD = 31, -1)
         if (type < 0) stop ("Invalid likelihood type for posterior allocation")
         trps <- traps(data$capthist)
         if (!is.null(data$mask)) area <- attr(data$mask,'area')
@@ -49,7 +51,7 @@ posterior.allocation <- function (beta, data)
                 if ((type == 6) & data$fi[n] == data$J) rep(NA, nmix)
                 else {
                     for (x in 1:nrow(pmix)) {
-                        
+                        hx <- matrix(haztemp$h[x,,], nrow = data$m)
                         px[x] <- prwisecrcpp(
                             as.integer(type),
                             as.integer(0),                       ## always just one n
@@ -60,7 +62,7 @@ posterior.allocation <- function (beta, data)
                             as.integer(data$m),
                             as.integer(data$details$nmix),
                             as.integer(data$cumss),
-                            as.integer(data$capthist[n,]),       ## 2-D CH
+                            as.integer(data$capthist[n,,drop = FALSE]),       ## 2-D CH
                             as.integer(data$fi[n]),
                             as.integer(data$li[n]),
                             as.double (hk),                      ## hazard instead of probability
@@ -71,8 +73,8 @@ posterior.allocation <- function (beta, data)
                             as.matrix (data$usge),
                             as.double (data$intervals),
                             as.integer(data$moveargsi),
-                            as.double (haztemp$h),               ## lookup sum_k (hazard)
-                            as.integer(haztemp$hindex[n,]),      ## index to h
+                            as.matrix (hx),                      ## lookup sum_k (hazard)
+                            as.matrix (haztemp$hindex[n,,drop=FALSE]),      ## index to h
                             as.integer(data$details$CJSp1),
                             as.integer(data$movemodel),
                             as.character(data$usermodel),
@@ -112,8 +114,8 @@ posterior.allocation <- function (beta, data)
                             as.matrix (data$usge),
                             as.double (data$intervals),
                             as.integer(data$moveargsi),
-                            as.integer(-1),                  ## not multicatch
-                            as.integer(-1),                  ## not multicatch
+                            as.matrix(-1),                  ## not multicatch
+                            as.matrix(-1),                  ## not multicatch
                             as.integer(data$details$CJSp1),
                             as.integer(data$movemodel),
                             as.character(data$usermodel),
@@ -144,16 +146,11 @@ posterior.allocation <- function (beta, data)
                 as.integer(nrow(realparval)),
                 as.integer(data$details$nmix),
                 as.integer(data$k),
-                as.integer(data$J),
+                as.integer(data$cumss[data$J+1]),
                 as.integer(data$m),
                 as.integer(PIA),
-                as.integer(data$cumss),
-                as.double(data$usge),
+                as.matrix(data$usge),
                 as.double(hk))
-            names(haztemp) <- c('hc0','h','hindex')
-            haztemp$hindex <- matrix(haztemp$hindex, nrow = data$nc)
-            ## discard surplus h for speed in C   DISCARD INTERNALLY
-            haztemp$h <- haztemp$h[1:(data$m * data$details$nmix * (max(haztemp$hindex)+1))]
             haztemp$h <- array(haztemp$h, dim = c(data$details$nmix, data$m, max(haztemp$hindex)+1))
         }
         else {

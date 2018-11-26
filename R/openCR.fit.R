@@ -17,6 +17,8 @@
 ## 2018-01-25 single coerved to multi
 ## 2018-02-02 detectfn HHR etc.
 ## 2018-05-01 intermediate variable allbetanames to fix problem with fixedbeta
+## 2018-10-29 CJSp1 argument for openCR.design
+## 2018-11-20 dropped posterior (see classMembership method)
 ################################################################################
 
 openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
@@ -24,7 +26,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                         mask = NULL, detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP'),
                         binomN = 0, movementmodel = c('static','uncorrelated','normal','exponential'),
                         start = NULL, link = list(), fixed = list(),
-                        timecov = NULL, sessioncov = NULL, dframe = NULL, details = list(),
+                        timecov = NULL, sessioncov = NULL, dframe = NULL, dframe0 = NULL, 
+                        details = list(),
                         method = 'Newton-Raphson', trace = NULL, ncores = NULL, ...)
 
 {
@@ -62,6 +65,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     details <- replace (defaultdetails, names(details), details)
     if (!is.null(trace)) details$trace <- trace
     if (details$LLonly)  details$trace <- FALSE
+    if (details$R) ncores <- 1    ## force 2018-11-12
     #########################################################################
 
     distribution <- match.arg(distribution)
@@ -107,6 +111,10 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     if (is.character(dframe)) {
         dframename <- dframe; rm(dframe)
         dframe <- get(dframename, pos=-1)
+    }
+    if (is.character(dframe0)) {
+        dframename <- dframe0; rm(dframe0)
+        dframe0 <- get(dframename, pos=-1)
     }
     if (is.character(capthist)) {
         capthistname <- capthist; rm(capthist)
@@ -269,7 +277,6 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     # Prepare detection design matrices and lookup
     ##############################################
     memo ('Preparing design matrices', details$trace)
-
     design <- openCR.design (capthist, model, type,
                              timecov = timecov,
                              sessioncov = sessioncov,
@@ -277,20 +284,24 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                              naive = FALSE,
                              contrasts = details$contrasts,
                              initialage = details$initialage,
-                             maximumage = details$maximumage)
+                             maximumage = details$maximumage,
+                             CJSp1 = details$CJSp1)
     allvars <- unlist(lapply(model, all.vars))
-    learnedresponse <- any(c("b", "B", "bsession") %in% allvars)
+    learnedresponse <- any(.openCRstuff$learnedresponses %in% allvars) || !is.null(dframe)
     mixturemodel <- "h2" %in% allvars | "h3" %in% allvars
     multi <- detector(traps(capthist))[1] %in% "multi"
-    design0 <- if (learnedresponse)
+    design0 <- if (learnedresponse) {
+        if (is.null(dframe0)) dframe0 <- dframe
         openCR.design (capthist, model, type,
                        timecov = timecov,
                        sessioncov = sessioncov,
-                       dframe = dframe,
+                       dframe = dframe0,
                        naive = TRUE,
                        contrasts = details$contrasts,
                        initialage = details$initialage,
-                       maximumage = details$maximumage)
+                       maximumage = details$maximumage,
+                       CJSp1 = details$CJSp1)
+    }
     else
         design
 
@@ -374,6 +385,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     if (any(is.na(start)) | is.list(start)) {
         rpsv <- if(secr) RPSV(capthist, CC = TRUE) else NA
         ## assemble start vector
+  
         default <- list(
             p = 0.6,
             lambda0 = 0.6,
@@ -391,8 +403,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
             N = ncf + 1,
             # superN = ncf + 20,
             superN = ncf*(1-distrib) + 20,   ## use N-n for binomial 2018-03-12
-            # superD = (ncf + 20) / marea,
-            superD = (ncf*(1-distrib) + 20) / marea,
+            superD = (ncf + 20) / marea,
+            # superD = (ncf*(1-distrib) + 20) / marea,  ## not a good idea 2018-05-28
             sigma =  rpsv,
             z = 2,
             move.a = rpsv/2,
@@ -637,11 +649,10 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         }
         dimnames(covar) <- list(betanames, betanames)
     }
-
-    if (nmix>1)
-        posterior <- posterior.allocation (this.fit$estimate, data)
-    else
-        posterior <- NULL
+    # if (nmix>1 && details$posterior)
+    #     posterior <- posterior.allocation (this.fit$estimate, data)
+    # else
+    #     posterior <- NULL
 
     desc <- packageDescription("openCR")  ## for version number
     temp <- list (call = cl,
@@ -661,12 +672,12 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                   timecov = timecov,
                   sessioncov = sessioncov,
                   dframe = dframe,
+                  dframe0 = dframe0,
                   details = details,
                   method = method,
                   ncores = ncores,
                   design = design,
                   design0 = design0,
-                  # PIA0njx = PIA0njx,
                   parindx = parindx,
                   intervals = intervals,
                   vars = vars,
@@ -676,7 +687,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                   fit = this.fit,
                   beta.vcv = covar,
                   eigH = eigH,
-                  posterior = posterior,
+                  # posterior = posterior,
                   version = desc$Version,
                   starttime = starttime,
                   proctime = proc.time()[3] - ptm[3]

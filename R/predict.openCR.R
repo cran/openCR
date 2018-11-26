@@ -138,14 +138,15 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
         }
         sessnames <- object$sessionlabels
         if (!is.null(sessnames) ) {
-            if (length(sessnames) == nrow(predict[[i]]))
+            if (length(sessnames) == nrow(predict[[i]])) {
                 row.names(predict[[i]]) <- sessnames
-            else if (nrow(predict[[i]])==1)
+            }
+            else if (nrow(predict[[i]])==1) {
                 row.names(predict[[i]]) <- sessnames[length(sessnames) %/% 2 + 1]
+            }
         }
     }
     if (savenew) attr(predict, 'newdata') <- newdata
-    
     predict
 }
 ############################################################################################

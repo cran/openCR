@@ -12,7 +12,7 @@
 
 \usage{
 
-par.openCR.fit (arglist, ncores = 1, seed = 123, trace = TRUE, logfile = "logfile.txt", 
+par.openCR.fit (arglist, ncores = 1, seed = 123, trace = FALSE, logfile = "logfile.txt", 
     prefix = "")
 
 openCRlist (...)

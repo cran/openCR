@@ -16,10 +16,10 @@ Information Criterion) are preferred.
 \usage{
 
 \method{AIC}{openCR}(object, ..., sort = TRUE, k = 2, dmax = 10,  use.rank = FALSE,
-                        svtol = 1e-5, criterion = c('AIC','AICc'))
+                        svtol = 1e-5, criterion = c('AIC','AICc'), n = NULL)
 
 \method{AIC}{openCRlist}(object, ..., sort = TRUE, k = 2, dmax = 10,  use.rank = FALSE,
-                        svtol = 1e-5, criterion = c('AIC','AICc'))
+                        svtol = 1e-5, criterion = c('AIC','AICc'), n = NULL)
 
 \method{logLik}{openCR}(object, ...)
 
@@ -39,6 +39,7 @@ Information Criterion) are preferred.
     counting non-redundant parameters }
   \item{criterion}{ character, criterion to use for model comparison and
   weights}
+  \item{n}{integer effective sample size}
 }
 
 \details{
@@ -52,9 +53,8 @@ AIC with small sample adjustment is given by
 \frac{2K(K+1)}{n-K-1} }{AICc = -2log(L(theta-hat)) + 2K +
 2K(K+1)/(n-K-1)}
 
-where \eqn{K} is the number of "beta" parameters estimated. The sample size
-\eqn{n} is the number of individuals observed at least once (i.e. the
-number of rows in \code{capthist}).
+where \eqn{K} is the number of "beta" parameters estimated. By default, the effective sample size \eqn{n} is the number of individuals observed at least once (i.e. the
+number of rows in \code{capthist}). This differs from the default in MARK which for CJS models is the sum of the sizes of release cohorts (see \code{\link{m.array}}).
 
 Model weights are calculated as \deqn{w_i = \frac{\exp(-\Delta_i / 2)}{
 \sum{\exp(-\Delta_i / 2)}}}{w_i = exp(-dAICc_i / 2) / sum{ exp(-dAICc_i

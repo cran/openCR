@@ -8,11 +8,14 @@
 ## 2017-12-10 expanded for secondary-session effects
 ## 2018-01-23 timecov added; does sessioncov work?
 ## 2018-02-23 Bsession added, bsession corrected
+## 2018-10-29 CJSp1 argument
+## 2018-11-22 bk, Bk added; bsession etc. redefined
+## 2018-11-23 tidy up
 ################################################################################
 
 openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL, 
                            sessioncov = NULL, dframe = NULL, contrasts = NULL, 
-                           initialage = 0, maximumage = 1, ...) {
+                           initialage = 0, maximumage = 1, CJSp1 = FALSE, ...) {
 
 ## Generate design matrix, reduced parameter array, and parameter index array (PIA)
 ## for each parameter
@@ -74,42 +77,36 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
         }
     }
     #--------------------------------------------------------------------------------
-    
-    
-    
-    
-    # This setting is used for 'naive' table?
-    if (is.null(intervals) | ms(capthist)) {
-        return(list(designMatrices = list(phi = matrix(0,nrow=0,ncol=1)),
-            parameterTable = matrix(0,nrow=0,ncol=1),
-            PIA = array(0,dim=c(1,1,1,1))))
-    }
     npar     <- length(models)                # real parameters
     parnames <- names(models)                 # c('p','phi') for CJS
     vars     <- unique (unlist(sapply (models, all.vars)))
     trps     <- traps(capthist)
     trapcov  <- covariates(trps)
+    used     <- usage(trps)>0
     nmix     <- secr:::get.nmix(models, capthist, NULL)
     zcov     <- covariates(capthist)          # individual covariates
     n        <- nrow(capthist)
     S        <- ncol(capthist)
-    if (grepl('secr', type))
-        K <- nrow(trps)
-    else
-        K <- 1
-    intervals <- attr(capthist, 'intervals')
+    K        <- if (grepl('secr', type)) nrow(trps) else 1
+    intervals         <- attr(capthist, 'intervals')
     if (is.null(intervals)) intervals <- rep(1, ncol(capthist)-1)
-    J        <- sum(intervals>0) + 1 
-    primarysession <- primarysessions(intervals)
+    J                 <- sum(intervals>0) + 1 
+    primarysession    <- primarysessions(intervals)
     secondarysessions <- tabulate(primarysession)
-    firstofsession <- match(1:J, primarysession)
-    used     <- usage(trps)>0
+    firstofsession    <- match(1:J, primarysession)
+    validlevels       <- getvalidlevels (type, parnames, J, CJSp1)
     
-    # if (length(used)>0 & any (duplicated(primarysession))) {  # reduce to robust design sessions 2017-11-19
-    #     used <- t(apply(used, 1, function(x) tapply(x, primarysession, max)))
-    # }
+    #--------------------------------------------------------------------------
 
-    validlevels <- getvalidlevels (type, parnames, J)
+    if (!grepl('secr', type) & any(.openCRstuff$traplearnedresponses %in% vars))
+        stop ("cannot use detector-specific predictor with non-spatial model")
+        
+    if (sum(.openCRstuff$learnedresponses %in% vars) > 1)
+        stop ("model should not use more than one type of behavioural response")
+    
+    if (any(.openCRstuff$learnedresponses %in% vars) &
+        packageDescription("openCR")$Version<"1.4.0")  # sunset < 1.4.0 for this msg
+        warning ("learned response models were re-defined in version 1.3 - check vignette")
     
     #--------------------------------------------------------------------------
     # session covariates   (primary sessions)
@@ -133,7 +130,8 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     #--------------------------------------------------------------------------
     dims <- c(n,S,K,nmix)       # virtual dimensions
     dframenrow <- prod(dims)    # number of rows
-    autovars <- c('b', 'B', 'bsession', 'Bsession', 'session', 't', 'Session', 'h2', 'h3', 'age', 'Age', 'Age2')
+    autovars <- c(.openCRstuff$learnedresponses, 'session', 't', 'Session', 
+                  'h2', 'h3', 'age', 'Age', 'Age2')
     #--------------------------------------------------------------------------
     # user-specified dframe
     if (is.null(dframe)) {
@@ -172,12 +170,12 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     #--------------------------------------------------------------------------
 
     ## behavioural response fields
+    
     makeb <- function (caphist) {      ## global response
         temp0 <- apply(abs(caphist), 1:2, sum)
         ## convert to n x (S+1) CH
         t(apply(temp0, 1, prevcapt))
     }
-    
     ## by primary session
     makebJ <- function (caphist) {      ## global response
         temp0 <- apply(abs(caphist), 1:2, sum)
@@ -187,57 +185,170 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
         t(apply(temp0, 1, rep, secondarysessions))
     }
     #--------------------------------------------------------------------------
-
-    if ('b' %in% vars) {
-        if (naive) dframe$b <- rep(FALSE, dframenrow)
+    if ('bsession' %in% vars) {
+        if (naive) dframe$bsession <- rep(FALSE, dframenrow)
         else {
             prevcapt <- function(x) {
-                prevcapt1 <- function(x) c(FALSE, cumsum(x[-S])>0)
+                #prevcapt1 <- function(x) c(FALSE, cumsum(x[-S])>0)  BUG 2018-11-22
+                prevcapt1 <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
                 ## apply within each primary session
                 unlist(lapply( split(x, primarysession), prevcapt1))
             }
+            temp <- makeb(capthist)
+            dframe$bsession <- secr::insertdim (as.vector(temp), c(1,2), dims)
+        }
+    }
+    
+    #------------------------------------------------
+    if ('Bsession' %in% vars) {
+        if (naive) dframe$Bsession <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) {
+                prevcapt1 <- function(x) c(FALSE, x[-length(x)]>0)
+                ## apply within each primary session
+                unlist(lapply( split(x, primarysession), prevcapt1))
+            }
+            temp <- makeb(capthist)
+            dframe$Bsession <- secr::insertdim (as.vector(unlist(temp)), c(1,2), dims)
+        }
+    }
+    
+    #------------------------------------------------
+    if ('b' %in% vars) {
+        if (naive) dframe$b <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
             temp <- makeb(capthist)
             dframe$b <- secr::insertdim (as.vector(temp), c(1,2), dims)
         }
     }
-    #------------------------------------------------
     
+    #------------------------------------------------
     if ('B' %in% vars) {
         if (naive) dframe$B <- rep(FALSE, dframenrow)
         else {
             prevcapt <- function(x) {
-                prevcapt1 <- function(x) c(FALSE, x[-S]>0)
+                prevcapt1 <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
+                ## apply within each primary session
+                capt1 <- unlist(lapply( split(x, primarysession), prevcapt1))
+                pcapt <- unique(primarysession[x>0])
+                ## EITHER same primary as ct and later OR next primary
+                (capt1 & (primarysession %in% pcapt)) | (primarysession %in% (pcapt+1))
+            }
+            temp <- makeb(capthist)
+            dframe$B <- secr::insertdim (as.vector(temp), c(1,2), dims)
+        }
+    }
+    # old Bsession
+    # if ('B' %in% vars) {
+    #     if (naive) dframe$B <- rep(FALSE, dframenrow)
+    #     else {
+    #         prevcapt <- function(x) c(FALSE, x[-J]>0)
+    #         temp <- makebJ(capthist)
+    #         dframe$B <- secr::insertdim (as.vector(temp), c(1,2), dims)
+    #     }
+    # }
+    #------------------------------------------------
+    
+        
+    #------------------------------------------------
+    ## individual trap-specific responses
+    
+    makebk <- function (caphist) {     
+        # condition added 2016-10-01
+        if (nrow(caphist)==0) 
+            array(dim = c(0,S,K))
+        else {
+            temp <- apply(abs(caphist), c(1,3), prevcapt)
+            aperm(temp, c(2,1,3))
+        }
+    }
+    
+    #------------------------------------------------
+    if ('bksession' %in% vars) {
+        if (naive) dframe$bksession <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) {
+                prevcapt1 <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
                 ## apply within each primary session
                 unlist(lapply( split(x, primarysession), prevcapt1))
             }
-            temp <- makeb(capthist)
-            dframe$B <- secr::insertdim (as.vector(unlist(temp)), c(1,2), dims)
+            temp <- makebk(capthist) 
+            dframe$bksession <- secr::insertdim(temp, 1:3, dims)  
         }
     }
-    #------------------------------------------------
     
-    if ('bsession' %in% vars) {
-        if (naive) dframe$bsession <- rep(FALSE, dframenrow)
-        else {
-            prevcapt <- function(x) c(FALSE, cumsum(x[-J])>0)
-            ## apply between primary sessions, then extend
-            
-            temp <- makebJ(capthist)
-            dframe$bsession <- secr::insertdim (as.vector(temp), c(1,2), dims)
-        }
-    }
     #------------------------------------------------
-    
-    if ('Bsession' %in% vars) {
-        if (naive) dframe$bsession <- rep(FALSE, dframenrow)
+    if ('Bksession' %in% vars) {
+        if (naive) dframe$Bksession <- rep(FALSE, dframenrow)
         else {
-            prevcapt <- function(x) c(FALSE, x[-J]>0)
-            temp <- makebJ(capthist)
-            dframe$Bsession <- secr::insertdim (as.vector(temp), c(1,2), dims)
+            prevcapt <- function(x) c(FALSE, x[-S]>0)
+            temp <- makebk(capthist)  # one session
+            dframe$Bksession <- secr::insertdim(temp, 1:3, dims)
         }
     }
+    
+    #------------------------------------------------
+    if ('bk' %in% vars) {
+        if (naive) dframe$bk <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
+            temp <- makebk(capthist) 
+            dframe$bk <- secr::insertdim(temp, 1:3, dims)  
+        }
+    }
+    
     #------------------------------------------------
 
+    ## 2018-11-22
+    ## Detector response (k) is an approximation because
+    ## "naive" state refers to animals not detectors --
+    ## undocumented for now (k matches secr)
+    
+    makek <- function (caphist) {      ## trap responds to capture of any animal
+        temp <- apply(abs(caphist), c(2,3), sum) # occasion x trap
+        apply(temp, 2, prevcapt)
+    }
+
+    #------------------------------------------------
+    if ('k' %in% vars) {
+        if (naive) dframe$k <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
+            temp <- makek(capthist)
+            dframe$k <- secr::insertdim(temp, 2:3, dims)
+        }
+    }
+
+    #------------------------------------------------
+    if ('ksession' %in% vars) {
+        if (naive) dframe$ksession <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) {
+                prevcapt1 <- function(x) c(FALSE, cumsum(x[-length(x)])>0)
+                ## apply within each primary session
+                unlist(lapply( split(x, primarysession), prevcapt1))
+            }
+            temp <- makek(capthist)
+            dframe$ksession <- secr::insertdim(temp, 2:3, dims)
+        }
+    }
+
+    #------------------------------------------------
+    if ('Ksession' %in% vars) {
+        if (naive) dframe$Ksession <- rep(FALSE, dframenrow)
+        else {
+            prevcapt <- function(x) {
+                prevcapt1 <- function(x) c(FALSE, x[-length(x)]>0)
+                ## apply within each primary session
+                unlist(lapply( split(x, primarysession), prevcapt1))
+            }
+            temp <- makek(capthist)
+            dframe$Ksession <- secr::insertdim(temp, 2:3, dims)
+        }
+    }
+
+    #------------------------------------------------
     ## h2 or h3
     if (nmix > 1) {
         mixture <- paste('h',nmix,sep='')
@@ -280,35 +391,35 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
             tempmat <- model.matrix(formula, data = dframe, contrasts.arg = contrasts, ...)
             ## drop pmix beta0 column from design matrix
             if (prefix=='pmix') tempmat <- tempmat[,-1,drop=FALSE]
-            temp <- secr::make.lookup (tempmat)   # retain unique rows
+            ## temp <- secr::make.lookup (tempmat)   # retain unique rows
+            temp <- makelookupcpp (tempmat)   # retain unique rows   ## 2018-11-06
             list (model=temp$lookup, index=temp$index)
         }
     }
-
     dframe[is.na(dframe)] <- 0
     # list with one component per real parameter
     # each of these is a list with components 'model' and 'index'
     designMatrices <- sapply (1:length(models), simplify=FALSE,
         function (x) make.designmatrix(models[[x]], names(models[x])))
     names(designMatrices) <- names(models)
-
+    
     ## dim(indices) = c(n*S*K*nmix, npar)
     indices <- sapply (designMatrices, function(x) x$index)
-
     indices <- matrix(unlist(indices), ncol = npar)
 
     # retain just the 'model' components of 'designMatrices'
     designMatrices <- lapply (designMatrices, function(x)x$model )
 
     # prefix column names in 'designMatrices' with parameter name
-
-    for (i in 1:npar)
+    for (i in 1:npar) {
         colnames(designMatrices[[i]]) <- paste (parnames[i], '.',
             colnames(designMatrices[[i]]), sep='')
+    }
 
     # repackage indices to define unique combinations of parameters
-    indices2 <- secr::make.lookup(indices)
-
+    ##indices2 <- secr::make.lookup(indices)
+    indices2 <- makelookupcpp(indices)
+    
     #--------------------------------------------------------------------
     # PIA = Parameter Index Array
     #       index to row of parameterTable for a given n,s,nmix
@@ -372,7 +483,8 @@ njxlookup <- function (PIA, primarysession) {
     }
     piask <- lapply(splitdf, fixpiask)
     njxIA <- do.call(rbind, piask)
-    lookup <- secr::make.lookup(njxIA)
+    ## lookup <- secr::make.lookup(njxIA)
+    lookup <- makelookupcpp(njxIA)
     lookup
 }
 

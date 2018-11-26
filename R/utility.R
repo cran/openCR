@@ -4,18 +4,25 @@
 ## 2018-04-20 m.array removed to m.array.R
 ## 2018-04-20 JS.counts removed to JS.counts.R
 ## 2018-04-20 posterior.allocation removed to posterior.R
+## 2018-11-22 n.unique.rows drop = FALSE 
+## 2018-11-22 learnedresponses global vector
 ###############################################################################
 
 .openCRstuff <- new.env()
-.openCRstuff$packageType <- ' pre-release'
-#.openCRstuff$packageType <- ''
+#.openCRstuff$packageType <- ' pre-release'
+.openCRstuff$packageType <- ''
 .openCRstuff$iter <- 0
 .openCRstuff$suspendedtypes <- c('JSSAfgCL', 'JSSAfg')
-
 
 .openCRstuff$sigmai <- rep(3, 50)   ## default 3
 .openCRstuff$sigmai[c(6,15,36)] <- 2
 .openCRstuff$sigmai[c(7,12,13,24,31)] <- 4
+
+.openCRstuff$learnedresponses <- c('b','bk', 'B', 'bsession',
+                                   'k', 'ksession', 'Ksession',
+                                   'bksession', 'Bsession','Bksession')
+.openCRstuff$traplearnedresponses <- c('bk', 'Bk', 'k', 'ksession', 'Ksession',
+                                   'bksession', 'Bksession')
 
 replacedefaults <- function (default, user) replace(default, names(user), user)
 
@@ -378,9 +385,10 @@ adjustlevels <- function (field, dframe, validlevels ) {
 }
 
 ############################################################################################
-
-getvalidlevels <- function (type, parnames, J) {
-
+# getvalidlevels <- function (type, parnames, J) {
+# 2018-10-29
+getvalidlevels <- function (type, parnames, J, CJSp1) {
+        
     # flag impossible parameters by primary session
 
     validlevels <- matrix(TRUE, nrow = length(parnames), ncol = J)
@@ -397,7 +405,9 @@ getvalidlevels <- function (type, parnames, J) {
         validlevels['move.b',J] <- FALSE
     }
     if (type %in% 'CJS') {
-        if ('p' %in% parnames)
+        # if ('p' %in% parnames)
+        # 2018-10-29
+        if ('p' %in% parnames & !CJSp1)
             validlevels['p',1] <- FALSE
     }
     if (type %in% c('JSSAf','JSSAfCL', 'JSSAsecrf','JSSAsecrfCL')) {
@@ -422,10 +432,12 @@ getvalidlevels <- function (type, parnames, J) {
             validlevels['b',1] <- FALSE  
     }
     if (type %in% c('CJSsecr')) {
-        if ('lambda0' %in% parnames)
-            validlevels['lambda0',1] <- FALSE
-        if ('sigma' %in% parnames)
-            validlevels['sigma',1] <- FALSE
+        if (!CJSp1) {              ## 2018-10-29
+            if ('lambda0' %in% parnames)
+                validlevels['lambda0',1] <- FALSE
+            if ('sigma' %in% parnames)
+                validlevels['sigma',1] <- FALSE
+        }
         # if ('move.a' %in% parnames)
         #     validlevels['move.a',1] <- FALSE
         # if ('move.b' %in% parnames)
@@ -817,9 +829,10 @@ typecode <- function (type) {
 }
 
 ## Based on Charles C. Berry on R-help 2008-01-13
+## drop = FALSE 2018-11-22
 n.unique.rows <- function(x) {
     order.x <- do.call(order, as.data.frame(x))
-    equal.to.previous <- rowSums(x[tail(order.x,-1),] != x[head(order.x,-1),])==0 
+    equal.to.previous <- rowSums(x[tail(order.x,-1),,drop = FALSE] != x[head(order.x,-1),,drop = FALSE])==0 
     1 + sum(!equal.to.previous)
 }
 

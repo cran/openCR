@@ -1,7 +1,7 @@
 ## 2017-05-12
 ## openCR parallel fit, derived, region.N
 
-par.openCR.fit <- function (arglist, ncores = 1, seed = 123, trace = TRUE,
+par.openCR.fit <- function (arglist, ncores = 1, seed = 123, trace = FALSE,
                           logfile = "logfile.txt", prefix = "") {
     ptm  <- proc.time()
     ## 'inherits' causes R to search in enclosing frames

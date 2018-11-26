@@ -6,12 +6,12 @@
 ## 2015-02-06 reconciled this current version with forked 1.2.0:
 ## 2017-12 revamped
 ## 2018-04-12 allow single session
-
+## 2018-11-22 new learned responses
 ############################################################################################
 
 openCR.make.newdata <- function (object, all.levels = FALSE) {
     # 'Session', 't' are handled separately at end
-    autovars <- c('session','b','B','bsession','h2','h3')
+    autovars <- c(.openCRstuff$learnedresponses, 'session','h2','h3')
     capthist <- object$capthist
     mask <- object$mask
     vars <- object$vars
@@ -54,9 +54,21 @@ openCR.make.newdata <- function (object, all.levels = FALSE) {
     if (nmix>1) basevars[mixvar] <- list(as.character(1:nmix))
     for (v in vars) {
         if (v=='T')  basevars$T <- 0
-        if (v=='b')  basevars$b <- factor(0:1)
-        if (v=='B')  basevars$B <- factor(0:1)
-        if (v=='bsession')  basevars$bsession <- factor(0:1)
+        
+        # superceded 2018-11-15            
+        # if (v=='b')  basevars$b <- factor(0:1)
+        # if (v=='k')  basevars$k <- factor(0:1)
+        # if (v=='bk') basevars$bk <- factor(0:1)
+        # if (v=='bsession')  basevars$bsession <- factor(0:1)
+        # if (v=='ksession')  basevars$ksession <- factor(0:1)
+        # if (v=='bksession') basevars$bksession <- factor(0:1)
+        # if (v=='Bsession')  basevars$Bsession <- factor(0:1)
+        # if (v=='Ksession')  basevars$Ksession <- factor(0:1)
+        # if (v=='Bksession')  basevars$Bksession <- factor(0:1)
+        for (i in .openCRstuff$learnedresponses) {
+            if (v == i) basevars[,i] <- factor(0,1)
+        }
+            
         # firstage <- as.numeric(grepl('CJS', object$type))
         firstage <- 0
         if (v=='age')  basevars$age <- factor(firstage:object$details$maximumage)
