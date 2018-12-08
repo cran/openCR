@@ -53,7 +53,7 @@ AIC with small sample adjustment is given by
 \frac{2K(K+1)}{n-K-1} }{AICc = -2log(L(theta-hat)) + 2K +
 2K(K+1)/(n-K-1)}
 
-where \eqn{K} is the number of "beta" parameters estimated. By default, the effective sample size \eqn{n} is the number of individuals observed at least once (i.e. the
+where \eqn{K} is the number of ``beta" parameters estimated. By default, the effective sample size \eqn{n} is the number of individuals observed at least once (i.e. the
 number of rows in \code{capthist}). This differs from the default in MARK which for CJS models is the sum of the sizes of release cohorts (see \code{\link{m.array}}).
 
 Model weights are calculated as \deqn{w_i = \frac{\exp(-\Delta_i / 2)}{

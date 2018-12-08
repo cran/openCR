@@ -683,7 +683,7 @@ This is generally an undeveloped field for spatially explicit capture--recapture
 
 For Cormack-Jolly-Seber (nonspatial) models there is an established suite of tests following Burnham et al. (1987). The tests have been implemented in the U-CARE software of Choquet et al. (2009), recently translated into R by Gimenez et al (2017) as package **R2ucare**. Program RELEASE (Burnham et al. 1987) also implements the core CJS tests and is available through MARK.
 
-The **openCR** function `ucare.cjs` is a wrapper for relevant functions in **R2ucare**. We briefly demonstrate it here for the dipper data of Marzolin (1988).
+The **openCR** function `ucare.cjs` is a wrapper for relevant functions in **R2ucare**, which should be installed. We briefly demonstrate it here for the dipper data of Marzolin (1988).
 
 ```{r ucare}
 ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')

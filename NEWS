@@ -1,3 +1,11 @@
+version 1.3.1 (2018-12-08)
+
+New features and changed behaviour
+    o sumsims accepts simulated fits with method = "none"
+
+Other
+    o R2ucare now in Suggests not Imports, with tweak to ucare.cjs() 
+
 version 1.3.0 (2018-11-26)
 
 New features and changed behaviour

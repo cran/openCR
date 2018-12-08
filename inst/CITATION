@@ -5,7 +5,7 @@ vers <- paste("R package version", meta$Version)
 url <- "https://CRAN.R-project.org/package=openCR"
 
 citEntry(entry="Manual",
-    title = "open: Open population capture-recapture models",
+    title = "openCR: Open population capture-recapture models",
     author = personList(as.person("Murray Efford")),
     year = year,
     note = vers,

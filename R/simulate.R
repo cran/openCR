@@ -3,6 +3,7 @@
 ## simulate.R 
 ## 2018-05-28 intervals argument for runsim.spatial
 ## 2018-11-02 revised sumsims
+## 2018-11-27 revised sumsims to allow method = "none"
 ################################################################################
 sim.nonspatial <- function(N, turnover = list(), p, nsessions, noccasions = 1, 
                            intervals = NULL, recapfactor = 1, seed = NULL, 
@@ -162,6 +163,7 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE,
         results
     }
     else {
+
         if (is.null(sims)) {
             data.frame(cbind(median = NA, mean = NA, sd = NA, n = NA))
         }
@@ -175,17 +177,22 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE,
                 stop ("Parameter ", parm, " not reported (try ", paste(names(predicted[[1]]), collapse=', '), ")")
             }
             mat <- t(sapply(predicted, function(x) unlist(x[[parm]][session,])))
-            if (is.na(maxcode)) maxcode <- Inf
-            codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'code')
-            if (is.null(codes[[1]]))
-                codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'convergence')
-            if (any(is.null(codes)))
-                stop ("problem finding convergence codes")
             if (dropifnoSE)
                 OK <- !is.na(mat[,3])
             else
                 OK <- rep(TRUE, nrow(mat))
-            OK <- OK & (codes<= maxcode)    
+
+            if (attr(sims[[1]], "fit")$method != "none") {
+                if (is.na(maxcode)) maxcode <- Inf
+                codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'code')
+                if (is.null(codes[[1]]))
+                    codes <- sapply(lapply(sims, attr, 'fit'), '[[', 'convergence')
+                # 2018-11-27
+                codes <- unlist(codes)
+                if (any(is.null(codes)))
+                    stop ("problem finding convergence codes")
+                OK <- OK & (codes<= maxcode)    
+            }
             if (!is.null(svtol)) {
                 nbeta <- function(x) length(attr(x, 'fit')$par)
                 NP <- sapply(sims, nbeta)  # nrepl vector, all same

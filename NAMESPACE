@@ -13,7 +13,8 @@ importFrom (stats, "AIC", "coef", "logLik", "as.formula", "model.matrix", "nlm",
 importFrom (methods, "formalArgs")
 importFrom (Rcpp, "evalCpp")
 importFrom (RcppParallel, "RcppParallelLibs", "setThreadOptions", "defaultNumThreads")
-importFrom (R2ucare, "test3sr", "test3sm", "test2ct", "test2cl", "overall_CJS")
+# suggests, not imports from 1.3.1
+# importFrom (R2ucare, "test3sr", "test3sm", "test2ct", "test2cl", "overall_CJS")
 
 export (openCR.fit)
 export (par.openCR.fit)
