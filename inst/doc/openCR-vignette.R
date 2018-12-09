@@ -150,5 +150,6 @@ fitnm <- openCR.fit(ovenCH, type = 'JSSAlCL', model = list(phi ~ t, lambda~t),
 AIC(fitnm,fitnr)
 
 ## ----ucare------------------------------------------------------------------------------
-ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
+if (requireNamespace("R2ucare"))
+    ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
 

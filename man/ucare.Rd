@@ -69,7 +69,8 @@ Pradel, R., Gimenez O. and Lebreton, J.-D. (2005) Principles and interest of GOF
 
 \examples{
 
-ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
+if (requireNamespace("R2ucare"))
+    ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
 
 }
 

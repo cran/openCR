@@ -72,7 +72,9 @@ moving.fit(capthist = OVpossumCH, FUN = nrow)
 
 \dontrun{
 
-moving.fit(capthist = OVpossumCH, FUN = ucare.cjs, width = 5, tests = "overall_CJS")
+## if package R2ucare installed
+if (requireNamespace("R2ucare"))
+    moving.fit(capthist = OVpossumCH, FUN = ucare.cjs, width = 5, tests = "overall_CJS")
 
 ## using default FUN = openCR.fit
 

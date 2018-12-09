@@ -686,7 +686,8 @@ For Cormack-Jolly-Seber (nonspatial) models there is an established suite of tes
 The **openCR** function `ucare.cjs` is a wrapper for relevant functions in **R2ucare**, which should be installed. We briefly demonstrate it here for the dipper data of Marzolin (1988).
 
 ```{r ucare}
-ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
+if (requireNamespace("R2ucare"))
+    ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
 ```
 
 This invocation of `ucare.cjs` calls the **R2ucare** functions `test3sr`, `test3sm`, `test2ct`, `test2cl` and `overall_CJS` for each sex and provides a condensed report. For interpretation see the original papers, the **R2ucare** [vignette](https://cran.r-project.org/package=R2ucare/vignettes/vignette_R2ucare.html), and Chapter 5 of the MARK book (Cooch and White 2017).  Lebreton et al. (1992: 86) indicate only Test 3SR is meaningful for these data (see also [openCR-examples.pdf][openCR-examples.pdf]).
