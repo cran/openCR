@@ -11,6 +11,7 @@
 ## 2018-10-29 CJSp1 argument
 ## 2018-11-22 bk, Bk added; bsession etc. redefined
 ## 2018-11-23 tidy up
+## 2018-12-21 trap covariates
 ################################################################################
 
 openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL, 
@@ -364,6 +365,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
 
     findvars (zcov, vars, 1)
     findvars (timecov, vars, 2)
+    findvars (trapcov, vars, 3)  ## 2018-12-21
     findvars (sessioncov, vars, 2, scov = TRUE)  ## expands correctly 2018-05-07
     tvc <- timevaryingcov(capthist)
     if (!is.null(tvc) & (length(vars)>0)) {

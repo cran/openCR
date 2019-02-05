@@ -7,6 +7,7 @@
 ## 2017-12 revamped
 ## 2018-04-12 allow single session
 ## 2018-11-22 new learned responses
+## 2019-02-02 fixed bug: factor(0,1)
 ############################################################################################
 
 openCR.make.newdata <- function (object, all.levels = FALSE) {
@@ -66,7 +67,8 @@ openCR.make.newdata <- function (object, all.levels = FALSE) {
         # if (v=='Ksession')  basevars$Ksession <- factor(0:1)
         # if (v=='Bksession')  basevars$Bksession <- factor(0:1)
         for (i in .openCRstuff$learnedresponses) {
-            if (v == i) basevars[,i] <- factor(0,1)
+            # if (v == i) basevars[,i] <- factor(0:1)   ## 2019-02-02 fixed bug: factor(0,1)
+            if (v == i) basevars[[i]] <- factor(0:1)   ## 2019-02-02 fixed bug: factor(0,1)
         }
             
         # firstage <- as.numeric(grepl('CJS', object$type))

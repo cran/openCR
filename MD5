@@ -1,6 +1,6 @@
-a06f835c93e8d2812f08f9c4c0ebadf7 *DESCRIPTION
+d4e84a2109e84ea6f0624fcd75a084f9 *DESCRIPTION
 50a0d11046c75709380048ba7aa9b386 *NAMESPACE
-71f0d9955428b0caabceca8d95f48d2d *NEWS
+1427e4f51b9fff5c23de866a53ddaa4d *NEWS
 bd8a467afb230d87335ce004717db8cc *R/AIC.R
 857c619660331d40cf8a3c0c108eb105 *R/JS.counts.R
 323e415d608215db72b5b696bff4042e *R/JSdirect.R
@@ -22,10 +22,10 @@ bf1fcc1527d62227ee21dd12a4bdb0c6 *R/m.array.R
 c50b72c42bd489d4e4b9fdeaefd703f5 *R/methods.R
 870a2631e695528462c05b67127d87c8 *R/moving.fit.R
 b9292cbc34fafb4dabc04aedd10842e3 *R/onAttach.R
-61e57bcf5f3a51df580f80abce8126c3 *R/openCR.design.R
+f75e880230105bbf5d7ed83aedd9b7b8 *R/openCR.design.R
 8ff84845e23bcda3e278cdc8d56ea33a *R/openCR.esa.r
 563339fcd9b3bb4c29b75247052b9d0a *R/openCR.fit.R
-f9434a39d64e7cf0fc89085f5921908b *R/openCR.make.newdata.R
+f7a24adeda16286f99992a6debe44062 *R/openCR.make.newdata.R
 2ea2339a4a7001923c7c3b740a60629e *R/openCR.pdot.r
 616e87ab3717e4a5fcff330264031915 *R/par.openCR.fit.R
 d8a041c3a9761e07c6c013d8dc0ba474 *R/plot.openCR.R
@@ -39,7 +39,7 @@ d8fc0362d7bc55cd7b9220d8578ee2c2 *R/plotKernel.R
 72846033f6a1d406f66934091a1e7079 *R/read.inp.R
 411323593a1e081a37516787ad404e9a *R/rev.capthist.R
 940bc14bff5acf7a0745244a8747f376 *R/simulate.R
-4bbf694530d6958fdd74de092f7bbedd *R/summary.R
+df00b93dd893a74a393e4d54bd3d7750 *R/summary.R
 835af2a05a0ac28d184038871bb6be97 *R/ucare.R
 ed03e36b2db86bc73858150475622593 *R/utility.R
 04e442d1dbeab034ea01c88f40866704 *build/vignette.rds
@@ -49,10 +49,9 @@ ed03e36b2db86bc73858150475622593 *R/utility.R
 ea26a4f0b02668ed9223c39bec5f4042 *data/gonodontis.RData
 776720d93e1fbb26122ab57715e2cfb0 *data/microtus.RData
 d623b188bc85feb351be6112e6b103c3 *inst/CITATION
-ab2c746658cd02dbdd68bf61946af5aa *inst/doc/openCR-manual.pdf
 429de15d0bec78f09c0477951ad43a94 *inst/doc/openCR-vignette.R
 601da0377d9692c46be7904618d053d8 *inst/doc/openCR-vignette.Rmd
-8435335e1753051fc4499809cbe35822 *inst/doc/openCR-vignette.pdf
+c9f252cd7ca41412baba94a984a2de78 *inst/doc/openCR-vignette.pdf
 4d82db8392fe7619b7ecccee13d13ca5 *inst/extdata/ErgonAndGardner2013.rdat
 0c5d936c15398429820fecfc67e3d0ad *inst/extdata/JLYEXMPL
 128e570be606ec5484643f1b308e52cb *inst/extdata/ed.inp
@@ -62,7 +61,7 @@ d2af713380d05e9b2f9da3ff9ab10371 *man/JS.direct.Rd
 1fc06438742bb4ac32452a5041cf4f04 *man/LLsurface.Rd
 d09ffc87981f8733329d5dee0c6c0c39 *man/PPNpossums.Rd
 90ef232c8dad69dc2eeb61e5f6b41edc *man/age.matrix.Rd
-938c393387d7b3ba31b7241b5db3140c *man/classMembership.Rd
+908c39cf0bd72cc3b77a653f82d9455d *man/classMembership.Rd
 300120cb69d1213122d97e931f750c5a *man/cloned.fit.Rd
 1ee5cf952de03a5900fd6a0fa26ebb47 *man/derived.Rd
 d43805fa088a6566c29c49338c38ac6b *man/dipper.Rd
@@ -73,7 +72,7 @@ e8e3e16bc4b20f90aae004f55ce07f02 *man/manip.Rd
 40d21ca24f1bc04efb27694427f2a3fd *man/microtus.Rd
 95c01dfde75c60dd028920849be187ef *man/moving.fit.Rd
 c079631b621f58a5044f7ecc622cfc72 *man/openCR-internal.Rd
-5ced63c70af4201389fe8ba011955405 *man/openCR-package.Rd
+1cc92335dd996b42179b2a7e0449cf4e *man/openCR-package.Rd
 5ae191467450bb00f20b8d97f67938d2 *man/openCR.design.Rd
 35fd96d2df0dc0c50e888cd3d47131c5 *man/openCR.fit.Rd
 deda9da7f3297c965b6d382cd54285aa *man/openCR.make.newdata.Rd

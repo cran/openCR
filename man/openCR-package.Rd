@@ -27,8 +27,8 @@
   \tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 1.3.2\cr
-Date: \tab 2018-12-08\cr
+Version: \tab 1.3.4\cr
+Date: \tab 2019-02-05\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 
@@ -52,8 +52,7 @@ Models are fitted by numerically maximizing the likelihood. The function
 \code{openCR}. Generic methods (print, AIC, etc.) are provided
 for each object class.
 
-A link at the bottom of each help page takes you to the help index. The
-help pages are also available as \url{../doc/openCR-manual.pdf}.
+A link at the bottom of each help page takes you to the help index. 
 
 See \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for more.
 

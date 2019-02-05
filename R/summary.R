@@ -38,11 +38,16 @@ summary.openCR <- function (object, newdata = NULL, alpha = 0.05, svtol = 1e-5, 
     ncapt <- sum(freq * apply(abs(ch),1,sum))
     nprimary <- length(object$intervals)+1
     nsecondary <- ncol(ch)
-    
+
     ch <- unsqueeze(ch)   ## 2018-11-10    
     chsess <- suppressWarnings(split(ch, primarysessions(intervals(ch)), byoccasion = TRUE))
-    bysession <- summary(chsess, terse = TRUE)
-    out$capthist <- cbind(bysession, Total = c(nsecondary, ncapt, n, nrow(traps(ch))))
+    bysession <- summary(chsess, terse = TRUE, moves = TRUE)
+    
+    ## RESPONSE TO NEW SUMMARY(CAPTHIST) IN secr 3.2.0
+    #out$capthist <- cbind(bysession, Total = c(nsecondary, ncapt, n, nrow(traps(ch))))
+    nmov <- if (nrow(bysession>4)) sum(unlist(sapply(moves(ch), function(y) y>0))) else numeric(0)
+    out$capthist <- cbind(bysession, Total = c(nsecondary, ncapt, n, nrow(traps(ch)), nmov))
+    
     out$intervals <- object$intervals
     
     if (secrmodel) {
