@@ -1040,7 +1040,7 @@ For independent detectors[^footnote19] each with individual detection probabilit
 
 The evaluation of $p_\cdot(\vec x_b)$ must allow for the possibility that a member of the superpopulation is not alive at time $j$, and for movement between sampling occasions. Using $\beta_j$ for entry probability and $\phi_j$ for apparent survival,
 $$
-p_\cdot(\vec x_b) = \sum_{b=1}^J \sum_{d=b}^J \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d) \{ 1 - \prod_{j=b}^{j=d} [\mbox{Pr} (\omega_j=0 | \vec \vec x_j) f(\vec x_j|\vec x_b)] \} .
+p_\cdot(\vec x_b) = \sum_{b=1}^J \sum_{d=b}^J \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d) \{ 1 - \prod_{j=b}^{j=d} [\mbox{Pr} (\omega_j=0 | \vec x_j) f(\vec x_j|\vec x_b)] \} .
 $$
 The problem here is to pin down $f(\vec x_j|\vec x_b)$ for an undetected animal. Initially ($j=b$) $\vec x_b$ is Poisson-distributed. This changes over time: peripheral locations become more likely the longer an animal remains uncaptured. Diffusive dispersal movements tend to flatten the distribution.
 

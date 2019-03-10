@@ -1,6 +1,6 @@
-d4e84a2109e84ea6f0624fcd75a084f9 *DESCRIPTION
+5342f67a7e4aabbce36d86b3eaad0b92 *DESCRIPTION
 50a0d11046c75709380048ba7aa9b386 *NAMESPACE
-1427e4f51b9fff5c23de866a53ddaa4d *NEWS
+3c0fd50cc241d54b4852f65dd3d15434 *NEWS
 bd8a467afb230d87335ce004717db8cc *R/AIC.R
 857c619660331d40cf8a3c0c108eb105 *R/JS.counts.R
 323e415d608215db72b5b696bff4042e *R/JSdirect.R
@@ -50,8 +50,8 @@ ea26a4f0b02668ed9223c39bec5f4042 *data/gonodontis.RData
 776720d93e1fbb26122ab57715e2cfb0 *data/microtus.RData
 d623b188bc85feb351be6112e6b103c3 *inst/CITATION
 429de15d0bec78f09c0477951ad43a94 *inst/doc/openCR-vignette.R
-601da0377d9692c46be7904618d053d8 *inst/doc/openCR-vignette.Rmd
-c9f252cd7ca41412baba94a984a2de78 *inst/doc/openCR-vignette.pdf
+57f6b7a69573751de0ee13f87b1ffcdd *inst/doc/openCR-vignette.Rmd
+ba91426e0d5b4eae6b7070bebcf58667 *inst/doc/openCR-vignette.pdf
 4d82db8392fe7619b7ecccee13d13ca5 *inst/extdata/ErgonAndGardner2013.rdat
 0c5d936c15398429820fecfc67e3d0ad *inst/extdata/JLYEXMPL
 128e570be606ec5484643f1b308e52cb *inst/extdata/ed.inp
@@ -72,7 +72,7 @@ e8e3e16bc4b20f90aae004f55ce07f02 *man/manip.Rd
 40d21ca24f1bc04efb27694427f2a3fd *man/microtus.Rd
 95c01dfde75c60dd028920849be187ef *man/moving.fit.Rd
 c079631b621f58a5044f7ecc622cfc72 *man/openCR-internal.Rd
-1cc92335dd996b42179b2a7e0449cf4e *man/openCR-package.Rd
+39adfae7814b0ac060a3e01fe2db30a3 *man/openCR-package.Rd
 5ae191467450bb00f20b8d97f67938d2 *man/openCR.design.Rd
 35fd96d2df0dc0c50e888cd3d47131c5 *man/openCR.fit.Rd
 deda9da7f3297c965b6d382cd54285aa *man/openCR.make.newdata.Rd
@@ -102,4 +102,4 @@ bbade7049c7f548cb70fe790208082f8 *src/prwi.cpp
 6c2bd93a37a251ed8cae318f3e760826 *src/prwisecrparallel.cpp
 e4420adfaaf3710ff9199cc14b6240e1 *src/utils.cpp
 a74e4ea4295df08711a22739dc7fb585 *src/utils.h
-601da0377d9692c46be7904618d053d8 *vignettes/openCR-vignette.Rmd
+57f6b7a69573751de0ee13f87b1ffcdd *vignettes/openCR-vignette.Rmd
