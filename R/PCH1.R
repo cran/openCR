@@ -37,11 +37,11 @@ PCH1 <- function (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals) {
 
 #==============================================================================
 # 
-# prepare matrix n x j x m of session-specific Pr
-pr0njmx <- function (n, x, cumss, jj, kk, mm, binomN, PIA0, gk0, Tsk) {
+# prepare matrix n x j x m of session-specific Pr(omega_i = 0)
+pr0njmx <- function (n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk) {
     pjm <- array(1, dim = c(jj, mm))
+    kk <- dim(Tsk)[1]
     for (j in 1:jj) {
-        # browser()        
         # s is vector of indices to secondary sessions in this primary session
         s <- (cumss[j]+1) : cumss[j+1]
         S <- length(s)
@@ -51,11 +51,13 @@ pr0njmx <- function (n, x, cumss, jj, kk, mm, binomN, PIA0, gk0, Tsk) {
         gsk <- array(0, dim=c(S, kk, mm))
         gsk[cski>0] <- gk0[i]
         size <- t(Tsk[,s])      
-        ## if (binomN != 1) size[] <- binomN
-        pjm[j, ] <- if (binomN == 0) 
-            apply(1-gsk, 3, function(x) prod(exp(-size * -log(x))))  ## Poisson
-        else if (all(size==1))
+        pjm[j, ] <- if (binomN %in% c(-2,0)) {
+            ## for Poisson and multcatch detectors assume gk0 is hazard not probability
+            apply(gsk, 3, function(x) exp(-sum(size * x)))  
+        }
+        else if (all(size==1)) {
             apply(1-gsk,3, prod)
+        }
         else {
             apply(1-gsk, 3, function(x) prod (x^size))  ## Binomial or Bernoulli
         }
@@ -68,15 +70,15 @@ PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0
                       kernel, mqarray, cellsize) {
     
     One <- function (n) {
-        ## precompute session-specific Pr for all unique parameter combinations
-        pjm <- pr0njmx(n, x, cumss, jj, kk, mm, binomN, PIA0, gk0, Tsk)
+        ## precompute this animal's session-specific Pr for mask points
+        pjm <- pr0njmx(n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk)
         phij <- getphij (n, x, openval0, PIAJ, intervals)
         beta <- getbeta (type, n, x, openval0, PIAJ, intervals, phij)
         if (movemodel>1) {
             moveargsi <- pmax(moveargsi,0)
-            moveargs <- getmoveargs (type, n, x, openval0, PIAJ, intervals, moveargsi)
-            kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize, 
-                                    moveargsi, moveargs)
+            moveargs <- getmoveargs (n, x, openval0, PIAJ, intervals, moveargsi)
+            kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize,
+                                    moveargsi, moveargs, normalize = TRUE)
         }
         pdt <- 0
         for (b in 1:jj) {
@@ -99,24 +101,21 @@ PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0
                     prw0 <- prod(sumpm[b:d]) / mm
                 }
                 else {  ## normal, exponential etc.
-                    # use dummy (w=0) capthist until can re-write pr0njmx 2018-03-14
-                    pjm <- rep(1,mm)
-                    for (j in b:d) {
-                        pjm <- prw (n, j, x, nc, jj, kk, binomN, cumss, PIA0,
-                                     gk0, Tsk, w, pjm)
-                        ## replace pjm with version updated for movement 
-                        ## pi_1(X|omega_i1) = Pr(omega_i1|X_i1) pi_0(X) / Pr (omega_i1) 
-                        ## the denominator Pr(omega_i) is omitted as it is constant across the mask 
-                        if (j<d) pjm <- convolvemq(j, kernelp, mqarray, pjm)
+                    pm <-  pjm[b, ] / mm
+                    if (d>b) {
+                        for (j in (b+1):d) {
+                            pm <- convolvemq(j-1, kernelp, mqarray, pm)
+                            pm <- pm * pjm[j, ]
+                        }
                     }
-                    prw0 <- sum(pjm) / mm
+                    prw0 <- sum(pm)
+                    
                 }
-                pdt <- pdt + pbd * (1 - prw0)
+                pdt <- pdt + pbd * (1 - prw0)     ## sum over b,d
             }
         }
         pdt
     }
-    if (movemodel>1) w <- array(0, dim=c(nc,cumss[jj+1],kk)) else w <- NA
     if (individual) {
         sapply(1:nc, One)
     }

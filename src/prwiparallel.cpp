@@ -152,9 +152,14 @@ NumericVector allhistparallelcpp (int x, int type, int nc,
                             intervals.size()+1, openval.nrow(),
                             intervals,
                             cumss, w, fi, li, openval, PIA, PIAJ, output);
-    
-    // Run operator() on multiple threads
-    parallelFor(0, nc, somehist, grain);
+    if (grain>0) {    
+	// Run operator() on multiple threads
+	parallelFor(0, nc, somehist, grain);
+    }
+    else {
+        // for debugging avoid multithreading and allow R calls e.g. Rprintf
+	somehist.operator()(0,nc);    
+    }
     
     // Return consolidated result
     return output;

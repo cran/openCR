@@ -52,8 +52,7 @@ Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2017) R2ucare: Goodnes
   for Capture-Recapture Models. R package version 1.0.0. https://CRAN.R-project.org/package=R2ucare
 
 Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2018) R2ucare: An R package to perform 
-goodness-of-fit tests for capture--recapture models. \emph{Methods in Ecology and Evolution} in press doi:
-10.1111/2041-210X.13014.
+goodness-of-fit tests for capture--recapture models. \emph{Methods in Ecology and Evolution} \bold{9}, 1749--1754.
 
 Lebreton, J.-D., Burnham, K. P., Clobert, J., and Anderson, D. R. (1992) Modeling survival and testing biological hypotheses using marked animals: a unified approach with case studies. \emph{Ecological Monographs} \bold{62}, 67--118.
 

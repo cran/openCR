@@ -124,7 +124,9 @@ invlogit(coef(fit)['phi',c('beta','lcl','ucl')])
 
 ## ----plotkernel, fig.width=5, fig.height=3.5--------------------------------------------
 par (mar=c(2,2,3,6), cex=0.9)
-plotKernel ('normal', spacing = 10, pars = 40, clip = TRUE, contour = TRUE)
+k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
+plot(k, contour = TRUE)
+summary(k)
 
 ## ----derived, cache = mycache-----------------------------------------------------------
 dipperCL <- openCR.fit(dipperCH, type = 'JSSAlCL', 

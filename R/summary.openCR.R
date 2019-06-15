@@ -6,7 +6,6 @@ summary.openCR <- function (object, newdata = NULL, alpha = 0.05, svtol = 1e-5, 
     CLtype <- grepl("CL", object$type) || grepl("CJS", object$type) 
     ch <- object$capthist
     det <- detector(traps(ch))[1]
-
     out <- vector('list')
     
     # cl <- paste(names(object$call)[-1],object$call[-1], sep=' = ', collapse=', ' )

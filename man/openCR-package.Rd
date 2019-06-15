@@ -27,8 +27,8 @@
   \tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 1.3.5\cr
-Date: \tab 2019-03-10\cr
+Version: \tab 1.4.0\cr
+Date: \tab 2019-06-15\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 
@@ -65,6 +65,10 @@ See \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for more.
   Borchers, D. L. and Efford, M. G. (2008) Spatially explicit maximum
   likelihood methods for capture--recapture studies. \emph{Biometrics}
   \bold{64}, 377--385.
+
+  Efford, M. G. and Schofield, M. R. (2019) A spatial open-population capture--recapture model.    \emph{Biometrics} In revision.
+
+  Glennie, R., Borchers, D. L., Murchie, M. Harmsen, B. J., and Foster, R. J. (2019) Open population maximum likelihood spatial capture--recapture. \emph{Biometrics} In press.
 
   Pledger, S., Pollock, K. H. and Norris, J. L. (2010) Open
   capture--recapture models with heterogeneity: II. Jolly-Seber

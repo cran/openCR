@@ -87,9 +87,13 @@ List makegkParallelcpp (int detectfn, int sigmai, int grain,
     
     Hckm hckm (sigmai, detectfn, openval, traps, mask, hk, gk);
     
-    // call it with parallelFor
-    parallelFor(0, mask.nrow(), hckm, grain);
-    
+    if (grain>0) {
+        // call it with parallelFor
+        parallelFor(0, mask.nrow(), hckm, grain);
+    }
+    else {
+        hckm.operator()(0,mask.nrow());    // for debugging avoid multithreading to allow R calls
+    }
     return List::create(gk, hk);
 }
 //==============================================================================

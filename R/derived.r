@@ -151,7 +151,9 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
                 }
                 
                 lambdaj <- persession(phi + f)
-                fj <- persession(f)
+                ## fj <- persession(f)
+                ## bug fixed 1.3.6 2019-04-02
+                fj <- lambdaj - persession(phi)
 
                 d <- numeric(J)
                 d[1] <- 1;

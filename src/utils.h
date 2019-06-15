@@ -38,7 +38,8 @@ void fillkernelp (int kn,
                   double cellsize,
                   const RMatrix<int> kernel, 
                   const RVector<int> moveargsi, 
-                  const CharacterVector fnname,
+                  //const CharacterVector fnname,
+                  const String fnname,
                   const std::vector<double> &moveargs, 
                   std::vector<double> &kernelp);
 
@@ -208,4 +209,13 @@ void getbeta (int type, int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 List makelookupcpp (const NumericMatrix x);  
+//--------------------------------------------------------------------------
+
+void pr0njmx (int n, int x, 
+              const RVector<int> cumss, 
+              int nc,  int jj, int kk, int mm, int cc0, int binomN,  
+              const RVector<int> PIA0, 
+              const RVector<double> gk0, 
+              const RMatrix<double> Tsk, 
+              std::vector<double> &pjm);
 //--------------------------------------------------------------------------

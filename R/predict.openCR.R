@@ -2,6 +2,8 @@
 ## package 'openCR'
 ## predict.openCR.R
 ## moved from methods 2017-12-25
+## 2019-04-11 ignores contrasts arg of lpredictor?
+## 2019-04-13 failed with single parameter when others fixed
 ###############################################################################
 
 predict.openCRlist <- function (object, newdata = NULL, se.fit = TRUE,
@@ -26,11 +28,16 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
                     beta.vcv = beta.vcv, validlevels = object$design$validlevels)
     }
     predict <- sapply (object$realnames, getfield, simplify = FALSE)
+
     if(se.fit) {
         realvcv <- vcov(object, realnames = names(predict), newdata = newdata, byrow = TRUE)
         nreal <- length(predict)
         realvcv <- array(unlist(realvcv), dim=c(nreal, nreal, nrow(newdata)))
         realSE <- apply(realvcv,3, function(x) suppressWarnings(sqrt(diag(x))))
+        # bug fix 2019-04-13
+        # if single parameter, apply() returns vector instead of matrix
+        if (is.null(dim(realSE))) realSE <- matrix(realSE, nrow = 1)
+        ####################
         rownames(realSE) <- names(predict)
     }
     if (!is.null(predict$pmix)) {
@@ -79,7 +86,6 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
             }
         }
         lpred  <- predict[[i]][,'estimate']
-        
         if (i %in% c('b')) {
             tempmat <- matrix(lpred, nrow=nsess)
             predict[[i]]$estimate <- as.numeric(apply(tempmat,2,invmlogit))

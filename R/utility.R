@@ -8,14 +8,36 @@
 ## 2018-11-22 learnedresponses global vector
 ###############################################################################
 
+typecode <- function (type) {
+    type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4,
+                   JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19,
+                   Pradel = 20, JSSARET = 21, JSSAg = 22, JSSAgCL = 23, Pradelg = 26, JSSAfgCL = 27,
+                   JSSAk = 28, JSSAkCL = 29,
+                   CJSsecr = 6, JSSAsecrf = 7, JSSAsecrD = 8,
+                   JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11,
+                   JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrB = 14,
+                   JSSAsecrg = 24, JSSAsecrgCL = 25, secrCL = 30, secrD = 31, -1)
+    type
+}
+
+movecode <- function (movementmodel) {
+    switch (movementmodel, static = 0, uncorrelated = 1, normal = 2, 
+            exponential = 3, user = 4, t2D = 5, uniform = 6)
+}
+
+kerneltypes <- c('normal','exponential','user','t2D','uniform')
+
 .openCRstuff <- new.env()
 #.openCRstuff$packageType <- ' pre-release'
 .openCRstuff$packageType <- ''
 .openCRstuff$iter <- 0
 .openCRstuff$suspendedtypes <- c('JSSAfgCL', 'JSSAfg')
 
+# location of 'sigma' in parameter vector
+# zero-based, so take care to add 1 when used as index in R 2019-04-21
+# moveargs (move.a etc) follow sigma
 .openCRstuff$sigmai <- rep(3, 50)   ## default 3
-.openCRstuff$sigmai[c(6,15,36)] <- 2
+.openCRstuff$sigmai[c(6,15)] <- 2
 .openCRstuff$sigmai[c(7,12,13,24,31)] <- 4
 
 .openCRstuff$learnedresponses <- c('b','bk', 'B', 'bsession',
@@ -262,7 +284,8 @@ transform <- function (x, link) {
             neglog = log(-x),
             logit = logit(x),
             loglog = -log(-log(x)),
-            mlogit = x,
+            # mlogit = x,
+            mlogit = logit(x),   ## 2019-04-20
             odds = odds(x),
             sin = sine(x)
     )
@@ -458,7 +481,7 @@ lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL, validl
     # adjust for CJS nonidentifiable parameters
     # see also make.designmatrix in openCR.design.R
     if (!is.null(newdata$session))
-    notOK <- !validlevels[field,newdata$session]   ## BEFORE adjust levels
+        notOK <- !validlevels[field,newdata$session]   ## BEFORE adjust levels
     else
         notOK <- !validlevels[field,newdata$t]   ## BEFORE adjust levels
     newdata <- adjustlevels(field, newdata, validlevels)
@@ -815,18 +838,6 @@ complete.beta.vcv <- function (object) {
     beta.vcv
 }
 ###############################################################################
-
-typecode <- function (type) {
-    type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4,
-                   JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19,
-                   Pradel = 20, JSSARET = 21, JSSAg = 22, JSSAgCL = 23, Pradelg = 26, JSSAfgCL = 27,
-                   JSSAk = 28, JSSAkCL = 29,
-                   CJSsecr = 6, JSSAsecrf = 7, JSSAsecrD = 8,
-                   JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11,
-                   JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrB = 14,
-                   JSSAsecrg = 24, JSSAsecrgCL = 25, secrCL = 30, secrD = 31, -1)
-    type
-}
 
 ## Based on Charles C. Berry on R-help 2008-01-13
 ## drop = FALSE 2018-11-22

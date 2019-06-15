@@ -1,9 +1,10 @@
 ################################################################################
-## openCR 1.2.1
+## openCR 1.3.6
 ## simulate.R 
 ## 2018-05-28 intervals argument for runsim.spatial
 ## 2018-11-02 revised sumsims
 ## 2018-11-27 revised sumsims to allow method = "none"
+## 2019-04-07 runsim.nonspatial, runsim.spatial return NULL for failed replicates
 ################################################################################
 sim.nonspatial <- function(N, turnover = list(), p, nsessions, noccasions = 1, 
                            intervals = NULL, recapfactor = 1, seed = NULL, 
@@ -88,11 +89,17 @@ runsim.nonspatial <- function (nrepl = 100, seed = NULL, ncores = NULL,
     onesim <- function(r) {
         CH <- sim.nonspatial(...)  # does not pass seed
         fitargs$capthist <- CH
-        fit <- do.call(openCR.fit, fitargs)
-        out <- extractfn(fit)
-        attr(out, 'eigH') <- fit$eigH
-        attr(out, 'fit') <- fit$fit
-        message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        fit <- try(do.call(openCR.fit, fitargs))
+        if (!inherits(fit, 'try-error')) {   ## 2019-04-07
+            out <- extractfn(fit)
+            attr(out, 'eigH') <- fit$eigH
+            attr(out, 'fit') <- fit$fit
+            message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        }
+        else {
+            out <- NULL
+            message("Failed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        }
         out
     }
     list(...)
@@ -126,11 +133,19 @@ runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = NULL,
         if (is.null(detargs$traps)) detargs$traps <- popargs$core
         fitargs$capthist <- do.call(sim.capthist, detargs)
         intervals(fitargs$capthist) <- intervals
-        fit <- do.call(openCR.fit, fitargs)
-        out <- extractfn(fit)
-        attr(out, 'eigH') <- fit$eigH
-        attr(out, 'fit') <- fit$fit
-        message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        fit <- try(do.call(openCR.fit, fitargs))
+            if (!inherits(fit, 'try-error')) {   ## 2019-04-07
+                out <- extractfn(fit)
+                if (is.list(fit)) {              ## 2019-06-10 
+                    attr(out, 'eigH') <- fit$eigH
+                    attr(out, 'fit') <- fit$fit
+                }
+                message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+            }
+            else {
+                out <- NULL
+                message("Failed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+            }
         out
     }
     popargs$seed <- NULL

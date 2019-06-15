@@ -21,17 +21,36 @@ plot.openCR <- function(x, par = 'phi', newdata = NULL, add = FALSE, xoffset = 0
         if (yl[1]<0.05) yl[1] <- 0
         if (yl[2]>0.95 & yl[2]<1) yl[2] <- 1
     }
+    args <- list(...)
+    argsbase <- args[names(args) %in% c('xlab','ylab','axes','col','cex')]
+    defaultbase <- list(x = sessionxv, y = pred$estimate, xlab = 'Session', ylab = par,
+                        ylim = yl, xlim = xl, type = 'n', yaxs = 'i')
+    base <- replace(defaultbase, names(argsbase), argsbase)
+    base$axes <- FALSE
+    argspt <- args[names(args) %in% c('pch','cex', 'col', 'fg', 'bg', 'type', 'xpd', 'xaxs', 'yaxs')]
+    argspt$x <- xv
+    argspt$y <- pred$estimate
+    argsseg <- args[names(args) %in% c('lty','lwd', 'col', 'xpd')]
+    argsseg$x0 <- xv
+    argsseg$y0 <- pred$lcl
+    argsseg$x1 <- xv
+    argsseg$y1 <- pred$ucl
     if (!add) {
-        plot (sessionxv, pred$estimate, type = 'n', xlab = 'Session', ylab = par,
-              ylim = yl, xlim = xl, axes = FALSE, yaxs = 'i')
-        axis(1, at = sessionxv, labels = sessnames)
-        axis (2, at = pretty(yl), las=1)
-        box(bty = 'l')
+        #plot (sessionxv, pred$estimate, type = 'n', xlab = 'Session', ylab = par,
+        #      ylim = yl, xlim = xl, axes = FALSE, yaxs = 'i')
+        do.call(plot, base)
+        if (is.null(argsbase$axes) || argsbase$axes) {
+            axis(1, at = sessionxv, labels = sessnames)
+            axis (2, at = pretty(yl), las=1)
+            box(bty = 'l')
+        }
     }
-
+        
     if (CI) {
-        segments (xv, pred$lcl, xv, pred$ucl)
+        do.call(segments, argsseg)
+        #segments(xv, pred$lcl, xv, pred$ucl)
     }
-    points (xv, pred$estimate, ...)
-    invisible()
+    # points (xv, pred$estimate, ...)
+    do.call(points, argspt)
+    invisible(xv)
 }

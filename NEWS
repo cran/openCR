@@ -1,13 +1,45 @@
+version 1.4.0 (2019-06-15)
+
+New features and changed behaviour
+    o new 2-parameter movement kernel t2D for 2-D t-distribution 
+    o new movement kernel uniform (no parameters, depends kernelradius)
+    o new function make.kernel() and kernel methods plot and summary
+    o plotKernel() deprecated
+    o runsims.spatial() more robust with non-standard extractfn
+    o plotKernel() deprecated
+    o see also 1.3.6
+
+Bugs fixed
+    o biased estimates from movement models
+
+Other
+    o removed redundant C++ code for single-threaded execution
+    o default details$autoini changed to NULL, meaning 'use all'
+    o classMembership should now work with movement models
+
+version 1.3.6 (2019-04-13; not published)
+
+New features and changed behaviour
+    o plot.openCR() invisibly returns the x coordinates of plotted points; dots argument 
+      also controls axes, line width and colour of CI
+    o new plot method for output from derived.openCR
+    o openCR.fit checks whether autoini required (incomplete or no start provided)
+    o runsim.nonspatial() and runsim.spatial() return NULL for failed replicates rather than crashing
+
+Bugs fixed
+    o derived method for openCR SECR models wrongly adjusted per capita recruitment 
+      when intervals varied, with consequences for derived D-hat
+    o JSSAsecrXXX models gave erroneous estimates, particularly of lambda0 and sigma, 
+      for count data with binomN = 0 (Poisson counts) 
+    o predict.openCR failed when one parameter estimated (others fixed)
+
 version 1.3.5 (2019-03-10)
 
 New features and changed behaviour
     o none
 
-Other
-    o correct one line in vignette latex code \vec
-
 Bugs fixed
-    o none
+    o vignette rebuild failed on r-devel-linux-x86_64-debian-gcc (double \vec)
 
 version 1.3.4 (2019-02-05)
 

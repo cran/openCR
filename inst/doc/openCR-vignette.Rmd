@@ -1,5 +1,5 @@
 ---
-title: '**openCR** 1.3 - open population capture--recapture'
+title: '**openCR** 1.4 - open population capture--recapture'
 author: "Murray Efford"
 date: "`r Sys.Date()`"
 output: 
@@ -20,7 +20,9 @@ mycache <- FALSE
 
 \vspace{12pt}
 
-The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. Modelling of movement between sessions is experimental in this version. The interface generally resembles that of **secr** (Efford 2018a) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. Some bugs should be expected in the initial release. A paper describing the spatial model has been submitted (Efford 2018b).
+The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2018a) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. A paper describing the spatial model has been submitted (Efford and Schofield 2019).
+
+This is still something of a work in progress, so be careful to check results 'make sense' and be aware of [limitations](#limitations).
 
 [^footnote1]: These supplementary vignettes are not included with the package. It is intended to distribute them on the website www.otago.ac.nz/density. Otherwise contact the author.
 
@@ -118,6 +120,8 @@ Schwarz (2001) is illuminating (see also chapter on Jolly-Seber models by Schwar
 
 For each JSSA recruitment parameterization there is a choice between models that include the total number of detected individuals  ($u_\cdot$ or $n$ in different notations), and models that condition on this number. Conditional-likelihood models do not directly estimate abundance; abundance is estimated as a derived parameter (Schwarz and Arnason 1996). Full-likelihood models include abundance as a parameter. The choice of formulation has virtually no effect on the parameter estimates[^footnote5]. The conditional likelihood form is somewhat faster and easier to fit (Schwarz and Arnason 1996), and it focuses on parameters that are estimated robustly (apparent survival, seniority, population growth rate).
 
+The conditional models discussed by Pradel (1996), Link and Barker (2005), Schofield and Barker (2016) and others lack a distinguishing label to indicate their collective similarity. The label Pradel--Link--Barker PLB is suggested by Efford and Schofield (in revision).
+
 [^footnote5]: this may not be true for spatial models with spatially varying density, but these models are not considered in **openCR**.
 
 ## Sufficient statistics vs capture histories
@@ -132,7 +136,9 @@ Most published formulations of CJS and JSSA models admit only one secondary sess
 
 ## Spatial vs nonspatial
 
-Models may be spatially explicit or not. Nonspatial models ignore the spatial distribution of animals. Spatial models use the spatially explicit capture--recapture paradigm of Efford (2004), Borchers and Efford (2008) and Royle et al. (2014). Open population spatial models using MCMC were published by Gardner et al. (2010), Chandler and Clark (2014), Ergon and Gardner (2014), Whittington and Sawaya (2015) and others. There are three major motivations for open spatial models
+Models may be spatially explicit or not. Nonspatial models ignore the spatial distribution of animals. Spatial models use the spatially explicit capture--recapture paradigm of Efford (2004), Borchers and Efford (2008) and Royle et al. (2014). Open population spatial models using MCMC were published by Gardner et al. (2010), Chandler and Clark (2014), Ergon and Gardner (2014), Whittington and Sawaya (2015) and others. Glennie et al. (2019) proposed a frequentist hidden Markov formulation. The spatial models in **openCR** are described by Efford and Schofield (in revision) and provide very similar estimates to those of Glennie et al. (2019).
+
+There are three major motivations for open spatial models
 
 * allowance for varying extent of sampling area
 * modelling of individual heterogeneity due to differential access to detectors
@@ -146,9 +152,8 @@ Recruitment in spatial models may be modelled using parameterizations to those d
 
 By definition, the interval between primary sessions is long enough for turnover due to births and deaths. It is also possible that resident animals shift their home ranges (i.e. disperse). Spatial models may either ignore such movement (Gardner et al. 2010, Chandler and Clark 2014, Whittington and Sawaya 2015) or attempt to model it (Ergon and Gardner 2014). There are good arguments for modelling movement:
 
-* Movement that is ignored inflates estimates of the within-session scale of detection $\sigma$, and therefore results in downard bias in estimates of density.
-* If the distribution of dispersal distances can be inferred from the detection histories of residents then it is possible in principle to separate actual mortality from losses due emigration (Ergon and Gardner 2014). 
-However, the robustness and data requirements of movement models have yet to be researched.
+* Movement that is ignored inflates estimates of the within-session scale of detection $\sigma$, with flow-on effects on demographic parameters.
+* If the distribution of dispersal distances can be inferred from the detection histories of residents then it is possible in principle to separate actual mortality from losses due emigration (Ergon and Gardner 2014). However, the robustness and data requirements of movement models have yet to be fully understood.
 
 # Data structure and input
 
@@ -217,6 +222,7 @@ Table 2. Parameters of nonspatial **openCR** models
 | JSSAB   | + | +   |   |   |   |   |   | + |   |
 | JSSAN   | + | +   |   |   |   |   |   |   | + |
 
+Models with type ending in CL are of the Pradel--Link--Barker type.
 
 ### Non-spatial models using sufficient statistics
 
@@ -261,6 +267,8 @@ Table 4. Parameters of spatial **openCR** models
 | JSSAsecrD   | + | + | + | + |   |   |   |   |   |   | + |
 | secrCL      | + | + | + |   |   |   |   |   |   |   |   |
 | secrD       | + | + | + |   |   |   |   |   | + |   |   |
+
+Spatial models with type ending in CL have features in common with the Pradel--Link--Barker models, hence the label 'spatial PLB'.
 
 # Model formulae
 
@@ -315,7 +323,7 @@ Covariates for detection parameters in secondary sessions are provided in the 't
 
 ## Closed populations
 
-The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.3 fits simple closed models faster than **secr** 3.1. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
+The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.4 fits simple closed models faster than **secr** 3.1. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
 
 ```{r compare, cache = mycache, warning = FALSE}
 msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
@@ -503,43 +511,68 @@ The mean is backtransformed from the link scale. This results in some bias owing
 
 Potential movement of home ranges between primary sessions (= dispersal) is a critical part of open-population models. The argument `movementmodel` of `openCR.fit` allows the possibilities in Table 6. Two of these do not model movement at all. The default 'static' is a null model in which each animal retains the same home range. The 'uncorrelated' option models the locations of an animal independently in each primary session; information is sacrificed and no particular movement model is implied.
 
-The remaining options (normal, exponential and user-supplied function) fit a dispersal kernel (Nathan et al. 2012) to represent movement between primary sessions. This usually requires at least one more parameter to represent the spatial scale of dispersal. The likelihood for spatially explicit capture--recapture with movement is outlined in the [Appendix](#appendix) and will be published separately.
+The remaining options (normal, exponential, t2D, uniform, and user-supplied function) fit a dispersal kernel (Nathan et al. 2012) to represent movement between primary sessions. This usually requires at least one more parameter to represent the spatial scale of dispersal. 
+
+IMPORTANT NOTE: Movement models were recoded in **openCR** 1.4.0 and results may differ from previous releases.
 
 **Table 6**. Models for movement between primary sessions.
 
 | Movement model | Parameter(s) | Description |
 |-------------|------------|--------------------------------------------|
-| static | (none) | Centres constant across primary sessions |
-| uncorrelated | (none) | Centres unconstrained |
-| normal | move.a | Centres shift randomly between sessions according to Gaussian kernel |
-| exponential | move.a | Centres shift randomly between sessions according to negative exponential kernel |
-| (user function) | move.a, move.b | User-supplied kernel function |
+| `static` | (none) | Centres constant across primary sessions |
+| `uncorrelated` | (none) | Centres unconstrained |
+| `normal` | `move.a` | Gaussian (bivariate normal) kernel |
+| `exponential` | `move.a` | Laplace (negative exponential) kernel |
+| `t2D` | `move.a`, `move.b` | 2-dimensional $t$-distribution kernel |
+| `uniform` | (none) | Uniform within kernel radius |
+| (user function) | `move.a`, `move.b` | User-supplied kernel function (`ncores = 1` only)|
 
-## Dispersal kernels
+## Movement kernels
 
-All movement kernels are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin. 
+All movement kernels are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin (Table 7). 
 
-The extent of the kernel is controlled by details argument 'kernelradius' that gives the radius in terms of mask cells. The default radius (10) results in a discretized kernel of 349 cells (square of 441 cells minus corners). Cell-specific values are normalised so that they sum to 1.0 across the kernel. Dispersal probability effectively falls to zero at the boundary of the kernel, so the kernel radius is a critical part of the model
+The extent of the kernel is controlled by details argument 'kernelradius' that gives the radius in terms of mask cells. The default radius (10) results in a discretized kernel of 349 cells (square of 441 cells minus corners). Cell-specific values are normalised so that they sum to 1.0 across the kernel. Dispersal probability effectively falls to zero at the boundary of the kernel, so the kernel radius is a critical part of the model. The 'uniform' kernel has no parameters but depends critically on the user-specified kernel radius.
 
-A kernel function may be specified by the user and passed in the argument `movementmodel`. The function should have argument $r$, and optionally $a$, or $a$ and $b$ (the last two correspond to **openCR** parameters move.a and move.b) It should return a vector of values one for each element of $r$, although length(r) = 1 when the likelihood is evaluated in C++ (`details$R = FALSE`, the default). The code should give a valid result when $r = 0$. With the default link ('log' for both move.a and move.b) there is no risk of $a \leq 0$ or $b \leq 0$.
+**Table 7**. Kernel probability density functions. From Nathan et al. (2012, Table 15.1) and Clark et al. (1999) with adjustment for parameterisation in **openCR**.
 
-A kernel may be visualised with the plotKernel function:
+| Kernel | `move.a` | `move.b` | pdf | Expected movement* | Proportion* $r > R$ |
+|-----------|------|------|-----------------------|--------------------------|---------------------|
+| normal | $\alpha_g$ | | $\frac{1}{2 \pi \alpha_g^2} \exp\left( \frac{-r^2}{2\alpha_g^2} \right)$ | $\frac{\alpha_g \sqrt \pi}{\sqrt 2}$ | $\exp \left( - \frac{R^2}{2 \alpha_g^2}\right)$|
+| exponential | $\alpha_l$ | | $\frac{1}{2 \pi \alpha_l^2} \exp \left( \frac{-r}{\alpha_l} \right)$ | $2 \alpha_l$ | $\exp \left( - \frac{R}{\alpha_l}\right)$|
+| t2D | $\alpha_t$ | $\beta$ | $\frac{\beta}{\pi \alpha_t^2} \left( 1 + \frac{r^2}{\alpha_t^2} \right)^{-(\beta+1)}$ | $\alpha_t \frac{\sqrt \pi}{2} \frac{\Gamma \left( \beta-0.5 \right)}{\Gamma (\beta)}$, $\beta > 0.5$| $\left(\frac{\alpha_t^2}{\alpha_t^2 + R^2} \right)^\beta$|
+\* Continuous, untruncated, kernel. Expected values for the discretized and truncated kernel will be less (see `summary.kernel`).
+
+\vspace{12pt}
+
+The 't2D' kernel is the same as '2Dt' of Clark et al. (1999) and Nathan et al. (2012), renamed to avoid initial digit. The parameter $\alpha_t$ (`move.a`) corresponds to $a$ in Nathan et al. (2012) and $\sqrt u$ in Clark et al. (1999); the parameter $\beta$ (`move.b`) corresponds to $b-1$ in Nathan et al. (2012) and $p$ in Clark et al. (1999). Defining `move.b` as $\beta \equiv b-1$ is handy because the default link for `move.b` (log) then ensures $b>1$.
+
+The `t2D' kernel approaches bivariate normal as $\beta \to \infty$ and Cauchy as $\beta \to 0$ (e.g., Clark et al. 1999).
+Clark et al. (1999 p. 1485) found it hard to fit this kernel to seed dispersal data.
+
+## User-defined kernel
+
+A kernel function may be specified by the user and passed in the argument `movementmodel`. The function should have argument $r$, and optionally $a$, or $a$ and $b$ (the last two correspond to **openCR** parameters `move.a` and `move.b`) It should return a vector of values one for each element of $r$, although length(r) = 1 when the likelihood is evaluated in C++ (`details$R = FALSE`, the default). The code should give a valid result when $r = 0$. With the default link ('log' for both `move.a` and `move.b`) there is no risk of $a \leq 0$ or $b \leq 0$.
+
+## Plotting and summary
+
+A kernel may be constructed with `make.kernel` and visualised with the `plot` method. Use the `summary` method to obtain a terse description. 
 
 ```{r plotkernel, fig.width=5, fig.height=3.5}
 par (mar=c(2,2,3,6), cex=0.9)
-plotKernel ('normal', spacing = 10, pars = 40, clip = TRUE, contour = TRUE)
+k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
+plot(k, contour = TRUE)
+summary(k)
 ```
+
+Use the **secr** function `spotHeight(k)` to display cell values on the plot.
 
 ## Warnings
 
 1. The 'uncorrelated' option is not recommended. It discards information on the continuity of home ranges between primary sessions, and estimates may vary with the (often arbitrary) extent of the habitat mask.
 
-2. Kernel-based movement models are experimental in **openCR** 1.1. This is because
+2. Kernel-based movement models require extreme care. Definitive advice cannot yet be given on the safe use of these models. Long-distance movements will usually be poorly sampled and poorly modelled.
 
-* bugs may remain in the code,
-* the theory  has yet to be peer reviewed,
-* doubts remain about the general robustness and usefulness of the estimates, and
-* questions about edge effects, appropriate kernel size and buffer width remain to be addressed.
+3. User-defined functions cannot be used with multithreaded C++, so they will be slow to fit; always set `ncores = 1`.
 
 # Derived parameters
 
@@ -681,7 +714,7 @@ Table 7. Multi-session data objects in **secr**.
 
 This is generally an undeveloped field for spatially explicit capture--recapture models. Demonstrating that assumptions were not satisfied may also be of no consequence: we would usually ignore such a finding if the estimator is reasonably robust. 
 
-For Cormack-Jolly-Seber (nonspatial) models there is an established suite of tests following Burnham et al. (1987). The tests have been implemented in the U-CARE software of Choquet et al. (2009), recently translated into R by Gimenez et al (2017) as package **R2ucare**. Program RELEASE (Burnham et al. 1987) also implements the core CJS tests and is available through MARK.
+For Cormack-Jolly-Seber (nonspatial) models there is an established suite of tests following Burnham et al. (1987). The tests have been implemented in the U-CARE software of Choquet et al. (2009), recently translated into R by Gimenez et al (2018) as package **R2ucare**. Program RELEASE (Burnham et al. 1987) also implements the core CJS tests and is available through MARK.
 
 The **openCR** function `ucare.cjs` is a wrapper for relevant functions in **R2ucare**, which should be installed. We briefly demonstrate it here for the dipper data of Marzolin (1988).
 
@@ -764,12 +797,20 @@ Borchers, D. L. and Efford, M. G. (2008) Spatially explicit maximum
 likelihood methods for capture--recapture studies. *Biometrics*
 **64**, 377--385.
 
-Burnham, K. P., Anderson, D. R., White, G. C., Brownie, C. and Pollock, K. H. (1987) *Design and Analysis Methods for Fish Survival Experiments Based on Release-Recapture.* American Fisheries Society Monograph 5. Bethesda, Maryland, USA.
+Burnham, K. P., Anderson, D. R., White, G. C., Brownie, C. and Pollock, K. H. (1987) 
+*Design and Analysis Methods for Fish Survival Experiments Based on Release-Recapture.* 
+American Fisheries Society Monograph 5. Bethesda, Maryland, USA.
 
 Chandler, R. B. and Clark, J. D. (2014) Spatially explicit integrated population models. 
 *Methods in Ecology and Evolution* **5**, 1351--1360.
 
-Choquet, R., Lebreton, J.-D., Gimenez, O., Reboulet, A.-M. and Pradel, R. (2009) U-CARE: Utilities for performing goodness of fit tests and manipulating CApture-REcapture data. *Ecography* **32**, 1071--1074.
+Choquet, R., Lebreton, J.-D., Gimenez, O., Reboulet, A.-M. and Pradel, R. (2009) 
+U-CARE: Utilities for performing goodness of fit tests and manipulating CApture-REcapture data.
+ *Ecography* **32**, 1071--1074.
+
+Nathan , R., Klein, E., Robledo-Arnuncio, J. J. and Revilla, E. (2012) 
+Dispersal kernels: a review. In: J Clobert et al. *Dispersal Ecology and Evolution*. 
+Oxford University Press. Pp 187--210.
 
 Cooch, E. and White, G. (eds) (2017) *Program MARK: A Gentle
 Introduction*. 17th edition. Available online at
@@ -784,7 +825,7 @@ studies. *Oikos* **106**, 598--610.
 Efford, M. G. (2018a). secr: Spatially explicit capture--recapture models. R package version
   3.1.8. https://CRAN.R-project.org/package=secr
   
-Efford, M. G. (2018b). A spatial open-population capture–recapture model. Submitted to Biometrics.
+Efford, M. G. and Schofield, M. R. (2019). A spatial open-population capture–-recapture model. Biometrics (In revision).
   
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:
@@ -818,8 +859,9 @@ Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2017) R2ucare: Goodnes
   for Capture-Recapture Models. R package version 1.0.0. https://CRAN.R-project.org/package=R2ucare
 
 Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2018) R2ucare: An R package to perform 
-goodness-of-fit tests for capture--recapture models. *Methods in Ecology and Evolution* in press doi:
-10.1111/2041-210X.13014.
+goodness-of-fit tests for capture--recapture models. *Methods in Ecology and Evolution* **9**, 1749--1754.
+
+Glennie, R., Borchers, D. L., Murchie, M. Harmsen, B. J. and Foster, R. J. (2019) Open population maximum likelihood spatial capture--recapture. *Biometrics* In press.
 
 Hines, J. E., Kendall, W. L. and Nichols, J. D. (2003) On the use of the robust design with transient capture--recapture models. *The Auk* **120**, 1151--1158.
 
@@ -889,8 +931,7 @@ Schwarz, C. J. and Arnason, A. N. (1996) A general methodology for the
   analysis of capture-recapture experiments in open
   populations. *Biometrics* **52**, 860--873.
   
-Schofield, M. and Barker, R. (2016) 50-year-old curiosities: ancillarity and inference in capture--recapture models. 
-*Statistical Science* **31**, 161--174.
+Schofield, M. and Barker, R. (2016) 50-year-old curiosities: ancillarity and inference in capture--recapture models. *Statistical Science* **31**, 161--174.
 
 Seber, G. A. F. (1982) *The estimation of animal abundance and related parameters*. 2nd edition. Griffin.
 
@@ -925,134 +966,6 @@ Academic Press, San Diego.
 <!-- $$ -->
 
 \pagebreak
-
-#Appendix. SECR likelihood for open-population model with movement between primary sessions {#appendix}
-
-This appendix repeats material in the submitted paper Efford (2018b).
-
-We classify spatiotemporal capture--recapture models according to the constraints on home range centres. Centres may be --
-
-1. Stationary throughout the study,
-2. Distributed independently within some region at each sampling session, or
-3. Redistributed according to a spatial kernel, leading to temporally autocorrelated locations.
-
-We assume that turnover (survival, recruitment and movement) is independent of location. This simplifies treatment of the birth and death processes. For an animal known to be present from birth just before time $b$ until death just after time $d$, the modelling of scenarios (1) and (2) is straightforward - neither involves an explicit description of the movement process.
-
-In the movement model (scenario 3 above), animals shift their home-range centres in the interval between sampling sessions according to a probabilistic dispersal kernel (Nathan et al 2012). If the kernel is radially symmetrical we can express the probability of moving from $\vec{x}_1$ to $\vec{x}_2$ as a function of distance i.e.,  $\mbox{Pr}(\vec{x}_2 | \vec{x}_1) = f(|\vec{x}_2 - \vec{x}_1|)$. The cumulative displacement after $S$ intervals is the $S$-convolution of $f$ with itself.
-
-Home-range centres can be assumed initially (when first available for detection at time $b$) to follow a Poisson distribution in two dimensions. The intensity of the distribution is the population density $D$; we mostly assume $D$ to be constant[^footnote16].
-
-[^footnote16]: Although it is straightforward to use an inhomogeneous Poisson distribution $D(\vec x)$ for initial location, a radially symmetrical movement kernel causes this to flatten over time. Location-dependent (or possibly non-isotropic) movement is needed to result in an inhomogeneous distribution at  equilibrium.
-
-Barring edge effects, and allowing individuals to move independently, the distribution of home range centres remains Poisson over time. The location of an individual chosen at random from a finite region $A$ (large enough to avoid edge effects that affect sampled animals) has probability density $\pi(\vec x) = 1/A$.
-
-## Closed-population likelihood
-
-The likelihood for spatially explicit capture--recapture data developed by Borchers and Efford (2008) is a product of two parts, one for the probability of observing $n$ individuals in the course of a study, and the other for the probability of observing the particular set of $n$ non-null detection histories $\vec \omega$: $L = L(n)L(\vec \omega | n)$.
-
-The second part of the likelihood is a product over individuals:
-\begin{equation*}
-L(\vec \omega | n) \propto \prod_{\vec \omega_i \in \, \vec \omega} \mbox{Pr} (\vec \omega_i | \omega_{i\cdot} > 0),
-\end{equation*}
-assuming individuals are detected independently, and using $\omega_{i\cdot} > 0$ to indicate a non-null detection history. In the closed-population model
-
-\begin{align}
-\mbox{Pr} (\vec \omega_i | \omega_i > 0) &= \int_{\mathbb R ^2} \mbox{Pr} (\vec \omega_i | \omega_i > 0, \vec x) \,.\, f(\vec x |  \omega_i > 0) \; d \vec x \nonumber \\
-&= \int_{\mathbb R ^2}
-\frac{\mbox{Pr} (\vec \omega_i | \vec x)}{p_\cdot(\vec x)} \,.\,
-\frac{D(\vec x) p_\cdot(\vec x)}{\int_{\mathbb{R}^2} D(\vec x) p_\cdot(\vec x) \;d \vec x }
-\; d \vec x, \nonumber
-\end{align}
-
-where $\vec x$ represents the location of an animal and $f(\vec x |  \omega_{i\cdot} > 0)$ describes the spatial distribution of detected animals. For constant $D(\vec x)$ the RHS simplifies to $a^{-1} \int_{\mathbb R ^2} \mbox{Pr} (\vec \omega_i | \vec x) \; d \vec x$ where $a = \int_{\mathbb{R}^2} p_\cdot(\vec x) \;d \vec x$. Expressions are provided below for the overall probability of capture $p_\cdot(\vec x) = \mbox{Pr} (\omega_i > 0 | \vec x)$.
-
-This formulation avoids specifying a finite target population $N$ or area $A$. It relies on $f(\vec x)$ falling to zero over most of the plane so that $\mbox E (n)$ is finite. The model can also be formulated for a finite population $N$ in a region with area $A$. Computer implementations of both formulations restrict integration to the most pertinent subset of the plane, but this is a convenience rather than essential.
-
-In a homogeneous Poisson population, $n$ is Poisson distributed with expected value $\lambda = Da$ where $a$ is the effective sampling area defined by $a = \int_{\mathbb R^2} p_\cdot(\vec x) \, d \vec x$ where $p_\cdot(\vec x)$ is the probability an individual at $\vec x$ is detected at least once (Borchers and Efford 2008).
-
-## Open-population likelihood
-
-The data for an open-population study comprise observations $\omega_{i,j}$ on each animal $i$ in successive primary sessions $j$. Times of birth/arrival $b$ and death/departure $d$ are generally unknown[^footnote17]. All possible combinations of $b$ and $d$ are considered in the individual-based form of the likelihood (Pledger et al. 2003, 2010; Link and Barker 2010; Schofield and Barker 2016).
-
-[^footnote17]: $b$ and $d$ strictly refer to the first and last sampling times at which an animal was available for detection. Except for removal on capture, CJS models condition on first detection, so the computations effectively treat $b$ as known. 
-
-If animals do not move between primary sessions we have
-
-\begin{align}
-\mbox{Pr} (\vec \omega_{i} | \omega_{i\cdot} > 0) 
-&= \sum_{b=1}^J \sum_{d=b}^J \left[ \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d)
-\prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr}
-(\omega_{i,j} | \omega_{i\cdot} > 0, \vec x_b) \,.\, f(\vec x_b | \omega_{i\cdot} > 0) \; d \vec x_b \right] \nonumber \\
-&= \sum_{b=1}^J \sum_{d=b}^J \left[ \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d)
-\, a ^ {-1} \prod_{j=b}^{j=d} \int_{\mathbb R^2} \mbox{Pr} (\omega_{i,j} | \vec x_b) \, d \vec x_b \right]. \nonumber
-\end{align}
-
-The expression $f(\vec x_b$\|$\omega_{i \cdot} >0 )$ concerns the spatial distribution of detected members of the superpopulation,[^footnote18] and $p_\cdot(\vec x_b)$ refers to the overall probability of detecting a member of the superpopulation with initial location $\vec x_b$. $a = \int_{\mathbb{R}^2} p_\cdot(\vec x_b) \, d \vec x_b$.
-
-[^footnote18]: 'Superpopulation' refers to all animals alive and available for capture at one or more sampling times (primary sessions) (Schwarz and Arnason 1996).
-
-If animals are allowed to move between primary sessions then we must consider their location at each sampling time when modelling $\omega_{i,j}$. We use $\vec x_j$ for the location of an animal in session $j$. We assume that centres are Poisson-distributed at the time of recruitment, and we designate these $\vec x_b$. On each later occasion each $\omega_{i,j}$ is shifted by a random vector governed by the dispersal kernel, progressively drifting away from $\vec x_{i,1}$.
-
-\begin{align}
-\mbox{Pr} (\vec \omega_{i} | \omega_{i\cdot} > 0) 
-&= \sum_{b=1}^J \sum_{d=b}^J \left[ 
-\beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d)
-\prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr}
-(\omega_{i,j} | \omega_{i\cdot} > 0, \vec x_j) \,.\, f(\vec x_b | \omega_{i\cdot} > 0) \,.\, f(\vec x_j |  \omega_{i,j-1}, \vec x_b) \; d \vec x_j \right] \nonumber \\
-&= \sum_{b=1}^J \sum_{d=b}^J \left[ \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d)
-\, a ^ {-1} \prod_{j=b}^{j=d} \int_{\mathbb R ^2} \mbox{Pr} (\omega_{i,j} | \vec x_j) \,.\, f(\vec x_j |  \vec x_{j-1}, \omega_{i,j-1}) \; d \vec x_j \right].
-\end{align}
-
-$p_\cdot(\vec x_b)$ and $a = \int_{\mathbb{R}^2} p_\cdot(\vec x_b) \, d \vec x_b$ are defined in relation to the superpopulation as before, but their calculation must allow for possible movement between primary sessions.
-
-For the correlated model, $f(\vec x_b$\|$\vec x_{b-1}, \omega_{i,b-1})$ is defined as $f(\vec x_b)$ i.e. Poisson. On later occasions we 'update' the probability of each potential location using detection information from the previous occasion and the dispersal kernel.
-
-
-**Appendix Table 1** Probability of detection history $\omega_{i}$ conditional on recruitment at time $b$ and death at time $d$ under three models for home-range centres. $p(\omega_{i,j}$\|$\vec x)$ represents the probability of the observations of animal $i$ on occasion $j$ given that its centre was at $\vec x$. $d$ is the time the animal was alive and last available for detection. $a$ is the effective sampling area defined in relation to the superpopulation.
-
-| Centres | $\mbox {Pr} (\omega_{i}$ \| $\omega_{i\cdot}>0)$ |
-|----------|----------------------------------------|
-| Static | $a^{-1} \int_{\mathbb{R}^2}  \prod _{j=b}^{j=d} p(\omega_{i,j}$\|$\vec x)\; d\vec x$ |
-| Uncorrelated |  $a^{-1}  \prod _{j=b}^{j=d} \int_A  p(\omega_{i,j}$\|$\vec x) \; d\vec x$ |
-| Correlated | $a^{-1} \prod_{j=b}^{j=d} \int_{\mathbb{R}^2} p(\omega_{i,j}$\|$\vec x_{i,j}) f(\vec x_{i,j}$\|$\vec x_{i,j-1}, \omega_{i,j-1}) \; d \vec x_{i,j}$ |
-
-### Updating of $\vec x_j$
-
-We have yet to describe the sequence of probability models for the location of detected individuals $f(\vec x_j$\|$\vec x_{j-1}, \omega_{i,j-1})$. In the absence of detection information, each successive model would be a convolution of the dispersal kernel with the previous 2-dimensional probability distribution. For a homogeneous Poisson density model this alone would achieve nothing (each successive distribution would be 2-D Poisson). The 'trick' here is to first compute the posterior probability for the location of the current animal given the spatial information on detections in the current sampling session:
-$$
-g(\vec x_j | \omega_{i,j}) = p(\omega_{i,j} | \vec x_{j}) \; / \int_{\mathbb R^2} p(\omega_{i,j} | \vec x_j) dx.
-$$
-Then for dispersal kernel $\vec h$ the convolution is
-$$
-f(\vec x_j) = g(\vec x_{j-1}) * \vec h.
-$$
-We usually integrate over a finite area of habitat rather than the real plane. Edge effects due to animals dispersing out of this area pose a potentially significant problem that has not been addressed. Toroidal wrapping is a possibility when the area is rectangular, but it generally isn't.
-
-## Probability detected at least once
-
-### Static HR
-
-For independent detectors[^footnote19] each with individual detection probability $p_{sk} (\vec x)$, the aggregate probability that an animal at $\vec x$ will be detected by at least one detector on occasion $s$ is $p_{s\cdot} = 1 -  \prod_{k=1}^{k=K} 1 -  p_{sk} (\vec x)$. Then the overall probability of detection for an animal at $\vec x$ is $p_\cdot (\vec x) = 1 - \prod_{s=1}^{s=S} [1 - p_{s\cdot} (\vec x)] = 1 - \prod_{s=1}^S \prod_{k=1}^K [1 - p_{sk}(\vec x)]$.
-
-[^footnote19]: Binary or count `proximity' detectors in the jargon of \textbf{secr}.
-
-### With kernel-based movement
-
-The evaluation of $p_\cdot(\vec x_b)$ must allow for the possibility that a member of the superpopulation is not alive at time $j$, and for movement between sampling occasions. Using $\beta_j$ for entry probability and $\phi_j$ for apparent survival,
-$$
-p_\cdot(\vec x_b) = \sum_{b=1}^J \sum_{d=b}^J \beta_{b-1} \prod_{j=b}^{j=d-1} \phi_j (1-\phi_d) \{ 1 - \prod_{j=b}^{j=d} [\mbox{Pr} (\omega_j=0 | \vec x_j) f(\vec x_j|\vec x_b)] \} .
-$$
-The problem here is to pin down $f(\vec x_j|\vec x_b)$ for an undetected animal. Initially ($j=b$) $\vec x_b$ is Poisson-distributed. This changes over time: peripheral locations become more likely the longer an animal remains uncaptured. Diffusive dispersal movements tend to flatten the distribution.
-
-$$
- f(\vec x_j|\vec x_{j-1}) = \frac{f(\vec x_{j-1})[1-p_{s\cdot}(\vec x_{j-1})]}{\int_{\mathbb{R}^2} f(\vec x_{j-1})[1-p_{s\cdot}(\vec x_{j-1})] \, d \vec x} \,*\, \vec h.
-$$
-
-For the spatiotemporal model the effective sampling area $a$ may be defined in relation to the superpopulation using $p_\cdot(\vec x)$.
-
-## Implementation
-
-In the development above, integrations have been across the plane ($\mathbb R^2$). In practice, integration will usually be restricted to a finite area $A$, for both computational and biological reasons. For sampling in continuous habitat, when there is no natural limit to $A$, the extent of $A$ is usually set by considering the probability of detecting more distant animals (these should be ignorable) -- choosing $A$ that is too small results in positive bias in estimated density. For models that include dispersal we must also allow for the immigration of more distant animals during sampling, so a larger region is desirable.
 
 [secr-manual.pdf]: https://www.otago.ac.nz/density/pdfs/secr-manual.pdf
 [secr-overview.pdf]: https://www.otago.ac.nz/density/pdfs/secr-overview.pdf

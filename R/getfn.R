@@ -3,6 +3,7 @@
 ## getfn.R
 ## 2018-02-26 openCR 1.0.0
 ## 2018-11-11 buggy if J<3; fixed for getbeta0
+## 2019-04-21 getmoveargs bug fixed - moveargsi + 1
 ###############################################################################
 
 #------------------------------------------------------------------------
@@ -93,14 +94,15 @@ getphij <- function (n, x, openval, PIAJ, intervals) {
 }
 #------------------------------------------------------------------------
 
-getmoveargs <- function (type, n, x, openval, PIAJ, intervals, moveargsi) {
+## bug fix moveargsi + 1 2019-04-21
+getmoveargs <- function (n, x, openval, PIAJ, intervals, moveargsi) {
     ## z is adjustment for intrusion of 'z' parameter between sigma and move.a
     ## in the realparameter table (openval, openval0) when detectfn has 3 parameters
     J <- length(intervals) + 1
     moveargs <- matrix(0, nrow = J, ncol = 2)
-    moveargs[,1] <- openval[PIAJ[n,,x], moveargsi[1], drop = FALSE]
+    moveargs[,1] <- openval[PIAJ[n,,x], moveargsi[1]+1, drop = FALSE]
     if (moveargsi[2]>0)
-        moveargs[,2] <- openval[PIAJ[n,,x], moveargsi[2], drop = FALSE]
+        moveargs[,2] <- openval[PIAJ[n,,x], moveargsi[2]+1, drop = FALSE]
     moveargs[nrow(moveargs),] <- 0    ## movea for each primary session, zero for last
     moveargs
 }

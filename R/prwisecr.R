@@ -3,7 +3,7 @@
 ## prwi
 ## prwisecr
 
-## 2018-02-12
+## 2018-02-12, 2019-05-19
 
 ## openval has
 ## column 1 p or lambda0
@@ -12,7 +12,6 @@
 ## column 4 sigma (pmix if non-spatial)
 ## column 5 pmix
 
-
 #########################################################################################
 
  # probability of count for session s, detector k, animal i
@@ -20,34 +19,34 @@
  # a probability otherwise
 
 pski <- function(binomN, count, Tski, g) {
-    
+
     result <- 1.0
-    
+
     if (binomN == -1) {                              ## binary proximity detectors : Bernoulli
-        if (any(abs(Tski-1) > 1e-10)) {              ## effort not unity; adjust g 
+        if (any(abs(Tski-1) > 1e-10)) {              ## effort not unity; adjust g
             g <- 1 - (1 - g)^Tski
         }
-        if (count>0)                                 
+        if (count>0)
             result <- g
-        else 
+        else
             result <- 1 - g
     }
-    else if (binomN == 0) {                          ## count detectors : Poisson 
-        if (count == 0) 
-            result <- exp(-Tski * g)                 ## routinely apply Tsk adjustment to cum. hazard 
+    else if (binomN == 0) {                          ## count detectors : Poisson
+        if (count == 0)
+            result <- exp(-Tski * g)                 ## routinely apply Tsk adjustment to cum. hazard
         else
             result <- dpois(count, Tski * g, FALSE)
     }
     else if (binomN == 1) {                          ## count detectors : Binomial, size from Tsk
-        result <- dbinom (count, round(Tski), g, FALSE) 
+        result <- dbinom (count, round(Tski), g, FALSE)
     }
-    else if (binomN > 1) {                           ## count detectors : Binomial, specified size 
-        if (abs(Tski-1) > 1e-10) {                   ## effort not unity, adjust g 
+    else if (binomN > 1) {                           ## count detectors : Binomial, specified size
+        if (abs(Tski-1) > 1e-10) {                   ## effort not unity, adjust g
             g <- 1 - (1 - g)^Tski
         }
         result <- dbinom (count, binomN, g, FALSE)
     }
-    else stop("binomN < 0 not allowed")
+    else stop("binomN < -1 not allowed")
     result
 }
 
@@ -107,46 +106,7 @@ convolvemq <- function (
     workpjm
 }
 
-#-----------------------------------------------------------------------
-## fill cells of kernel with probability of movement from central point
-
-fillkernelp <- function (
-    J,              ## number of sessions
-    kerneltype,     ## 0 normal, 1 exponential, 2 usermodel
-    kernel,
-    usermodel,
-    cellsize,
-    moveargsi,
-    moveargs)
-{
-    kn <- nrow(kernel)
-    kernelp <- matrix(0, nrow = kn, ncol = J)
-    r2 <- (kernel$x^2 + kernel$y^2) * cellsize^2
-    r <- sqrt(r2)
-    for (j in 1:J) {
-        if (kerneltype == 0)        ## normal (Gaussian) kernel
-            kernelp[,j] <- exp(-r2 / 2 / moveargs[j]^2)
-        else if (kerneltype == 1)   ## negative exponential kernel
-            kernelp[,j] <- exp(-r / moveargs[j])
-        else if (kerneltype == 2) {
-            if (!is.function(usermodel))
-                stop ("fillkernelp requires valid user model for movement")
-            if (moveargsi[2]>0)
-                kernelp[,j] <- usermodel(r, moveargs[j,1], moveargs[j,2])  ##  2 parameters
-            else if (moveargsi[1]>0)
-                kernelp[,j] <- usermodel(r, moveargs[j,1])
-            else
-                kernelp[,j] <- usermodel(r)   ## no parameters!
-        }
-        else stop("unrecognised kerneltype")
-    }
-    ## normalise
-    sumj <- apply(kernelp,2,sum)
-    kernelp <- sweep(kernelp, MARGIN=2, STATS=sumj, FUN="/")
-    kernelp
-}
 ###################################################################################
-
 prwi <- function (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ,
                       intervals, CJSp1) {
     # get session-specific real parameter values
@@ -204,7 +164,7 @@ prw <- function (n, j, x, nc, jj, kk, binomN, cumss, PIA, gk, Tsk, w, pjm) {
             if (c >= 1) {    # drops unset traps
                 count <- w[n,s,k]
                 if (count<0) {count <- -count; dead <- TRUE }
-                pjm <- pjm * pski(binomN,count,Tsk[k,s], gk[c,k,])   
+                pjm <- pjm * pski(binomN,count,Tsk[k,s], gk[c,k,])
             }
         }
         if (dead) break;   # after processing all traps on this occasion
@@ -213,17 +173,16 @@ prw <- function (n, j, x, nc, jj, kk, binomN, cumss, PIA, gk, Tsk, w, pjm) {
 }
 ###################################################################################
 
-prwisecr <- function (type, n, x, nc, jj,
-                      kk, mm, nmix, cumss, w, fi, li, gk, openval,
-                      PIA, PIAJ, binomN, Tsk, intervals,  CJSp1, moveargsi, movemodel,
+prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
+                      openval, PIA, PIAJ, binomN, Tsk, intervals,
+                      CJSp1, calcpdotbd, moveargsi, movemodel,
                       usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL) {
-
     phij <- getphij (n, x, openval, PIAJ, intervals)
 
     if (movemodel > 1) {
         moveargsi <- pmax(moveargsi,0)
-        moveargs <- getmoveargs (type, n, x, openval, PIAJ, intervals, moveargsi)
-        kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize, moveargsi, moveargs)
+        moveargs <- getmoveargs (n, x, openval, PIAJ, intervals, moveargsi)
+        kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
     }
 
     if(type==6) {
@@ -235,45 +194,77 @@ prwisecr <- function (type, n, x, nc, jj,
         cjs <- 0
         beta <- getbeta (type, n, x, openval, PIAJ, intervals, phij)
     }
+    if (calcpdotbd) {
+        ## Precompute session-specific Pr for all unique parameter combinations 2019-05-05
+        ## Does not allow for learned response
+        pjmat <- pr0njmx(n, x, cumss, jj, mm, binomN, PIA, gk, Tsk)  ## PCH1.R
+    }
     maxb <- fi[n]
     mind <- abs(li[n])
     maxd <- jj
     if (li[n] < 0) maxd <- mind     # possible censoring
-
     pdt <- 0
+    pdotbd <- 1.0
     for (b in minb:maxb) {
         for (d in mind:maxd) {
+            if (calcpdotbd) {
+                # compute pdot for this b,d
+                if (movemodel == 1) {   ## uncorrelated; product over primary sessions
+                    if (d>(b+cjs)) {
+                        pdotbd <- 1 - prod(apply(pjmat[(b+cjs):d,]/mm,2,sum))
+                    }
+                    else {
+                        pdotbd <- 1
+                    }
+                }
+                else {
+                    pr0 <- pjmat[b+cjs,] / mm
+                    if (d>(b+cjs)) {
+                        for (j in (b+cjs+1):d) {
+                            if (movemodel>1) pr0 <- convolvemq(j-1, kernelp, mqarray, pr0)
+                            pr0 <- pr0 * pjmat[j,]
+                        }
+                    }
+                    pdotbd <- 1-sum(pr0)
+                }
+            }
             if (type==6) pbd <- 1 else pbd <- beta[b]
             if (b<d) pbd <- pbd * prod(phij[b:(d-1)])
             if (li[n]>0)    # not censored
                 pbd <- pbd * (1-phij[d])
-            prwi <- 1
             if ((b+cjs) <= d) {
-                if ((movemodel==0) | (movemodel>1)) {
-                    pjm <- rep(1,mm)
+                if (movemodel == 0) {
+                    alpha <- rep(1/mm,mm)
                     for (j in (b+cjs):d) {
-                        pjm <- prw (n, j, x, nc, jj, kk, binomN, cumss, PIA,
-                                    gk, Tsk, w, pjm)
-                        if (movemodel>1)
-                            ## replace pjm with version updated for movement
-                            ## pi_1(X|omega_i1) = Pr(omega_i1|X_i1) pi_0(X) / Pr (omega_i1)
-                            ## the denominator Pr(omega_i) is omitted as it is constant across the mask
-                            if (j<d) pjm <- convolvemq(j, kernelp, mqarray, pjm)
+                        alpha <- prw (n, j, x, nc, jj, kk, binomN, cumss, PIA,
+                                    gk, Tsk, w, alpha)
                     }
-                    prwi <- sum(pjm) / mm
+                    prwi <- sum(alpha) / pdotbd
                 }
-                else {   ## movemodel == 1
+                else if ( movemodel == 1) { # uncorrelated; product over primary sessions
                     prwi <- 1.0
                     for (j in (b+cjs):d) {
-                        pjm <- rep(1,mm)
-                        pjm <- prw(n, j, x, nc, jj, kk, binomN, cumss, PIA,
-                                   gk, Tsk, w, pjm)
-                        sump <- sum(pjm) / mm
-                        prwi <- prwi * sump;   # product over primary sessions
+                        alpha <- prw(n, j, x, nc, jj, kk, binomN, cumss, PIA,
+                                   gk, Tsk, w, rep(1/mm,mm))
+                        prwi <- prwi * sum(alpha)
                     }
+                    prwi <- prwi / pdotbd
                 }
+                else { # movemodel>1
+                    alpha <- prw (n, b+cjs, x, nc, jj, kk, binomN, cumss, PIA,
+                                      gk, Tsk, w, rep(1/mm, mm))
+                    if (d>(b+cjs)) {
+                        for (j in (b+cjs+1):d) {
+                            alpha <- convolvemq(j-1, kernelp, mqarray, alpha)
+                            alpha <- prw (n, j, x, nc, jj, kk, binomN, cumss, PIA,
+                                          gk, Tsk, w, alpha)
+                        }
+                    }
+                    prwi <- sum(alpha) / pdotbd
+                    # cat("n ", n, " b ", b, " d ", d, " prwi ", prwi, "\n")
+                }
+                pdt <- pdt + pbd * prwi
             }
-            pdt <- pdt + pbd * prwi
         }
     }
     pdt
@@ -307,19 +298,18 @@ prwmulti <- function (n, j, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, pjm) {
     pjm
 }
 
-prwisecrmulti <- function (type, n, x, jj,
-                      mm, cumss, w, fi, li, hk, openval,
-                      PIA, PIAJ, binomN, Tsk, intervals,  moveargsi, h, hindex, CJSp1, movemodel,
-                      usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL) {
+prwisecrmulti <- function (type, n, x, jj, mm, cumss, w, fi, li, hk, openval,
+                      PIA, PIAJ, binomN, Tsk, intervals,  moveargsi, h, hindex,
+                      CJSp1, calcpdotbd, movemodel, usermodel, kernel = NULL,
+                      mqarray = NULL, cellsize = NULL) {
     ## precompute p0 to save time
     p0 <- exp(-h)
     phij <- getphij (n, x, openval, PIAJ, intervals)
     if (movemodel > 1) {
         moveargsi <- pmax(moveargsi,0)
-        moveargs <- getmoveargs (type, n, x, openval, PIAJ, intervals, moveargsi)
+        moveargs <- getmoveargs (n, x, openval, PIAJ, intervals, moveargsi)
         kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize, moveargsi, moveargs)
     }
-#browser()
     if(type==6) {
         minb <- fi[n]
         cjs <- 1-CJSp1
@@ -329,43 +319,72 @@ prwisecrmulti <- function (type, n, x, jj,
         cjs <- 0
         beta <- getbeta (type, n, x, openval, PIAJ, intervals, phij)
     }
+    if (calcpdotbd) {
+        pjmat <- pr0njmx(n, x, cumss, jj, mm, binomN, PIA, hk, Tsk)  ## PCH1.R
+    }
     maxb <- fi[n]
     mind <- abs(li[n])
     maxd <- jj
     if (li[n] < 0) maxd <- mind     # possible censoring
 
     pdt <- 0
+    pdotbd <- 1
     for (b in minb:maxb) {
         for (d in mind:maxd) {
+            if (calcpdotbd) {
+                # compute pdot for this b,d
+                if (movemodel == 1) {   ## uncorrelated; product over primary sessions
+                    if (d>(b+cjs)) {
+                        pdotbd <- 1 - prod(apply(pjmat[(b+cjs):d,]/mm,2,sum))
+                    }
+                    else {
+                        pdotbd <- 1
+                    }
+                }
+                else {
+                    pr0 <- pjmat[b+cjs,] / mm
+                    if (d>(b+cjs)) {
+                        for (j in (b+cjs+1):d) {
+                            if (movemodel>1) pr0 <- convolvemq(j-1, kernelp, mqarray, pr0)
+                            pr0 <- pr0 * pjmat[j,]
+                        }
+                    }
+                    pdotbd <- 1 - sum(pr0)
+                }
+            }
             if (type==6) pbd <- 1 else pbd <- beta[b]
             if (b<d) pbd <- pbd * prod(phij[b:(d-1)])
             if (li[n]>0)    # not censored
                 pbd <- pbd * (1-phij[d])
             prwi <- 1
             if ((b+cjs) <= d) {
-                if ((movemodel==0) | (movemodel>1)) {
-                    pjm <- rep(1,mm)
+                if (movemodel == 0) {
+                    alpha <- rep(1/mm,mm)
                     for (j in (b + cjs):d) {
-                        pjm <- prwmulti (n, j, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, pjm)
-                        if (movemodel>1)
-                            ## replace pjm with version updated for movement
-                            ## pi_1(X|omega_i1) = Pr(omega_i1|X_i1) pi_0(X) / Pr (omega_i1)
-                            ## the denominator Pr(omega_i) is omitted as it is constant across the mask
-                            if (j<d) pjm <- convolvemq(j, kernelp, mqarray, pjm)
+                        alpha <- prwmulti (n, j, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, alpha)
                     }
-                    prwi <- sum(pjm) / mm
+                    prwi <- sum(alpha) / pdotbd
                 }
-                else {   ## movemodel == 1
+                else if (movemodel == 1) {
                     prwi <- 1.0
                     for (j in (b+cjs):d) {
-                        pjm <- rep(1,mm)
-                        pjm <- prwmulti (n, j, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, pjm)
-                        sump <- sum(pjm) / mm
-                        prwi <- prwi * sump;   # product over primary sessions
+                        alpha <- prwmulti (n, j, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, rep(1/mm,mm))
+                        prwi <- prwi * sum(alpha);   # product over primary sessions
                     }
+                    prwi <- prwi / pdotbd
                 }
+                else { # movemodel>1
+                    alpha <- prwmulti (n, b+cjs, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, rep(1/mm,mm))
+                    if (d>(b+cjs)) {
+                        for (j in (b+cjs+1):d) {
+                            alpha <- convolvemq(j-1, kernelp, mqarray, alpha)
+                            alpha <- prwmulti (n, j, x, cumss, w, PIA, hk, Tsk, h, p0, hindex, alpha)
+                        }
+                    }
+                    prwi <- sum(alpha) / pdotbd
+                }
+                pdt <- pdt + pbd * prwi
             }
-            pdt <- pdt + pbd * prwi
         }
     }
     pdt

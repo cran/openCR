@@ -1,7 +1,7 @@
 \name{openCR.fit}
 \alias{openCR.fit}
 
-\title{  Fit Open Population Capture--Recapture Model }
+\title{ Fit Open Population Capture--Recapture Model }
 
 \description{
 
@@ -17,9 +17,9 @@ nonspatial Jolly-Seber Schwarz-Arnason model (`JSSA', also known as
 
 openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1), 
     distribution = c("poisson", "binomial"), mask = NULL, 
-    detectfn = c("HHN","HHR","HEX","HAN","HCG","HVP"), 
-    binomN = 0, movementmodel = c("static", "uncorrelated", "normal", "exponential"), 
-    start = NULL, link = list(), fixed = list(), timecov = NULL, 
+    detectfn = c("HHN","HHR","HEX","HAN","HCG","HVP"), binomN = 0, 
+    movementmodel = c("static", "uncorrelated", "normal", "exponential", "t2D", 
+    "uniform"), start = NULL, link = list(), fixed = list(), timecov = NULL, 
     sessioncov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
     method = "Newton-Raphson", trace = NULL, ncores = NULL, ...)
 }
@@ -129,8 +129,7 @@ covariate in ..CL models.
 individuals detected; this may be conditional on the population size (or number in the
 masked area) ("binomial") or unconditional ("poisson").
 \code{distribution} affects the sampling variance of the estimated
-density. The default is "binomial". For variance comparable with
-\pkg{secr} estimates this should be changed to "poisson".
+density. The default is "poisson" as in \pkg{secr}.
 
 Movement models are described in the \href{../doc/openCR-vignette.pdf}{vignette}.
 

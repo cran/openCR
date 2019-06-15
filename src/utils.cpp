@@ -100,7 +100,7 @@ double pski ( int binomN,
         }
         result = gbinom (count, binomN, g, 0);
     }
-    else stop("binomN < 0 not allowed");
+    else stop("binomN < -1 not allowed");  // code multi -2 separately
 
     return (result);
 }
@@ -187,29 +187,36 @@ void fillkernelp (int kn,
                   double cellsize,
                   const RMatrix<int> kernel, 
                   const RVector<int> moveargsi, 
-                  const CharacterVector fnname,
+                  //const CharacterVector fnname,
+                  const String fnname,
                   const std::vector<double> &moveargs, 
                   std::vector<double> &kernelp) {
     int j,k;
-    double r,r2;
+    double r,r2,a,a2,b;
     NumericVector p;
     std::vector<double> sumj(jj);
-    std::string fn;
     for (j = 0; j < (jj-1); j++) sumj[j] = 0;
     for (k = 0; k < kn; k++) {
         r2 = (kernel[k]*kernel[k] + kernel[k+kn]*kernel[k+kn]) * cellsize * cellsize;
         r = sqrt(r2);
         for (j = 0; j < (jj-1); j++) {
-            // Rprintf(" k %4d j %4d  moveargs[j,] %8.6f %8.6f \n",  k,j,moveargs[j], moveargs[j+jj]);
-            if (kerneltype == 0)        // Gaussian kernel 
-                kernelp[j * kn + k] = exp(-r2 / 2 / moveargs[j] / moveargs[j]);
-            else if (kerneltype == 1)   // Negative exponential kernel 
-                kernelp[j * kn + k] = exp(-r / moveargs[j]);
-            else if (kerneltype == 2) {  // User kernel 
+            if (kerneltype == 0) {         // Gaussian kernel 
+                a2 = moveargs[j] * moveargs[j];
+                kernelp[j * kn + k] = exp(-r2 / 2 / a2);
+	    }
+            else if (kerneltype == 1) {   // Negative exponential kernel 
+                a = moveargs[j];
+                kernelp[j * kn + k] = exp(-r / a);
+	    }
+            else if (kerneltype == 3) {   // 2-D t kernel 
+                a2 = moveargs[j] * moveargs[j];
+                b = moveargs[j+jj] + 1;
+                kernelp[j * kn + k] = (b-1) / M_PI / a2 / pow(1 + r*r/a2, b);
+            }
+            else if (kerneltype == 2) {   // User kernel 
                 // call R function from C++
-                fn =  as<std::string>(fnname[0]);
                 Environment env = Environment::global_env();
-                Function f = env[fn];
+                Function f = env[fnname];
                 if (moveargsi[1]>0)
                     p = f(r, moveargs[j], moveargs[j+jj]);
                 else if (moveargs[0]>0)
@@ -217,18 +224,21 @@ void fillkernelp (int kn,
                 else 
                     p = f(r);
                 kernelp[j * kn + k] = p[0];
-                
                 // Rprintf(" k %4d j %4d  kernelp[j * kn + k] %8.6f\n",  k,j,kernelp[j * kn + k]); 
+            }
+            else if (kerneltype == 4) {  // uniform kernel 
+                kernelp[j * kn + k] = 1.0 / kn;
             }
             else stop("unrecognised kerneltype");
             sumj[j] += kernelp[j * kn + k];
         }
     }
     // normalise 
-    for (k = 0; k < kn; k++) 
+    for (k = 0; k < kn; k++) {
         for (j = 0; j < (jj-1); j++) {
             kernelp[j * kn + k] = kernelp[j * kn + k] / sumj[j];
         }
+    }
 }
 //--------------------------------------------------------------------------
 
@@ -242,7 +252,7 @@ void fillkernelparallel (int kn,
                   const std::vector<double> &moveargs, 
                   std::vector<double> &kernelp) {
     int j,k;
-    double r,r2;
+    double r,r2,a,a2,b;
     std::vector<double> p(jj);
     std::vector<double> sumj(jj);
     for (j = 0; j < (jj-1); j++) sumj[j] = 0;
@@ -250,24 +260,36 @@ void fillkernelparallel (int kn,
         r2 = (kernel[k]*kernel[k] + kernel[k+kn]*kernel[k+kn]) * cellsize * cellsize;
         r = sqrt(r2);
         for (j = 0; j < (jj-1); j++) {
-            // Rprintf(" k %4d j %4d  moveargs[j,] %8.6f %8.6f \n",  k,j,moveargs[j], moveargs[j+jj]);
-            if (kerneltype == 0)        // Gaussian kernel 
-                kernelp[j * kn + k] = exp(-r2 / 2 / moveargs[j] / moveargs[j]);
-            else if (kerneltype == 1)   // Negative exponential kernel 
-                kernelp[j * kn + k] = exp(-r / moveargs[j]);
-            else if (kerneltype == 2) {  // User kernel 
+            if (kerneltype == 0) {        // Gaussian kernel 
+                a2 = moveargs[j] * moveargs[j];
+                kernelp[j * kn + k] = exp(-r2 / 2 / a2);
+	    }
+            else if (kerneltype == 1) {   // Negative exponential kernel 
+		a = moveargs[j];
+                kernelp[j * kn + k] = exp(-r / a);
+	    }
+            else if (kerneltype == 2) {   // User kernel 
                 // cannot call R function from RcppParallel worker
-                stop("cannot call R function from RcppParallel worker");
+                stop("cannot call R function from RcppParallel worker; try ncores = 1");
+            }
+            else if (kerneltype == 3) {   // 2-D t kernel 
+                a2 = moveargs[j] * moveargs[j];
+                b = moveargs[j+jj] + 1;
+                kernelp[j * kn + k] = (b-1) / M_PI / a2 / pow(1 + r2/a2, b);
+            }
+            else if (kerneltype == 4) {   // uniform kernel 
+                kernelp[j * kn + k] = 1.0 / kn;
             }
             else stop("unrecognised kerneltype");
             sumj[j] += kernelp[j * kn + k];
         }
     }
     // normalise 
-    for (k = 0; k < kn; k++) 
+    for (k = 0; k < kn; k++) {
         for (j = 0; j < (jj-1); j++) {
             kernelp[j * kn + k] = kernelp[j * kn + k] / sumj[j];
         }
+    }
 }
 //--------------------------------------------------------------------------
 
