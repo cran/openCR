@@ -34,7 +34,7 @@ This is still something of a work in progress, so be careful to check results 'm
 
 [^footnote2]: As far as I know, this abbreviation was first used by Pledger et al. (2010). Recognising the contributions of Crosbie and Manly, Schofield and Barker (2009) and Cowen et al. (2010) referred to it the Crosbie-Manly-Arnason-Schwarz (CMAS) model. Link and Barker (2010) used 'Crosbie-Manly-Schwarz-Arnason' (CMSA) for the same model. CMSA has since been used by various authors, including Schofield and Barker (2016). JSSA is used in **openCR** because this highlights its evolution from the widely known Jolly-Seber model. POPAN refers to the software of Schwarz and Arnason (1996), recycled as the name of a data type in MARK.
 
-Spatial versions of the CJS and JSSA model types are also provided[^footnote2a]. The spatial models allow for 'multi', 'proximity' or 'count' detectors as defined in **secr**. Several functions are implemented for the decline in hazard of detection with distance. Movement between primary sessions may be modelled (cf Ergon and Gardner 2014), but this feature is experimental.
+Spatial versions of the CJS and JSSA model types are also provided[^footnote2a]. The spatial models allow for 'multi', 'proximity' or 'count' detectors as defined in **secr**. Several functions are implemented for the decline in hazard of detection with distance. Movement between primary sessions may be modelled (cf Ergon and Gardner 2014; Glennie et al. 2019), but particular care is needed, especially with respect to [kernel](#kernels) truncation.
 
 [^footnote2a]: The utility of the spatial CJS model type (CJSsecr) is in doubt because the distribution of detected animals is not uniform at first detection, but rather biased towards the vicinity of the detectors.
 
@@ -323,7 +323,7 @@ Covariates for detection parameters in secondary sessions are provided in the 't
 
 ## Closed populations
 
-The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.4 fits simple closed models faster than **secr** 3.1. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
+The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.4 fits simple closed models faster than **secr** 3.2. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
 
 ```{r compare, cache = mycache, warning = FALSE}
 msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
@@ -527,7 +527,7 @@ IMPORTANT NOTE: Movement models were recoded in **openCR** 1.4.0 and results may
 | `uniform` | (none) | Uniform within kernel radius |
 | (user function) | `move.a`, `move.b` | User-supplied kernel function (`ncores = 1` only)|
 
-## Movement kernels
+## Movement kernels {#kernels}
 
 All movement kernels are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin (Table 7). 
 
@@ -822,10 +822,8 @@ Crosbie, S. F. and Manly, B. F. J. (1985) Parsimonious modelling of capture--mar
 Efford, M. G. (2004) Density estimation in live-trapping
 studies. *Oikos* **106**, 598--610.
 
-Efford, M. G. (2018a). secr: Spatially explicit capture--recapture models. R package version
-  3.1.8. https://CRAN.R-project.org/package=secr
-  
-Efford, M. G. and Schofield, M. R. (2019). A spatial open-population capture–-recapture model. Biometrics (In revision).
+Efford, M. G. (2019). secr: Spatially explicit capture--recapture models. R package version
+  3.2.1. https://CRAN.R-project.org/package=secr
   
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:
@@ -840,6 +838,8 @@ capture--recapture studies. *Methods in Ecology and Evolution* **4**,
 Efford, M. G. and Fewster, R. M. (2013) Estimating population size by
 spatially explicit capture--recapture. *Oikos* **122**, 918--928.
 
+Efford, M. G. and Schofield, M. R. (2019). A spatial open-population capture–-recapture model. *Biometrics* (In revision).
+  
 Ergon, T. and Gardner, B. (2014) Separating mortality and emigration: modelling space
 use, dispersal and survival with robust-design spatial capture--recapture data. 
 *Methods in Ecology and Evolution* **5**, 1327--1336.

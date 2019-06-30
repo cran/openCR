@@ -20,8 +20,8 @@ Functions called by \code{openCR.fit} when \code{details$R == TRUE}, and some ot
 prwi (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJSp1)
 
 prwisecr (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
-    PIA, PIAJ, binomN, Tsk, intervals, CJSp1, calcpdotbd, moveargsi, movemodel, 
-    usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL)
+    PIA, PIAJ, binomN, Tsk, intervals, h, hindex, CJSp1, calcpdotbd, moveargsi, 
+    movemodel, usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL)
 
 PCH1 (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
 
@@ -48,6 +48,8 @@ cyclic.fit (..., maxcycle = 10, tol = 1e-5, trace = FALSE)
   \item{PIA}{parameter index array (secondary sessions)}
   \item{PIAJ}{parameter index array (primary sessions)}
   \item{intervals}{integer vector}
+  \item{h}{numeric 3-D array of hazard (mixture, mask position, hindex)}
+  \item{hindex}{integer n x s matrix indexing h for each individual, secondary session}
   \item{CJSp1}{logical; should CJS likelihood include first primary session?}
   
   \item{calcpdotbd}{logical; if TRUE value for each (b,d) is divided by pdot(b,d) }

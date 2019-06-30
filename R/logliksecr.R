@@ -5,6 +5,7 @@
 # 2019-04-14 R option failed with movement in PCH1secr because argument usermodel omitted
 # 2019-04-23 removed type 5 'secr' (unused)
 # 2019-05-06 1.4.0
+# 2019-06-19 onehistory modified for single call to prwisecr (merged prwimulti)
 
 # types
 
@@ -40,68 +41,41 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     onehistory <- function (n) {
         sump <- 0
         for (x in 1:nrow(pmix)) {
-            if (detectr == "multi") {
-                temp <- prwisecrmulti (
-                    type,
-                    1, x,
-                    data$J,
-                    data$m,
-                    data$cumss,
-                    data$capthist[n,,drop = FALSE],
-                    data$fi[n],
-                    data$li[n],
-                    hk,
-                    realparval,
-                    PIA[n,,,,drop = FALSE],
-                    PIAJ[n,,,drop = FALSE],
-                    binomN,
-                    data$usge,
-                    data$intervals,
-                    data$moveargsi,
-                    haztemp$h,
-                    haztemp$hindex[n,,drop = FALSE]+1,
-                    data$details$CJSp1,
-                    data$details$calcpdotbd,
-                    data$movemodel,
-                    get(data$usermodel),
-                    data$kernel,
-                    data$mqarray,
-                    data$cellsize)
-            }
-            else {
-                temp <- prwisecr(
-                    type,
-                    1,   # n
-                    x,
-                    1,
-                    data$J,
-                    data$k,
-                    data$m,
-                    data$details$nmix,
-                    data$cumss,
-                    data$capthist[n,,, drop = FALSE],   ## 3-D CH
-                    data$fi[n],
-                    data$li[n],
-                    if (detectr == "poissoncount") hk else gk, ## precomputed probability or hazard
-                    realparval,
-                    PIA[n,,,,drop = FALSE],
-                    data$design$PIAJ[n,,,drop = FALSE],
-                    binomN,
-                    data$usge,
-                    data$intervals,
-                    data$details$CJSp1,
-                    data$details$calcpdotbd,
-                    data$moveargsi,
-                    data$movemodel,
-                    get(data$usermodel),
-                    data$kernel,
-                    data$mqarray,
-                    data$cellsize)
-            }
+            temp <- prwisecr(
+                type,
+                1,   # n
+                x,
+                1,
+                data$J,
+                data$k,
+                data$m,
+                data$details$nmix,
+                data$cumss,
+                if (detectr == "multi") data$capthist[n,, drop = FALSE] else data$capthist[n,,, drop = FALSE],   ## 3-D CH
+                data$fi[n],
+                data$li[n],
+                if (detectr %in% c("poissoncount", "multi")) hk else gk, ## precomputed probability or hazard
+                realparval,
+                PIA[n,,,,drop = FALSE],
+                data$design$PIAJ[n,,,drop = FALSE],
+                binomN,
+                data$usge,
+                data$intervals,
+                haztemp$h,
+                haztemp$hindex[n,,drop = FALSE]+1,
+                data$details$CJSp1,
+                data$details$calcpdotbd,
+                data$moveargsi,
+                data$movemodel,
+                get(data$usermodel),
+                data$kernel,
+                data$mqarray,
+                data$cellsize)
+            
             sump <- sump + pmix[x,n] * temp
         }
-        ## if (sump==0) 0 else 
-        freq[n] * log(sump)
+        ## cat('n ', n, ' sump ', sump, '\n')
+        if (sump<=0) NA else freq[n] * log(sump)
     }
     
     ##############################################
@@ -142,8 +116,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 as.double (data$cellsize))
             sump <- sump + pmix[x,] * temp
         }
-        #ifelse(sump<=0, 0, freq * log(sump))
-        freq * log(sump)
+        if (any(is.na(sump)) || any(sump<=0)) NA else freq * log(sump)
     }
     
     #####################################################################
@@ -167,6 +140,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     if (data$learnedresponse)
         realparval0 <- makerealparameters (data$design0, beta, data$parindx, data$link, data$fixed)
     else realparval0 <- realparval
+    if (data$details$debug>0) print(realparval)    
     
     #-----------------------------------------
     # check valid parameter values
@@ -209,9 +183,12 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                                as.matrix(data$mask))
     gk <- array(temp[[1]], dim=c(nrow(realparval), data$k, data$m))  # array form for R use
     hk <- array(temp[[2]], dim=c(nrow(realparval), data$k, data$m))  # array form for R use
+    if (sum(hk)==0) {
+        return(1e10)
+    }
+
     pmix <- fillpmix2(data$nc, data$details$nmix, PIA, realparval)
     S <- ncol(data$capthist)
-
     #-----------------------------------------
 
     if (detectr == "multi") {
@@ -234,14 +211,13 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     else {
         haztemp <- list(h = array(-1, dim=c(data$details$nmix,1,1)), hindex = matrix(-1))
     }
-    
+
     #####################################################################
     ## Vector to store components of log likelihood
     comp <- numeric(5)
-    
+
     #####################################################################
     # Component 1: Probability of observed histories
-    ##if (data$ncores>1) {
     if (!data$details$R) {
         ## this is the streamlined option; always uses C code
         temp <- allhistsecrparallel()
@@ -269,7 +245,6 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             hk <- array(temp[[2]], dim=c(nrow(realparval), data$k, data$m))  # array form for R use
         }
         ## else use gk as gk0, hk as hk0
-
         pdot <- rep(0, data$nc)  # vector: one value for each unique observed history
         for (x in 1:data$details$nmix) {   # loop over latent classes
             if (data$details$R) {
@@ -330,7 +305,6 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     
     #####################################################################
     # Component 3: Probability of observing nc animals (non-CL types)
-
     if (type %in% c(7,8,12,13,14,24, 31)) {
         if (type %in% c(7, 12, 13, 24, 31))
             Dsuper <- realparval[nrow(realparval)*3+1] # Dsuper direct

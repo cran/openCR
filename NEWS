@@ -1,3 +1,18 @@
+version 1.4.1 (2019-06-29)
+
+New features and changed behaviour
+    o sumsims() dropifnoSE condition now also rejects zero SE
+    o print.summary.openCR() drops attributes eigH and fit
+
+Bugs fixed
+    o multiple problems in naive CJSsecr model (CJSp1 FALSE, the default)
+    o summary.openCR table of counts, format error with non-spatial model
+
+Other
+    o details switch 'calcpdotbd' defaults to FALSE unless required for movement model; 
+      may affect estimates with JSSAsecr models
+    o minor improvements to robustness when details$R = TRUE etc.
+
 version 1.4.0 (2019-06-15)
 
 New features and changed behaviour
@@ -6,7 +21,6 @@ New features and changed behaviour
     o new function make.kernel() and kernel methods plot and summary
     o plotKernel() deprecated
     o runsims.spatial() more robust with non-standard extractfn
-    o plotKernel() deprecated
     o see also 1.3.6
 
 Bugs fixed

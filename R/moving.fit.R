@@ -3,7 +3,7 @@
 ## 2018-05-12
 ## to do:
 ## extractFocal doesn't handle h2
-
+## 2019-06-30 enabled sessionlabels
 ###############################################################################
 
 extractFocal <- function(ocrlist, ...) {
@@ -34,7 +34,7 @@ moving.fit <- function(..., width = 3, centres = NULL, filestem = NULL,
         # interv <- interv[1:(length(interv)-1)]
         ch <- subset(ch, occasions = newocc)
         # intervals(ch) <- interv
-        # sessionlabels(ch) <- slabels[(j-buff):(j+buff)]
+        sessionlabels(ch) <- slabels[(j-buff):(j+buff)]
         ch
     }
     aroundscov <- function (scov, j) {
@@ -71,7 +71,7 @@ moving.fit <- function(..., width = 3, centres = NULL, filestem = NULL,
     oldoccasion <- 1:ncol(ch)
     # oldinterv <- intervals(ch)
     primary <- primarysessions(intervals(ch))
-    # slabels <- sessionlabels(ch)
+    slabels <- sessionlabels(ch)
     if (width>max(primary)) stop ('width exceeds number of primary sessions')
     if (width %% 2 != 1) stop ('width should be an odd integer')
     buff <- (width-1)/2

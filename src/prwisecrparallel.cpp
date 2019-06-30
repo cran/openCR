@@ -88,16 +88,19 @@ struct Somesecrhistories : public Worker {
         kn = kernel.nrow();          // number of cells in kernel
         cc = openval.nrow();         // number of parameter combinations
 
-	if (type == 6)     // CJSsecr
-            cjs = 1 - CJSp1;
-	else
-	    cjs = 0;
-
 	pdotbd.resize(jj*jj);
 	std::fill(pdotbd.begin(), pdotbd.end(), 1.0);
-        // default initialisation - works when all n individuals the same
-	if (calcpdotbd) {
-	    getpdotbd(0, pdotbd);
+
+	if (type == 6) {         // CJSsecr
+            cjs = 1 - CJSp1;   // offset 1 session iff true CJS (CJSp1=0)
+	}
+	else {
+	    cjs = 0;
+	    // default initialisation - works when all n individuals the same
+	    if (calcpdotbd) {
+		getpdotbd(0, pdotbd);
+		//Rprintf("sumpdotbd %10.8E \n", std::accumulate(pdotbd.begin(), pdotbd.end(), 0.0));
+	    }
 	}
 
 	indiv = individual();
@@ -167,6 +170,7 @@ struct Somesecrhistories : public Worker {
 	    }
 	}        
 	pr0njmx(n, x, cumss, nc, jj, kk, mm, cc, binomN, PIA, gk, Tsk, pjmat);
+	std::fill(pdotbd.begin(), pdotbd.end(), 0.0);
 	for (b=1; b<=jj; b++) {
 	    for (d=b; d<=jj; d++) {
 		if (movemodel==1) {
@@ -179,13 +183,16 @@ struct Somesecrhistories : public Worker {
 		    pdotbd[(d-1)*jj + b - 1] = 1 - prodp;
 		}
 		else {
-		    for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
-		    for (j= b+cjs+1; j<=d; j++) {
-			if (movemodel>1) convolvemq(mm, kn, j-1, mqarray, kernelp, alpha);  
-			for (m=0; m<mm; m++) alpha[m] *= pjmat[m * jj + j - 1];
+		    // for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
+		    if ((b+cjs) <= jj) { // 2019-06-17 
+			for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
+			for (j= b+cjs+1; j<=d; j++) {
+			    if (movemodel>1) convolvemq(mm, kn, j-1, mqarray, kernelp, alpha);  
+			    for (m=0; m<mm; m++) alpha[m] *= pjmat[m * jj + j - 1];
+			}
+			pdotbd[(d-1)*jj + b - 1] = 1 - std::accumulate(alpha.begin(),
+								       alpha.end(), 0.0);
 		    }
-		    pdotbd[(d-1)*jj + b - 1] = 1 - std::accumulate(alpha.begin(),
-								   alpha.end(), 0.0);
 		}
 	    }
 	}
@@ -228,6 +235,10 @@ struct Somesecrhistories : public Worker {
 		}
 		if (dead) break;   // out of s loop
 	    }
+	    
+	    // Rprintf("n %4d j %3d pjmsum %10.8E \n", n,j, 
+	    // std::accumulate(pjm.begin(), pjm.end(), 0.0));   
+
 	}
 	// all other detectors
 	else {
@@ -256,10 +267,9 @@ struct Somesecrhistories : public Worker {
         double pdt;
         double pbd;
         int j, m;
-        int cjs = 0;          // CJS offset
         int b, minb, maxb;
         int d, mind, maxd;
-        double prwi;
+        double prwi = 1.0;
         
         // work vectors for session-specific real parameter values etc.
         std::vector<double> phij(jj);       // each primary session
@@ -290,6 +300,11 @@ struct Somesecrhistories : public Worker {
         else {
             minb = 1;
             getbeta (type, n, x, nc, jj, openval, PIAJ, intervals, phij, beta);
+	    // allow individual variation in phi, beta, moveargs
+	    // by replacing plotbd with custom value for this n
+	    if (calcpdotbd && n>0 && indiv) {
+		getpdotbd(n, pdotbd);
+	    }
         }
 
         maxb = fi[n];
@@ -301,12 +316,6 @@ struct Somesecrhistories : public Worker {
         else 
             maxd = jj;
 
-        // allow individual variation in phi, beta, moveargs
-        // by replacing plotbd with custom value for this n
-	if (calcpdotbd && n>0 && indiv) {
-	    getpdotbd(n, pdotbd);
-	}
-        
         pdt = 0.0;
         for (b = minb; b <= maxb; b++) {
             for (d = mind; d <= maxd; d++) {
@@ -321,48 +330,48 @@ struct Somesecrhistories : public Worker {
 		if (li[n]>0)    // not censored
 		    pbd *= 1-phij[d-1];
 
-		// prwi = probability of observed history given available b to d 
-		if (movemodel == 0) {
-		    for (m=0; m<mm; m++) alpha[m] = 1.0/mm;
-		    // initialise alpha to uniform density
-		    // loop over primary sessions in which may have been alive
-		    for (j = b + cjs; j <= d; j++) {
-			prw (j, n, alpha);                        
-		    }
-		    prwi = std::accumulate(alpha.begin(), alpha.end(), 0.0) / 
-                        pdotbd[(d-1)*jj + b - 1];
-		}
-		else if (movemodel == 1) {
-		    prwi = 1.0;
-		    for (j = b + cjs; j <= d; j++) {
+		prwi = 1.0;
+		if ((b+cjs)<=d) {
+		    // prwi = probability of observed history given available b to d 
+		    if (movemodel == 0) {
 			for (m=0; m<mm; m++) alpha[m] = 1.0/mm;
-			prw (j, n, alpha);                        
-			// product over primary sessions 
-			prwi *= std::accumulate(alpha.begin(), alpha.end(), 0.0);
+			// initialise alpha to uniform density
+			// loop over primary sessions in which may have been alive
+			for (j = b + cjs; j <= d; j++) {
+			    prw (j, n, alpha);                        
+			}
+			prwi = std::accumulate(alpha.begin(), alpha.end(), 0.0);
 		    }
-		    prwi /= pdotbd[(d-1)*jj + b - 1];
+		    else if (movemodel == 1) {
+			prwi = 1.0;
+			for (j = b + cjs; j <= d; j++) {
+			    for (m=0; m<mm; m++) alpha[m] = 1.0/mm;
+			    prw (j, n, alpha);                        
+			    // product over primary sessions 
+			    prwi *= std::accumulate(alpha.begin(), alpha.end(), 0.0);
+			}
+		    }
+		    else {  // movemodel > 1
+			for (m=0; m<mm; m++) alpha[m] = 1.0/mm;
+			prw (b+cjs, n, alpha);                        
+			for (j = b + cjs + 1; j <= d; j++) {
+			    convolvemq(mm, kn, j-1, mqarray, kernelp, alpha);  
+			    prw (j, n, alpha);                        
+			}		    
+			prwi = std::accumulate(alpha.begin(), alpha.end(), 0.0);
+		    }
 		}
-		else {  // movemodel > 1
-		    prwi = 0.0;
-		    for (m=0; m<mm; m++) alpha[m] = 1.0/mm;
-		    prw (b+cjs, n, alpha);                        
-		    for (j = b + cjs + 1; j <= d; j++) {
-			convolvemq(mm, kn, j-1, mqarray, kernelp, alpha);  
-			prw (j, n, alpha);                        
-		    }		    
-		    prwi = std::accumulate(alpha.begin(), alpha.end(), 0.0) / 
-                        pdotbd[(d-1)*jj + b - 1];
-		}
-		pdt += pbd * prwi;
+		pdt += pbd * prwi / pdotbd[(d-1)*jj + b - 1];
+		// Rprintf("x %4d n %4d b %3d d %3d pbd %10.8E prwi %10.8E pdotbd %10.8E \n",
+		//	x,n,b,d,pbd, prwi,  pdotbd[(d-1)*jj + b - 1]);       
 	    }
 	}
-	// Rprintf("x %4d n %4d pdt %11.9f \n", x,n,pdt);       
-	return pdt; 
+	// Rprintf("x %4d n %4d pdt %10.8E \n", x,n,pdt);       
+	return pdt;    // may be zero 
     }
 
     // function call operator that work for the specified range (begin/end)
-    void operator()(std::size_t begin, std::size_t end) {
-        
+    void operator()(std::size_t begin, std::size_t end) {        
 	for (std::size_t n = begin; n < end; n++) {
 	    output[n] = oneprwisecrcpp (n);
 	}

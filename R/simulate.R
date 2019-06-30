@@ -134,18 +134,18 @@ runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = NULL,
         fitargs$capthist <- do.call(sim.capthist, detargs)
         intervals(fitargs$capthist) <- intervals
         fit <- try(do.call(openCR.fit, fitargs))
-            if (!inherits(fit, 'try-error')) {   ## 2019-04-07
-                out <- extractfn(fit)
-                if (is.list(fit)) {              ## 2019-06-10 
-                    attr(out, 'eigH') <- fit$eigH
-                    attr(out, 'fit') <- fit$fit
-                }
-                message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        if (!inherits(fit, 'try-error')) {   ## 2019-04-07
+            out <- extractfn(fit)
+            if (is.list(fit)) {              ## 2019-06-10 
+                attr(out, 'eigH') <- fit$eigH
+                attr(out, 'fit') <- fit$fit
             }
-            else {
-                out <- NULL
-                message("Failed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
-            }
+            message("Completed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        }
+        else {
+            out <- NULL
+            message("Failed replicate ", r, "  ", format(Sys.time(), "%H:%M:%S %d %b %Y"))
+        }
         out
     }
     popargs$seed <- NULL
@@ -160,7 +160,8 @@ runsim.spatial <- function(nrepl = 100, seed = NULL, ncores = NULL,
     else {
         clust <- makeCluster(ncores, methods = FALSE, useXDR = .Platform$endian=='big')
         clusterSetRNGStream(clust, seed)
-        clusterExport(clust, c('popargs','detargs','fitargs','extractfn'), environment())
+        
+        clusterExport(clust, c('popargs','detargs','fitargs','extractfn', 'intervals'), environment())
         out <- parSapply (clust, 1:nrepl, onesim, simplify = FALSE)
         stopCluster(clust)
     }
@@ -193,7 +194,7 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE,
             }
             mat <- t(sapply(predicted, function(x) unlist(x[[parm]][session,])))
             if (dropifnoSE)
-                OK <- !is.na(mat[,3])
+                OK <- !is.na(mat[,3]) & mat[,3]>0   ## 0 condition added 2019-06-15
             else
                 OK <- rep(TRUE, nrow(mat))
 

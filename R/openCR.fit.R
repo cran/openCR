@@ -60,7 +60,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
                            contrasts = NULL, control = list(),
                            initialage = 0, maximumage = 1,
                            autoini = NULL, ignoreusage = FALSE, CJSp1 = FALSE, 
-                           calcpdotbd = TRUE, R = FALSE, 
+                           calcpdotbd = NULL, R = FALSE, 
                            squeeze = TRUE, grain = 1)
 
     if (is.logical(details$hessian))
@@ -85,6 +85,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     }
     ## integer code for movement model
     movemodel <- movecode(movementmodel)
+    if (is.null(details$calcpdotbd)) details$calcpdotbd <- movemodel>1
     if (movemodel==1 && details$calcpdotbd && !details$R) {
         warning ("calcpdotbd implementation for uncorrelated movement in C not tested")
     }

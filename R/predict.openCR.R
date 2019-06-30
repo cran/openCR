@@ -21,7 +21,6 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
     beta <- complete.beta(object)
     beta.vcv <- complete.beta.vcv(object)
     if (is.null(beta.vcv)) se.fit <- FALSE
-    
     getfield <- function (x) {
         lpredictor (newdata = newdata, model = object$model[[x]],
                     indx = object$parindx[[x]], beta = beta, field = x,
