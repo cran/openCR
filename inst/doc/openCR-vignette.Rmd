@@ -20,11 +20,11 @@ mycache <- FALSE
 
 \vspace{12pt}
 
-The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2018a) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. A paper describing the spatial model has been submitted (Efford and Schofield 2019).
+The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2019) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. The spatial model was described by Efford and Schofield (2020).
 
 This is still something of a work in progress, so be careful to check results 'make sense' and be aware of [limitations](#limitations).
 
-[^footnote1]: These supplementary vignettes are not included with the package. It is intended to distribute them on the website www.otago.ac.nz/density. Otherwise contact the author.
+[^footnote1]: These supplementary vignettes are not included with the package. It is intended to distribute them on the website https://www.otago.ac.nz/density/. Otherwise contact the author.
 
 # Outline 
 
@@ -58,7 +58,7 @@ Super-population size (or density in the case of secr models) may be computed as
 
 ## Features and limitations
 
-**openCR** has definite [limitations](#limitations) that may or may not be addressed in future versions. Important differences between **secr** and **openCR** are noted [here](#differences). Online help is not guaranteed: users should attempt to solve their own problems, or seek help from other users via [phidot](http://www.phidot.org/forum) or [secrgroup](<https://groups.google.com/forum/#!forum/secrgroup>).
+**openCR** has definite [limitations](#limitations) that may or may not be addressed in future versions. Important differences between **secr** and **openCR** are noted [here](#differences). Online help is not guaranteed: users should attempt to solve their own problems, or seek help from other users via [phidot](http://www.phidot.org/forum/) or [secrgroup](<https://groups.google.com/forum/#!forum/secrgroup>).
 
 # Dipper example
 
@@ -120,7 +120,7 @@ Schwarz (2001) is illuminating (see also chapter on Jolly-Seber models by Schwar
 
 For each JSSA recruitment parameterization there is a choice between models that include the total number of detected individuals  ($u_\cdot$ or $n$ in different notations), and models that condition on this number. Conditional-likelihood models do not directly estimate abundance; abundance is estimated as a derived parameter (Schwarz and Arnason 1996). Full-likelihood models include abundance as a parameter. The choice of formulation has virtually no effect on the parameter estimates[^footnote5]. The conditional likelihood form is somewhat faster and easier to fit (Schwarz and Arnason 1996), and it focuses on parameters that are estimated robustly (apparent survival, seniority, population growth rate).
 
-The conditional models discussed by Pradel (1996), Link and Barker (2005), Schofield and Barker (2016) and others lack a distinguishing label to indicate their collective similarity. The label Pradel--Link--Barker PLB is suggested by Efford and Schofield (in revision).
+The conditional models discussed by Pradel (1996), Link and Barker (2005), Schofield and Barker (2016) and others lack a distinguishing label to indicate their collective similarity. The label Pradel--Link--Barker PLB is suggested by Efford and Schofield (2020).
 
 [^footnote5]: this may not be true for spatial models with spatially varying density, but these models are not considered in **openCR**.
 
@@ -136,7 +136,7 @@ Most published formulations of CJS and JSSA models admit only one secondary sess
 
 ## Spatial vs nonspatial
 
-Models may be spatially explicit or not. Nonspatial models ignore the spatial distribution of animals. Spatial models use the spatially explicit capture--recapture paradigm of Efford (2004), Borchers and Efford (2008) and Royle et al. (2014). Open population spatial models using MCMC were published by Gardner et al. (2010), Chandler and Clark (2014), Ergon and Gardner (2014), Whittington and Sawaya (2015) and others. Glennie et al. (2019) proposed a frequentist hidden Markov formulation. The spatial models in **openCR** are described by Efford and Schofield (in revision) and provide very similar estimates to those of Glennie et al. (2019).
+Models may be spatially explicit or not. Nonspatial models ignore the spatial distribution of animals. Spatial models use the spatially explicit capture--recapture paradigm of Efford (2004), Borchers and Efford (2008) and Royle et al. (2014). Open population spatial models using MCMC were published by Gardner et al. (2010), Chandler and Clark (2014), Ergon and Gardner (2014), Whittington and Sawaya (2015) and others. Glennie et al. (2019) proposed a frequentist hidden Markov formulation. The spatial models in **openCR** are described by Efford and Schofield (2020) and provide very similar estimates to those of Glennie et al. (2019).
 
 There are three major motivations for open spatial models
 
@@ -823,7 +823,7 @@ Efford, M. G. (2004) Density estimation in live-trapping
 studies. *Oikos* **106**, 598--610.
 
 Efford, M. G. (2019). secr: Spatially explicit capture--recapture models. R package version
-  3.2.1. https://CRAN.R-project.org/package=secr
+  3.2.1. https://CRAN.R-project.org/package=secr/
   
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:
@@ -838,8 +838,9 @@ capture--recapture studies. *Methods in Ecology and Evolution* **4**,
 Efford, M. G. and Fewster, R. M. (2013) Estimating population size by
 spatially explicit capture--recapture. *Oikos* **122**, 918--928.
 
-Efford, M. G. and Schofield, M. R. (2019). A spatial open-population capture–-recapture model. *Biometrics* (In revision).
-  
+Efford, M. G. and Schofield, M. R. (2020) A spatial open-population capture--recapture model.
+  *Biometrics* **76**, 392--402.
+
 Ergon, T. and Gardner, B. (2014) Separating mortality and emigration: modelling space
 use, dispersal and survival with robust-design spatial capture--recapture data. 
 *Methods in Ecology and Evolution* **5**, 1327--1336.
@@ -856,12 +857,12 @@ Gimenez, O., Viallefont, A., Catchpole, E. A., Choquet, R. and Morgan,
   561--572.
 
 Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2017) R2ucare: Goodness-of-Fit Tests
-  for Capture-Recapture Models. R package version 1.0.0. https://CRAN.R-project.org/package=R2ucare
+  for Capture-Recapture Models. R package version 1.0.0. https://CRAN.R-project.org/package=R2ucare/
 
 Gimenez, O., Lebreton, J.-D., Choquet, R. and Pradel, R. (2018) R2ucare: An R package to perform 
 goodness-of-fit tests for capture--recapture models. *Methods in Ecology and Evolution* **9**, 1749--1754.
 
-Glennie, R., Borchers, D. L., Murchie, M. Harmsen, B. J. and Foster, R. J. (2019) Open population maximum likelihood spatial capture--recapture. *Biometrics* In press.
+Glennie, R., Borchers, D. L., Murchie, M. Harmsen, B. J. and Foster, R. J. (2019) Open population maximum likelihood spatial capture--recapture. *Biometrics* **75**, 1345--1355.
 
 Hines, J. E., Kendall, W. L. and Nichols, J. D. (2003) On the use of the robust design with transient capture--recapture models. *The Auk* **120**, 1151--1158.
 

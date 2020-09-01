@@ -1,3 +1,24 @@
+version 1.4.4 (2020-09-01)
+
+New features and changed behaviour
+    o none
+
+Other
+    o suggests rmarkdown
+    o tweak url in vignette
+
+version 1.4.2 (2020-09-01)
+
+New features and changed behaviour
+    o reported rank takes account of possible negative eigenvalues (eigH)
+
+Other
+    o some data.frame() calls specify stringsAsFactors = TRUE for backwards 
+      compatibility in R >= 4.0
+    o corrected return without ()
+    o terminal '/' on URLs in documentation as required
+    o updated references
+
 version 1.4.1 (2019-06-29)
 
 New features and changed behaviour

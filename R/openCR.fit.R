@@ -663,7 +663,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         covar <- matrix(nrow = NP, ncol = NP)
         if (!is.null(hess)) {
             eigH <- eigen(this.fit$hessian)$values
-            eigH <- eigH/max(eigH)
+            ## eigH <- eigH/max(eigH)
+            eigH <- abs(eigH)/max(abs(eigH))   ## 2020-05-28
             covar <- try(MASS::ginv(hess))
             if (inherits(covar, "try-error")) {
                 warning ("could not invert Hessian to compute ",

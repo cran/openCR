@@ -6,6 +6,7 @@
 # 2019-04-23 removed type 5 'secr' (unused)
 # 2019-05-06 1.4.0
 # 2019-06-19 onehistory modified for single call to prwisecr (merged prwimulti)
+# 2020-09-01 changed return; to return(1e10) in open.secr.loglikfn component 3
 
 # types
 
@@ -187,6 +188,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         return(1e10)
     }
 
+    if (data$details$debug>0) cat ("sum(gk) = ", sum(gk), "\n")
+
     pmix <- fillpmix2(data$nc, data$details$nmix, PIA, realparval)
     S <- ncol(data$capthist)
     #-----------------------------------------
@@ -316,8 +319,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         A <- maskarea(data$mask)
         N <- Dsuper * A
         # impose constraint: return with invalid result code if not possible
-        if (N < ncf) return;
-
+        if (N < ncf) return (1e10);
+        
         ## meanpdot <- data$nc / sum(1/pdot)
         ## possible bug <1.4.0 did not use freq
         meanpdot <- data$nc / sum(freq * 1/pdot)

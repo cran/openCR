@@ -83,11 +83,11 @@ openCR.make.newdata <- function (object, all.levels = FALSE) {
     
     if (!is.null(timecov)) {
         tcov <- timecov
-        timecov <- as.data.frame(tcov)
+        timecov <- as.data.frame(tcov, stringsAsFactors = TRUE)  ## updated sAF 2020-05-28
     }
     if (!is.null(sessioncov)) {
         scov <- sessioncov
-        sessioncov <- as.data.frame(scov)
+        sessioncov <- as.data.frame(scov, stringsAsFactors = TRUE)  ## updated sAF 2020-05-28
     }
     basevars <- findvars (basevars, timecov)
     basevars <- findvars (basevars, covariates(traps(capthist)))

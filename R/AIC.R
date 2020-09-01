@@ -72,7 +72,7 @@ AIC.openCRlist <- function (object, ..., sort = TRUE, k = 2, dmax = 10, use.rank
         stop ("components of 'object' must be 'openCR' objects")
     mat <- t(sapply(allargs, oneline.openCR, use.rank = use.rank,
                     svtol = svtol, n = n))
-    output <- data.frame(mat, stringsAsFactors=F)
+    output <- data.frame(mat, stringsAsFactors = FALSE)
     for (i in 3:6)
         output[,i] <- as.numeric(output[,i])
 

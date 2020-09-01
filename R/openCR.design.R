@@ -30,7 +30,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
             found <- names(cov) %in% vars
             if (is.data.frame(cov) & any(found)) {
                 found <- names(cov)[found]
-                values <- as.data.frame(cov[,found])
+                values <- as.data.frame(cov[,found], stringsAsFactors = TRUE)   ## updated sAF 2020-05-28
                 names(values) <- found
                 if (length(values)>0) {
                     for (variable in found) {
@@ -113,7 +113,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     # session covariates   (primary sessions)
     if (!is.null(sessioncov)) {
         scov <- sessioncov  # trick to name a vector 'scov'
-        sessioncov <- as.data.frame(scov)
+        sessioncov <- as.data.frame(scov, stringsAsFactors = TRUE)   ## updated sAF 2020-05-28
         if (nrow(sessioncov) != J)
             stop("number of rows in 'sessioncov' should equal ",
                  "number of primary sessions")
@@ -122,7 +122,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     # time covariates   (secondary sessions)
     if (!is.null(timecov)) {
         tcov <- timecov  # trick to name a vector 'tcov'
-        timecov <- as.data.frame(tcov)
+        timecov <- as.data.frame(tcov, stringsAsFactors = TRUE)   ## updated sAF 2020-05-28
         if (nrow(timecov) != S)
             stop("number of rows in 'timecov' should equal ",
                  "number of occasions (secondary sessions")

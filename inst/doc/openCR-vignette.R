@@ -1,4 +1,4 @@
-## ----settings, echo = FALSE----------------------------------------------
+## ----settings, echo = FALSE---------------------------------------------------
 mycache <- FALSE
 
 ## ----setup, message = FALSE, eval = TRUE, warning = FALSE-------------------------------

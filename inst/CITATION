@@ -2,7 +2,7 @@ citHeader("To cite package 'openCR' in publications use:")
 
 year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date)
 vers <- paste("R package version", meta$Version)
-url <- "https://CRAN.R-project.org/package=openCR"
+url <- "https://CRAN.R-project.org/package=openCR/"
 
 citEntry(entry="Manual",
     title = "openCR: Open population capture-recapture models",
