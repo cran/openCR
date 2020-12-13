@@ -6,26 +6,47 @@
 ## 2018-04-20 posterior.allocation removed to posterior.R
 ## 2018-11-22 n.unique.rows drop = FALSE 
 ## 2018-11-22 learnedresponses global vector
+## 2020-11-02 PLB aliases
+## 2020-12-07 CJSmte type experimental - to be added?
+## 2020-12-08 primaryonly tweaked to give 3-D output (single NULL traps)
+## 2020-12-12 mqsetup moved from prwisecr.R
 ###############################################################################
 
 typecode <- function (type) {
-    type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4,
-                   JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19,
-                   Pradel = 20, JSSARET = 21, JSSAg = 22, JSSAgCL = 23, Pradelg = 26, JSSAfgCL = 27,
-                   JSSAk = 28, JSSAkCL = 29,
-                   CJSsecr = 6, JSSAsecrf = 7, JSSAsecrD = 8,
-                   JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11,
-                   JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrB = 14,
-                   JSSAsecrg = 24, JSSAsecrgCL = 25, secrCL = 30, secrD = 31, -1)
+    type <- switch(type, 
+        CJS = 1, CJSmte = 5,
+        JSSAf = 4, JSSAl = 3, JSSAb = 2, JSSAg = 22, JSSAk = 28, 
+        JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAgCL = 23, JSSAkCL = 29,
+        JSSAB = 18, JSSAN = 19,
+        
+        CJSsecr = 6, 
+        JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11, JSSAsecrgCL = 25, 
+        JSSAsecrf = 7, JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrg = 24, 
+        JSSAsecrB = 14, JSSAsecrD = 8,
+        
+        Pradel = 20, JSSARET = 21, Pradelg = 26, JSSAfgCL = 27,
+        secrCL = 30, secrD = 31, 
+        
+        # added aliases 2020-11-01
+        PLBf = 15, PLBl = 16, PLBb = 17, PLBg = 23, PLBk = 29,
+        PLBsecrf = 9, PLBsecrl = 10, PLBsecrb = 11, PLBsecrg = 25, 
+        
+        -1)
     type
 }
 
 movecode <- function (movementmodel) {
     switch (movementmodel, static = 0, uncorrelated = 1, normal = 2, 
-            exponential = 3, user = 4, t2D = 5, uniform = 6)
+        exponential = 3, user = 4, t2D = 5, uniform = 6)
 }
 
-kerneltypes <- c('normal','exponential','user','t2D','uniform')
+edgemethodcode <- function (edgemethod) {
+    if (is.null(edgemethod)) edgemethod <- 'none' 
+    if (!edgemethod %in% c('none','wrap','truncate')) {
+        stop ("unrecognised edge method - should be 'none','wrap' or 'truncate'")
+    }
+    switch (edgemethod, none = 0, wrap = 1, truncate = 2, 0)
+}
 
 .openCRstuff <- new.env()
 #.openCRstuff$packageType <- ' pre-release'
@@ -252,6 +273,7 @@ primaryonly <- function(object) {
                 twoD <- t(apply(twoD, 1, function(x) tapply(x,primarysession,max)))  # in terms of primary sessions
                 li <- apply(twoD, 1, function(x) max(which(x>0)))
                 twoD[cbind(lost, li[lost])] <- -1
+                dim(twoD) <- c(dim(twoD),1)   ## 2020-12-08
                 class(twoD) <- 'capthist'
                 object <- twoD
             }
@@ -427,30 +449,30 @@ getvalidlevels <- function (type, parnames, J, CJSp1) {
     if ('move.b' %in% parnames) {
         validlevels['move.b',J] <- FALSE
     }
-    if (type %in% 'CJS') {
+    if (type %in% c('CJS', 'CJSmte')) {
         # if ('p' %in% parnames)
         # 2018-10-29
         if ('p' %in% parnames & !CJSp1)
             validlevels['p',1] <- FALSE
     }
-    if (type %in% c('JSSAf','JSSAfCL', 'JSSAsecrf','JSSAsecrfCL')) {
+    if (type %in% c('JSSAf','JSSAfCL', 'JSSAsecrf','JSSAsecrfCL', 'PLBf', 'PLBsecrf')) {
         if ('f' %in% parnames)
             validlevels['f',J] <- FALSE
     }
-    if (type %in% c('JSSAg','JSSAgCL', 'JSSAsecrg','JSSAsecrgCL','Pradelg')) {
+    if (type %in% c('JSSAg','JSSAgCL', 'JSSAsecrg','JSSAsecrgCL','Pradelg', 'PLBg', 'PLBsecrg')) {
         if ('gamma' %in% parnames)
             validlevels['gamma',1] <- FALSE
     }
-    if (type %in% c('JSSAk','JSSAkCL')) {
+    if (type %in% c('JSSAk','JSSAkCL', 'PLBk')) {
         if ('kappa' %in% parnames)
             validlevels['kappa',1] <- FALSE
     }
-    if (type %in% c('JSSAl','JSSAlCL', 'JSSAsecrl','JSSAsecrlCL',
+    if (type %in% c('JSSAl','JSSAlCL', 'JSSAsecrl','JSSAsecrlCL', 'PLBl', 'PLBsecrl',
                     'Pradel')) {
         if ('lambda' %in% parnames)
             validlevels['lambda',J] <- FALSE
     }
-    if (type %in% c('JSSAb', 'JSSAbCL', 'JSSAsecrb','JSSAsecrbCL')) {
+    if (type %in% c('JSSAb', 'JSSAbCL', 'JSSAsecrb','JSSAsecrbCL', 'PLBb', 'PLBsecrb')) {
         if ('b' %in% parnames)
             validlevels['b',1] <- FALSE  
     }
@@ -469,7 +491,6 @@ getvalidlevels <- function (type, parnames, J, CJSp1) {
     validlevels
 }
 ############################################################################################
-
 lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL, validlevels, contrasts = NULL) {
     vars <- all.vars(model)
     if (any(!(vars %in% names(newdata))))
@@ -643,14 +664,13 @@ fillpmix2 <- function (nc, nmix, PIA, realparval) {
 ############################################################################################
 
 age.matrix <- function (capthist, initialage = 0, minimumage = 0, maximumage = 1, collapse = FALSE) #, bysession = FALSE) 
-    # age grouping using cut()?
 {    
     makeage <- function (n) {
         ch <- capthist[n,,,drop=FALSE]
         temp0 <- apply(abs(ch), 1:2,sum)  ## sum over traps
         first <- match(TRUE, cumsum(temp0)>0)
         firstsession <- primarysession[first]
-        age <- (primarysession-firstsession)+ initialage[n]
+        age <- (primarysession - firstsession) + initialage[n]
         # age <- rep(initialage[n], S)
         # recruited <- primarysession>=firstsession
         # age[recruited] <- initialage[n] + cumsum(c(0, intervals[recruited[-S]]))
@@ -758,7 +778,7 @@ unsqueeze <- function(x) {
 ## code used in openCR.fit to put capthist object in a standard form
 ## 2018-02-11
 
-stdcapthist <- function (capthist, type, movementmodel, nclone, squ, ...) {
+stdcapthist <- function (capthist, type, nclone, squ, ...) {
     if (!inherits(capthist, 'capthist'))
         stop ("requires 'capthist' object")
     if (!ms(capthist) & is.null(intervals(capthist))) {
@@ -781,8 +801,6 @@ stdcapthist <- function (capthist, type, movementmodel, nclone, squ, ...) {
             capthist <- reduce(capthist, output = 'proximity', dropunused = FALSE)
             warning ("capthist coerced to 'proximity' detector type")
         }
-        if (grepl('JSSA', type) & (movementmodel==1))
-            warning("JSSA models are illdefined when used with movementmodel=1")
     }
     intervals(capthist) <- interv   ## restore if reduce.capthist has lost them
     sessionlabels(capthist) <- sessnames
@@ -851,3 +869,65 @@ individualcovariates <- function (PIA) {
     pia <- matrix(PIA, nrow = nrow(PIA))
     n.unique.rows(pia) > 1
 }
+###############################################################################
+
+# moved from prwisecr.R 2020-12-12
+
+# The mqarray is a lookup array giving the pixel in the output mask
+# that corresponds to a particular m in the input mask and q in the
+# kernel [q * mm + m].
+#
+# Destinations that lie outside the mask receive a value of -1.
+#
+# mqsetup() initialises mqarray for a particular mask and kernel.
+
+rectwrap <- function(oldx, oldy, newx, newy, concat = TRUE) {
+  # improved wrapping 2020-10-29
+  # assumes integer coordinates
+  
+  # rbind(-5:5, -5:5 %% 3)
+  #      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11]
+  # [1,]   -5   -4   -3   -2   -1    0    1    2    3     4     5
+  # [2,]    1    2    0    1    2    0    1    2    0     1     2
+  
+  xmin <- min(oldx)
+  ymin <- min(oldy)
+  xmax <- max(oldx)
+  ymax <- max(oldy)
+  newx <- newx %% (xmax-xmin+1)
+  newy <- newy %% (ymax-ymin+1)
+  if (concat) 
+    paste(newx, newy)
+  else 
+    list(newx=newx, newy=newy)
+}
+
+mqsetup <- function (
+  mask,      ## x,y points on mask (first x, then y)
+  kernel,    ## list of integer dx,dy points on kernel with p(move|dx,dy) mask (first x, then y)
+  cellsize,   ## side of grid cell (m) for each mask point
+  edgecode
+)
+{
+  ## assuming cells of mask and kernel are same size
+  ## and kernel takes integer values centred on current mask point
+  
+  oldx <- round((mask$x-min(mask$x))/cellsize)
+  oldy <- round((mask$y-min(mask$y))/cellsize)
+  
+  newx <- as.integer(outer(oldx, kernel$x, "+"))
+  newy <- as.integer(outer(oldy, kernel$y, "+"))
+  
+  # mqarray shared with C++ so indices are zero-based
+  if (edgecode == 1)    # "wrap"
+    newxy <- rectwrap(oldx,oldy,newx,newy)
+  else                  # "truncate", "none"
+    newxy <- paste(newx, newy)
+  
+  i <- match(newxy, paste(oldx,oldy)) - 1
+  i[is.na(i)] <- -1
+  matrix(i, nrow = nrow(mask), ncol = nrow(kernel))
+  
+}
+
+###############################################################################

@@ -3,7 +3,7 @@
 ## 2018-11-19 draft of classMembership as standalone function
 ##            cf posterior.allocation previously called in openCR.fit
 ## 2019-05-8 UNTESTED
-
+## 2020-11-07 failed due to bug in secr::alive, now fixed
 ###############################################################################
 
 matchch <- function (x, sq) {
@@ -47,7 +47,6 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
     PIA <- object$design$PIA
     PIAJ <- object$design$PIAJ
     #--------------------------------------------------------------------
-    
     cumss <- getcumss(capthist)
     J <- length(cumss)-1
     nc <- nrow(capthist)   ## beware freq!
@@ -99,17 +98,18 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
             usge <- matrix(1, nrow=k, ncol= cumss[J+1])  # in terms of secondary sessions
         
         ## integer code for movement model
-        movemodel <- movecode(object$movementmodel)
+        movementcode <- movecode(object$movementmodel)
+        edgecode <- edgemethodcode(object$edgemethod)
 
         cellsize <- mqarray <- 0
         kernel <- mqarray <- matrix(0,1,2)  ## default
-        if (movemodel %in% 2:5) {
+        if (movementcode %in% 2:5) {
             ## movement kernel
             k2 <- object$details$kernelradius
             cellsize <- attr(object$mask,'area')^0.5 * 100   ## metres, equal mask cellsize
             kernel <- expand.grid(x = -k2:k2, y = -k2:k2)
             kernel <- kernel[(kernel$x^2 + kernel$y^2) <= (k2+0.5)^2, ]
-            mqarray <- mqsetup (object$mask, kernel, cellsize)
+            mqarray <- mqsetup (object$mask, kernel, cellsize, edgecode) # 2020-11-02
         }
         
         usge <- usage(traps(capthist))
@@ -166,7 +166,6 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
                     as.integer(nc),
                     as.integer(binomN),
                     as.integer(object$details$CJSp1),
-                    as.integer(object$details$calcpdotbd),
                     as.integer(object$details$grain),
                     as.double (object$intervals),
                     as.integer(cumss),
@@ -180,7 +179,8 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
                     as.matrix (usge),
                     as.matrix (hx),                
                     as.matrix (hi),      
-                    as.integer(movemodel),
+                    as.integer(movementcode),
+                    as.integer(edgecode),
                     as.character(object$usermodel),  ## 2019-05-07
                     as.integer(object$moveargsi),
                     as.matrix (kernel),
@@ -197,37 +197,33 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
         if (type %in% c(20,26)) {
             stop("mixtures not expected in Pradel models")
         }
-        
         if (!is.null(fullCH)) {
             fullCH <- reduce(fullCH, outputdetector = 'nonspatial', verify = FALSE, dropunused=FALSE)
             # FAILS TO COMPRESS LAST DIM (bug in reduce.capthist 2018-11-20), SO REPEAT
             fullCH <- reduce(fullCH, verify = FALSE, dropunused=FALSE)
         }
-#        if (type != 1) {
-            for (x in 1:nmix) {
-                px[,x] <-   pmix[x,] * allhistparallelcpp(
-                    as.integer(x-1),
-                    as.integer(type),
-                    as.integer(nc),
-                    as.integer(object$details$CJSp1),
-                    as.integer(object$details$grain),
-                    as.double (object$intervals),
-                    as.integer(cumss),
-                    as.integer(CH),
-                    as.integer(fi),
-                    as.integer(li),
-                    as.matrix (realparval),
-                    as.integer(PIA),
-                    as.integer(object$design$PIAJ))
-            }
- #       }
+        for (x in 1:nmix) {
+            px[,x] <-   pmix[x,] * allhistparallelcpp(
+                as.integer(x-1),
+                as.integer(type),
+                as.integer(nc),
+                as.integer(object$details$CJSp1),
+                as.integer(object$details$grain),
+                as.double (object$intervals),
+                as.integer(cumss),
+                as.integer(CH),
+                as.integer(fi),
+                as.integer(li),
+                as.matrix (realparval),
+                as.integer(PIA),
+                as.integer(object$design$PIAJ))
+        }
     }
     
     px <- sweep(px, MARGIN = 1, STATS = apply(px,1,sum), FUN = "/")
     out <- data.frame(px)
     names(out) <- paste0('class', 1:nmix)
     out$maxclass <- max.col(out)
-    
     if (is.null(fullCH)) {   ## untested
         fullCH <- unsqueeze(object$capthist)
     }

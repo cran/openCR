@@ -20,13 +20,14 @@ Functions called by \code{openCR.fit} when \code{details$R == TRUE}, and some ot
 prwi (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJSp1)
 
 prwisecr (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
-    PIA, PIAJ, binomN, Tsk, intervals, h, hindex, CJSp1, calcpdotbd, moveargsi, 
-    movemodel, usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL)
+    PIA, PIAJ, binomN, Tsk, intervals, h, hindex, CJSp1, moveargsi, 
+    movementcode, edgecode, usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL)
 
 PCH1 (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
 
 PCH1secr (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, gk0,
-    binomN, Tsk, intervals,  moveargsi, movemodel, usermodel, kernel, mqarray, cellsize) 
+    binomN, Tsk, intervals,  moveargsi, movementcode, edgecode, usermodel, kernel, 
+    mqarray, cellsize) 
 
 pradelloglik (type, w, openval, PIAJ, intervals)
 
@@ -39,7 +40,8 @@ cyclic.fit (..., maxcycle = 10, tol = 1e-5, trace = FALSE)
   \item{n}{integer index of capture history}
   \item{x}{integer index of latent class}
   \item{jj}{integer number of primary sessions}
-  \item{cumss}{integer vector cumulative number of secondary sessions at start of each primary session}
+  \item{cumss}{integer vector cumulative number of secondary sessions at start of 
+      each primary session}
   \item{nmix}{integer number of latent classes}
   \item{w}{array of capture histories}
   \item{fi}{integer first primary session}
@@ -52,9 +54,9 @@ cyclic.fit (..., maxcycle = 10, tol = 1e-5, trace = FALSE)
   \item{hindex}{integer n x s matrix indexing h for each individual, secondary session}
   \item{CJSp1}{logical; should CJS likelihood include first primary session?}
   
-  \item{calcpdotbd}{logical; if TRUE value for each (b,d) is divided by pdot(b,d) }
   \item{moveargsi}{integer 2-vector for index of move.a, move.b (negative if unused)}
-  \item{movemodel}{character}
+  \item{movementcode}{integer 0 static, 1 uncorrelated etc.}
+  \item{edgecode}{integer 0 none, 1 wrap, 2 truncate}
   \item{usermodel}{function to fill kernel}
   \item{kernel}{dataframe with columns x,y relative coordinates of kernel cell centres}
   \item{mqarray}{integer matrix}

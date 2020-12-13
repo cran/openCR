@@ -40,7 +40,7 @@ runsim.RMark (nrepl = 100, model = "CJS", model.parameters = NULL, extractfn,
   \item{p}{numeric detection probability}
   \item{nsessions}{number of primary sessions}
   \item{noccasions}{number of secondary sessions per primary session}
-  \item{intervals}{intervals between secondary sessions (see Details)}
+  \item{intervals}{intervals between primary sessions (see Details)}
 \item{recapfactor}{numeric multiplier for capture probability after
   first capture}
   \item{seed}{random number seed see \link{random numbers}}
@@ -71,9 +71,11 @@ runsim.RMark (nrepl = 100, model = "CJS", model.parameters = NULL, extractfn,
 
 For \code{sim.nonspatial} -- If \code{intervals} is specified then the number of primary and secondary sessions is inferred from \code{intervals} and \code{nsessions} and \code{noccasions} are ignored. If \code{N} and \code{p} are vectors of length 2 then subpopulations of the given initial size are sampled with the differing capture probabilities and the resulting capture histories are combined.
 
-\code{runsim.spatial} is a relatively simple wrapper for \code{\link{sim.popn}}, \code{\link{sim.capthist}}, and \code{\link{openCR.fit}}. Some arguments are set automatically: the \code{sim.capthist} argument 'renumber' is always FALSE; argument 'seed' is ignored within 'popargs' and 'detargs'; if no 'traps' argument is provided in 'detargs' then 'core' from 'popargs' will be used; detargs$popn and fitargs$capthist are derived from the preceding step. The 'type' specified in fitargs may refer to a non-spatial or spatial open-population model ('CJS', 'JSSAsecrfCL' etc.). If the \code{intervals} argument specified it is used to set the intervals attribute of the simulated capthist object; turnover parameters in \code{sim.popn} are not scaled by \code{intervals}.
+\code{runsim.spatial} is a relatively simple wrapper for \code{\link{sim.popn}}, \code{\link{sim.capthist}}, and \code{\link{openCR.fit}}. Some arguments are set automatically: the \code{sim.capthist} argument 'renumber' is always FALSE; argument 'seed' is ignored within 'popargs' and 'detargs'; if no 'traps' argument is provided in 'detargs' then 'core' from 'popargs' will be used; detargs$popn and fitargs$capthist are derived from the preceding step. The 'type' specified in fitargs may refer to a non-spatial or spatial open-population model ('CJS', 'JSSAsecrfCL' etc.). If the \code{intervals} argument is specified it is used to set the intervals attribute of the simulated capthist object; turnover parameters in \code{sim.popn} are not scaled by \code{intervals}.
 
-In \code{runsim.nonspatial} and \code{runsim.spatial}, if \code{ncores} is NULL (the default) then the available cores (minus one) are used for multithreading by \code{openCR.fit}. Otherwise, (\code{ncores} specified) then replicates are split across multiple cores; 'ncores' is set to 1 for each replicate.
+Control of parallel processing changed in \pkg{openCR} 1.5.0 to conform to \pkg{secr}. In \code{runsim.nonspatial} and \code{runsim.spatial}, if \code{ncores} is NULL (the default) then the number of cores used for multithreading by \code{openCR.fit} is controlled by the environment variable RCPP_PARALLEL_NUM_THREADS. Use the secr function \code{setNumThreads} to set RCPP_PARALLEL_NUM_THREADS to a value greater than the default (2, from \pkg{openCR} 1.5 onwards).
+
+Otherwise, (\code{ncores} specified in runsim.nonspatial or runsim.spatial) 'ncores' is set to 1 for each replicate and the replicates are split across the specified number of cores.
 
 \code{sumsims} assumes output from \code{runsim.nonspatial} and \code{runsim.spatial} with `extractfn = predict' or `extractfn = summary'. Missing SE usually reflects non-identifiability of a parameter or failure of maximisation, so these replicates are dropped by default. If \code{svtol} is specified then the rank of the Hessian is determined by counting eigenvalues that exceed svtol, and replicates are dropped if the rank is less than the number of beta parameters. A value of 1e-5 is suggested for svtol in \code{\link{AIC.openCR}}, but smaller values may be appropriate for larger models (MARK has its own algorithm for this threshold).
 
@@ -113,6 +115,7 @@ openCR.fit(ch, type = 'CJS')
 \dontrun{
 
 turnover <- list(phi = 0.85, lambda = 1.0, recrmodel = 'constantN')
+set.seed(123)
 
 ## using type = 'JSSAlCL' and extractfn = predict
 

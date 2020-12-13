@@ -14,7 +14,7 @@ plotKernel <- function (movementmodel = c('normal','exponential','t2D','uniform'
         usermodel <- NULL
         movementmodel <- match.arg(movementmodel)
     }
-    movemodel <- movecode (movementmodel)
+    movementcode <- movecode (movementmodel)
     moveargsi <- c(0,0)
     if (missing(pars)) pars <- NULL
     title <-  paste('spacing =', spacing,
@@ -33,7 +33,7 @@ plotKernel <- function (movementmodel = c('normal','exponential','t2D','uniform'
     kernel[,] <- sweep(kernel, MARGIN=2, FUN = "-", STATS = rep((k2+0.5)*spacing,2))
 
     # cellsize = 1 because already inflated
-    kernelp <- fillkernelp (1, movemodel-2, kernel, usermodel, cellsize=1,
+    kernelp <- fillkernelp (1, movementcode-2, kernel, usermodel, cellsize=1,
                             moveargsi, moveargs, normalize)[,1]
 
     ## optional clipping (incompatible with contour)

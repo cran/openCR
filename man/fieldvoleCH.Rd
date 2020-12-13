@@ -44,7 +44,7 @@ Data were retrieved from DRYAD (Ergon and Lambin (2013) for \pkg{openCR}. Code f
 
 \references{
 
-Efford, M. G. (2017) Multi-session models in secr 3.0. https://www.otago.ac.nz/density/pdfs/secr-multisession.pdf
+Efford, M. G. (2019) Multi-session models in secr 4.1. \url{https://www.otago.ac.nz/density/pdfs/secr-multisession.pdf}
 
 Ergon, T., Ergon, R., Begon, M., Telfer, S. and Lambin, X. (2011) Delayed density-
 dependent onset of spring reproduction in a fluctuating population of field
@@ -56,7 +56,7 @@ use, dispersal and survival with robust-design spatial capture--recapture data.
 
 Ergon, T. and Lambin, X. (2013) Data from: Separating mortality and emigration:
 Modelling space use, dispersal and survival with robust-design spatial capture--recapture data.
-Dryad Digital Repository. URL http://dx.doi.org/10.5061/dryad.r17n5.
+Dryad Digital Repository. URL \url{https://dx.doi.org/10.5061/dryad.r17n5}.
 
 Reich, B. J. and Gardner, B. (2014) A spatial capture--recapture model for
 territorial species. \emph{Environmetrics} \bold{25}, 630--637.

@@ -7,21 +7,22 @@
 # 2019-05-06 1.4.0
 # 2019-06-19 onehistory modified for single call to prwisecr (merged prwimulti)
 # 2020-09-01 changed return; to return(1e10) in open.secr.loglikfn component 3
+# 2020-10-25 fixed bug in open.secr.loglikfn component 3
 
 # types
 
 # CJSsecr = 6
 
-# JSSAsecrf = 7
+# JSSAsecrf 7
 # JSSAsecrD = 8
-# JSSAsecrfCL = 9
-# JSSAsecrlCL = 10
-# JSSAsecrbCL = 11
+# JSSAsecrfCL = PLBsecrf = 9
+# JSSAsecrlCL = PLBsecrl = 10
+# JSSAsecrbCL = PLBsecrb = 11
 # JSSAsecrl = 12
 # JSSAsecrb = 13
 # JSSAsecrB = 14
 # JSSAsecrg = 24
-# JSSAsecrgCL = 25
+# JSSAsecrgCL = PLBsecrg = 25
 
 # secrCL = 30
 # secrD = 31
@@ -65,9 +66,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 haztemp$h,
                 haztemp$hindex[n,,drop = FALSE]+1,
                 data$details$CJSp1,
-                data$details$calcpdotbd,
                 data$moveargsi,
-                data$movemodel,
+                data$movementcode,
+                data$edgecode,
                 get(data$usermodel),
                 data$kernel,
                 data$mqarray,
@@ -75,7 +76,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             
             sump <- sump + pmix[x,n] * temp
         }
-        ## cat('n ', n, ' sump ', sump, '\n')
+        ## message('n ', n, ' sump ', sump)
         if (sump<=0) NA else freq[n] * log(sump)
     }
     
@@ -95,7 +96,6 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 as.integer(data$nc),
                 as.integer(binomN),
                 as.integer(data$details$CJSp1),
-                as.integer(data$details$calcpdotbd),
                 as.integer(data$details$grain),
                 as.double (data$intervals),
                 as.integer(data$cumss),
@@ -109,7 +109,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 as.matrix (data$usge),
                 as.matrix (hx),                
                 as.matrix (hi),      
-                as.integer(data$movemodel),
+                as.integer(data$movementcode),
+                as.integer(data$edgecode),
                 as.character(data$usermodel),  ## 2019-05-07
                 as.integer(data$moveargsi),
                 as.matrix (data$kernel),
@@ -166,7 +167,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     if (binomN < -2)
         stop("open-population secr requires multi, proximity or count detector type")
 
-    if (data$details$debug>2) browser()
+    if (data$details$debug>1) browser()
     PIA <- data$design$PIA
     PIAJ <- data$design$PIAJ
     if (data$learnedresponse)
@@ -188,7 +189,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         return(1e10)
     }
 
-    if (data$details$debug>0) cat ("sum(gk) = ", sum(gk), "\n")
+    if (data$details$debug>0) message ("sum(gk) = ", sum(gk))
 
     pmix <- fillpmix2(data$nc, data$details$nmix, PIA, realparval)
     S <- ncol(data$capthist)
@@ -223,18 +224,18 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     # Component 1: Probability of observed histories
     if (!data$details$R) {
         ## this is the streamlined option; always uses C code
-        temp <- allhistsecrparallel()
+        prwi <- allhistsecrparallel()
     }
     else {
         ## clunky option using R for debugging
-        temp <- sapply(1:data$nc, onehistory, USE.NAMES = FALSE )
+        prwi <- sapply(1:data$nc, onehistory, USE.NAMES = FALSE )
     }
-    comp[1] <- sum(temp)
-    
+    comp[1] <- sum(prwi)
+
     #####################################################################
     # Component 2: Probability of unobserved histories a^{-n} in likelihood for uniform-D
     
-    if ((type %in% c(9,10,11,25,30) && !data$details$calcpdotbd) ## CL and require global pdot for component 3
+    if ((type %in% c(9,10,11,25,30)) ## CL and require global pdot for component 3
         | (type %in% c(7,8,12,13,14,24,31))) {                   ## all other
         
         if (data$learnedresponse) {   ## overwrite gk with model for naive animal
@@ -268,14 +269,14 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     data$usge,
                     data$intervals,
                     data$moveargsi,
-                    data$movemodel,
+                    data$movementcode,
+                    data$edgecode,
                     get(data$usermodel),   # bug fixed 2019-04-14, 2019-05-07
                     data$kernel,
                     data$mqarray,
                     data$cellsize)
             }
             else {
-                
                 pch1 <-  PCH1secrparallelcpp(
                     as.integer(x-1),
                     as.integer(type),
@@ -293,7 +294,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.matrix (data$usge),
                     as.double (data$intervals),
                     as.integer(data$moveargsi),
-                    as.integer(data$movemodel),
+                    as.integer(data$movementcode),
+                    as.integer(data$edgecode),
                     as.character(data$usermodel),
                     as.matrix(data$kernel),
                     as.matrix(data$mqarray),
@@ -301,11 +303,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             }
             pdot <- pdot + pmix[x] * pch1
         }
-        if (!data$details$calcpdotbd)
-            comp[2] <- - sum(freq * log(pdot))    ## log(a^{-n})
-        ## otherwise nested within component 1 Pr(wi) 
+        pdot <- rep(pdot, freq)
+        comp[2] <- - sum(log(pdot))    ## log(1 / a_i)
     }
-    
     #####################################################################
     # Component 3: Probability of observing nc animals (non-CL types)
     if (type %in% c(7,8,12,13,14,24, 31)) {
@@ -320,10 +320,12 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         N <- Dsuper * A
         # impose constraint: return with invalid result code if not possible
         if (N < ncf) return (1e10);
-        
         ## meanpdot <- data$nc / sum(1/pdot)
         ## possible bug <1.4.0 did not use freq
-        meanpdot <- data$nc / sum(freq * 1/pdot)
+        ## meanpdot <- data$nc / sum(freq * 1/pdot)
+        ## 2020-10-25 use expanded n (ncf)
+        # meanpdot <- ncf / sum(rep(1/pdot,freq))
+        meanpdot <- ncf / sum(1/pdot)
         ## cf CLmeanesa in 'secr'
 
         comp[3] <- switch (data$distrib+1,
@@ -343,8 +345,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     loglik <- sum(comp)
     ## debug
     if (data$details$debug>=1) {
-        cat("Likelihood components (comp) ", format(comp, digits=10), "\n")
-        cat("Total ", format(loglik, digits = 10), "\n")
+        message("Likelihood components (comp) ", paste(format(comp, digits=10), collapse = ' '))
+        message("Total ", format(loglik, digits = 10))
         if (data$details$debug>1) browser()
     }
     ## optionally display message on console for this iteration

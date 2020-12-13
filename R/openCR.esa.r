@@ -8,14 +8,14 @@
 # CJSsecr = 6
 # JSSAsecrf = 7
 # JSSAsecrD = 8
-# JSSAsecrfCL = 9
-# JSSAsecrlCL = 10
-# JSSAsecrbCL = 11
+# JSSAsecrfCL = PLBsecrf = 9
+# JSSAsecrlCL = PLBsecrl = 10
+# JSSAsecrbCL = PLBsecrb = 11
 # JSSAsecrl = 12
 # JSSAsecrb = 13
 # JSSAsecrB = 14
 # JSSAsecrg = 24
-# JSSAsecrgCL = 25
+# JSSAsecrgCL = PLBsecrg = 25
 
 # secrCL = 30
 # secrD = 31
@@ -35,7 +35,6 @@ openCR.esa <- function (object, bysession = FALSE) {
     type     <- object$type
     intervals <- object$intervals
     cumss    <- getcumss(object$capthist)
-    movementmodel <- object$movementmodel
     binomN <- object$binomN
     if (is.null(binomN)) binomN <- 1
     ## openCR >= 1.2.0
@@ -45,15 +44,16 @@ openCR.esa <- function (object, bysession = FALSE) {
 
     ###### movement kernel and related
     cellsize <- mqarray <- 0
-    kernel <- data.frame(rownames=NULL)
-    if (movementmodel %in% c('normal','exponential','user','t2D')) {
+    kernel <- data.frame(rownames = NULL)
+    movementcode <- movecode(object$movementmodel)
+    edgecode <- edgemethodcode(object$edgemethod)
+    if (object$movementmodel %in% c('normal','exponential','user','t2D')) {
         k2 <- details$kernelradius
         cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
         kernel <- expand.grid(x = -k2:k2, y = -k2:k2)
         kernel <- kernel[(kernel$x^2 + kernel$y^2) <= (k2+0.5)^2, ]
-        mqarray <- mqsetup (mask, kernel, cellsize)
+        mqarray <- mqsetup (mask, kernel, cellsize, edgecode)   
     }
-    movemodel <- movecode(movementmodel)
 
     #--------------------------------------------------------------------
     # Fixed beta
@@ -91,12 +91,11 @@ openCR.esa <- function (object, bysession = FALSE) {
                                as.matrix(realparval0),
                                as.matrix(trps),
                                as.matrix(object$mask))
-    gk0 <- temp[[1]]
-    hk0 <- temp[[2]]
+    gk0 <- array(temp[[1]], dim=c(nrow(realparval0), k, m)) # 2020-10-28 as array
+    hk0 <- array(temp[[2]], dim=c(nrow(realparval0), k, m)) # 2020-10-28 as array
 
     ## mixture proportions
     if (details$nmix > 1) {
-        # temp <- fillpmix3cpp(   CHECK 2018-02-02
         temp <- fillpmix2(nc, details$nmix, object$design0$PIA, realparval0)
         pmix <- matrix(temp, ncol = nc)
     }
@@ -104,28 +103,55 @@ openCR.esa <- function (object, bysession = FALSE) {
         pmix <- matrix(1, nrow = details$nmix, ncol = nc)
     }
     onea <- function (x) {
-        pch1 <-  PCH1secrparallelcpp(
-            as.integer(x-1),
-            as.integer(type),
-            as.integer(object$details$grain),
-            as.logical(individual),
-            as.integer(J),
-            as.integer(m),
-            as.integer(nc),
-            as.integer(cumss),
-            as.matrix (realparval0),
-            as.integer(object$design0$PIA),
-            as.integer(object$design0$PIAJ),
-            as.double (if (detectr == "poissoncount") hk0 else gk0),  ## 2019-05-08, 17
-            as.integer(binomN),
-            as.matrix (usge),
-            as.double (intervals),
-            as.integer(object$moveargsi),
-            as.integer(movemodel),
-            as.character(object$usermodel),
-            as.matrix(kernel),
-            as.matrix(mqarray),
-            as.double (cellsize))
+        if (object$details$R) {
+            pch1 <-  PCH1secr(
+                type,
+                as.logical(object$design0$individual),
+                x,
+                nc,
+                J,
+                cumss,
+                k,
+                m,
+                realparval0,
+                object$design0$PIA,
+                object$design0$PIAJ,
+                if (detectr %in% c("multi", "poissoncount")) hk0 else gk0,
+                binomN,
+                usge,
+                intervals,
+                object$moveargsi,
+                movementcode,                     # what about edgecode? 2020-12-12
+                object$usermodel,
+                kernel,
+                mqarray,
+                cellsize)
+        }
+        else {
+            pch1 <-  PCH1secrparallelcpp(
+                as.integer(x-1),
+                as.integer(type),
+                as.integer(object$details$grain),
+                as.logical(individual),
+                as.integer(J),
+                as.integer(m),
+                as.integer(nc),
+                as.integer(cumss),
+                as.matrix (realparval0),
+                as.integer(object$design0$PIA),
+                as.integer(object$design0$PIAJ),
+                as.double (if (detectr == "poissoncount") hk0 else gk0),  ## 2019-05-08, 17
+                as.integer(binomN),
+                as.matrix (usge),
+                as.double (intervals),
+                as.integer(object$moveargsi),
+                as.integer(movementcode),
+                as.integer(edgecode),
+                as.character(object$usermodel),
+                as.matrix(kernel),
+                as.matrix(mqarray),
+                as.double (cellsize))
+        }
         pmix[x,] * pch1
     }
     
@@ -148,11 +174,19 @@ openCR.esa <- function (object, bysession = FALSE) {
     }
     if (bysession) {
         a <- sapply(1:details$nmix, oneabysession, simplify = FALSE)
-        a <- t(apply(abind(a, along=3), 1:2, sum))   ## session * ch, summed over mixture classes
+        a <- t(apply(abind(a, along=3), 1:2, sum))   ## session * ch, summed over latent classes
+        a <- a * area * m
+        sess <- primarysessions(intervals(object$capthist)) ## differs from 'intervals'
+        OK <- apply(object$capthist, 1, by, sess, sum)>0
+        freq <- sweep(OK, MARGIN=2, STATS=covariates(object$capthist)$freq, FUN = "*")
+        a <- lapply(1:J, function(j) rep(a[j,], freq[j,]))
     }
     else {
         a <- sapply(1:details$nmix, onea)
         a <- apply(a, 1, sum)    ## sum over latent classes
+        a <- rep(a, covariates(object$capthist)$freq)
+        a <- a * area * m
     }
-    a * area * m
+    ## adjusts for covariates(object$capthist)$freq - no need to do this downstream
+    a 
 }

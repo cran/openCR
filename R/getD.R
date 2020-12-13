@@ -22,17 +22,3 @@ getD <- function (designD, beta, mask, parindx, link, fixed,
     D
 }
 ###############################################################################
-
-## from secrloglik
-
-    # D.modelled <- !CL & is.null(fixedpar$D)
-    # if (!CL ) {
-    #     grplevels <- if (length(grp)>0) levels(grp[[1]]) else 1
-    #   D <- getD (designD, beta, mask, parindx, link, fixedpar,
-    #              grplevels, sessionlevels, parameter = 'D')
-    # 
-    #   if (!is.na(sumD <- sum(D)))
-    #       if (sumD <= 0)
-    #           warning ("invalid density <= 0")
-    # }
-

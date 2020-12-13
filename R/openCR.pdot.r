@@ -30,9 +30,14 @@ openCR.pdot <- function (object, bysession = FALSE) {
     realparval0 <- makerealparameters (design0, beta, parindx, link, fixed)
     nc  <- nrow(capthist)
     J <- length(intervals) + 1
-    type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4, JSSAg = 22, JSSAgCL = 23,
-        JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19, JSSARET = 21,
-        Pradel = 20, Pradelg = 26, JSSAk = 28, JSSAkCL = 29)
+    
+    # type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4, JSSAg = 22, JSSAgCL = 23,
+    #     JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19, JSSARET = 21,
+    #     Pradel = 20, Pradelg = 26, JSSAk = 28, JSSAkCL = 29)
+    # Use central coding from utility.R 2020-11-01
+    type <- typecode(type)
+    if (type<0) stop ("model type ", type, " not recognised")
+    
     distrib <- switch (object$distribution, poisson = 0, binomial = 1)
     binomN <- details$binomN
     

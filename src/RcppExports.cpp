@@ -48,8 +48,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // PCH1secrparallelcpp
-NumericVector PCH1secrparallelcpp(int x, int type, int grain, bool individual, int jj, int mm, int nc, const IntegerVector cumss, const NumericMatrix openval0, const IntegerVector PIA0, const IntegerVector PIAJ, const NumericVector gk0, int binomN, const NumericMatrix Tsk, const NumericVector intervals, const IntegerVector moveargsi, int movemodel, const String usermodel, const IntegerMatrix kernel, const IntegerMatrix mqarray, double cellsize);
-RcppExport SEXP _openCR_PCH1secrparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP grainSEXP, SEXP individualSEXP, SEXP jjSEXP, SEXP mmSEXP, SEXP ncSEXP, SEXP cumssSEXP, SEXP openval0SEXP, SEXP PIA0SEXP, SEXP PIAJSEXP, SEXP gk0SEXP, SEXP binomNSEXP, SEXP TskSEXP, SEXP intervalsSEXP, SEXP moveargsiSEXP, SEXP movemodelSEXP, SEXP usermodelSEXP, SEXP kernelSEXP, SEXP mqarraySEXP, SEXP cellsizeSEXP) {
+NumericVector PCH1secrparallelcpp(int x, int type, int grain, bool individual, int jj, int mm, int nc, const IntegerVector cumss, const NumericMatrix openval0, const IntegerVector PIA0, const IntegerVector PIAJ, const NumericVector gk0, int binomN, const NumericMatrix Tsk, const NumericVector intervals, const IntegerVector moveargsi, int movementcode, int edgecode, const String usermodel, const IntegerMatrix kernel, const IntegerMatrix mqarray, double cellsize);
+RcppExport SEXP _openCR_PCH1secrparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP grainSEXP, SEXP individualSEXP, SEXP jjSEXP, SEXP mmSEXP, SEXP ncSEXP, SEXP cumssSEXP, SEXP openval0SEXP, SEXP PIA0SEXP, SEXP PIAJSEXP, SEXP gk0SEXP, SEXP binomNSEXP, SEXP TskSEXP, SEXP intervalsSEXP, SEXP moveargsiSEXP, SEXP movementcodeSEXP, SEXP edgecodeSEXP, SEXP usermodelSEXP, SEXP kernelSEXP, SEXP mqarraySEXP, SEXP cellsizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -69,12 +69,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const NumericMatrix >::type Tsk(TskSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type moveargsi(moveargsiSEXP);
-    Rcpp::traits::input_parameter< int >::type movemodel(movemodelSEXP);
+    Rcpp::traits::input_parameter< int >::type movementcode(movementcodeSEXP);
+    Rcpp::traits::input_parameter< int >::type edgecode(edgecodeSEXP);
     Rcpp::traits::input_parameter< const String >::type usermodel(usermodelSEXP);
     Rcpp::traits::input_parameter< const IntegerMatrix >::type kernel(kernelSEXP);
     Rcpp::traits::input_parameter< const IntegerMatrix >::type mqarray(mqarraySEXP);
     Rcpp::traits::input_parameter< double >::type cellsize(cellsizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(PCH1secrparallelcpp(x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movemodel, usermodel, kernel, mqarray, cellsize));
+    rcpp_result_gen = Rcpp::wrap(PCH1secrparallelcpp(x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, edgecode, usermodel, kernel, mqarray, cellsize));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -184,8 +185,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // allhistsecrparallelcpp
-NumericVector allhistsecrparallelcpp(int x, int type, int mm, int nc, int binomN, int CJSp1, int calcpdotbd, int grain, const NumericVector intervals, const IntegerVector cumss, const IntegerVector w, const IntegerVector fi, const IntegerVector li, const NumericVector gk, const NumericMatrix openval, const IntegerVector PIA, const IntegerVector PIAJ, const NumericMatrix Tsk, const NumericMatrix h, const IntegerMatrix hindex, int movemodel, const String usermodel, const IntegerVector moveargsi, const IntegerMatrix kernel, const IntegerMatrix mqarray, double cellsize);
-RcppExport SEXP _openCR_allhistsecrparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP mmSEXP, SEXP ncSEXP, SEXP binomNSEXP, SEXP CJSp1SEXP, SEXP calcpdotbdSEXP, SEXP grainSEXP, SEXP intervalsSEXP, SEXP cumssSEXP, SEXP wSEXP, SEXP fiSEXP, SEXP liSEXP, SEXP gkSEXP, SEXP openvalSEXP, SEXP PIASEXP, SEXP PIAJSEXP, SEXP TskSEXP, SEXP hSEXP, SEXP hindexSEXP, SEXP movemodelSEXP, SEXP usermodelSEXP, SEXP moveargsiSEXP, SEXP kernelSEXP, SEXP mqarraySEXP, SEXP cellsizeSEXP) {
+NumericVector allhistsecrparallelcpp(int x, int type, int mm, int nc, int binomN, int CJSp1, int grain, const NumericVector intervals, const IntegerVector cumss, const IntegerVector w, const IntegerVector fi, const IntegerVector li, const NumericVector gk, const NumericMatrix openval, const IntegerVector PIA, const IntegerVector PIAJ, const NumericMatrix Tsk, const NumericMatrix h, const IntegerMatrix hindex, int movementcode, int edgecode, const String usermodel, const IntegerVector moveargsi, const IntegerMatrix kernel, const IntegerMatrix mqarray, double cellsize);
+RcppExport SEXP _openCR_allhistsecrparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP mmSEXP, SEXP ncSEXP, SEXP binomNSEXP, SEXP CJSp1SEXP, SEXP grainSEXP, SEXP intervalsSEXP, SEXP cumssSEXP, SEXP wSEXP, SEXP fiSEXP, SEXP liSEXP, SEXP gkSEXP, SEXP openvalSEXP, SEXP PIASEXP, SEXP PIAJSEXP, SEXP TskSEXP, SEXP hSEXP, SEXP hindexSEXP, SEXP movementcodeSEXP, SEXP edgecodeSEXP, SEXP usermodelSEXP, SEXP moveargsiSEXP, SEXP kernelSEXP, SEXP mqarraySEXP, SEXP cellsizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -195,7 +196,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
     Rcpp::traits::input_parameter< int >::type binomN(binomNSEXP);
     Rcpp::traits::input_parameter< int >::type CJSp1(CJSp1SEXP);
-    Rcpp::traits::input_parameter< int >::type calcpdotbd(calcpdotbdSEXP);
     Rcpp::traits::input_parameter< int >::type grain(grainSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type cumss(cumssSEXP);
@@ -209,13 +209,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const NumericMatrix >::type Tsk(TskSEXP);
     Rcpp::traits::input_parameter< const NumericMatrix >::type h(hSEXP);
     Rcpp::traits::input_parameter< const IntegerMatrix >::type hindex(hindexSEXP);
-    Rcpp::traits::input_parameter< int >::type movemodel(movemodelSEXP);
+    Rcpp::traits::input_parameter< int >::type movementcode(movementcodeSEXP);
+    Rcpp::traits::input_parameter< int >::type edgecode(edgecodeSEXP);
     Rcpp::traits::input_parameter< const String >::type usermodel(usermodelSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type moveargsi(moveargsiSEXP);
     Rcpp::traits::input_parameter< const IntegerMatrix >::type kernel(kernelSEXP);
     Rcpp::traits::input_parameter< const IntegerMatrix >::type mqarray(mqarraySEXP);
     Rcpp::traits::input_parameter< double >::type cellsize(cellsizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(allhistsecrparallelcpp(x, type, mm, nc, binomN, CJSp1, calcpdotbd, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movemodel, usermodel, moveargsi, kernel, mqarray, cellsize));
+    rcpp_result_gen = Rcpp::wrap(allhistsecrparallelcpp(x, type, mm, nc, binomN, CJSp1, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -223,7 +224,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_openCR_PCH1cpp", (DL_FUNC) &_openCR_PCH1cpp, 10},
     {"_openCR_PCH0secrjcpp", (DL_FUNC) &_openCR_PCH0secrjcpp, 12},
-    {"_openCR_PCH1secrparallelcpp", (DL_FUNC) &_openCR_PCH1secrparallelcpp, 21},
+    {"_openCR_PCH1secrparallelcpp", (DL_FUNC) &_openCR_PCH1secrparallelcpp, 22},
     {"_openCR_gethcpp", (DL_FUNC) &_openCR_gethcpp, 9},
     {"_openCR_makegkcpp", (DL_FUNC) &_openCR_makegkcpp, 8},
     {"_openCR_makegkParallelcpp", (DL_FUNC) &_openCR_makegkParallelcpp, 6},

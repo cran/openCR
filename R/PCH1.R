@@ -13,7 +13,6 @@ PCH1 <- function (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals) {
     one <- function(n) {    
         p <- getp (n, x, openval0, PIA0)
         phij <- getphij (n, x, openval0, PIAJ, intervals)
-        # getg (type, n, x, nc, jj, openval0, cc0, PIAJ, g);
         beta <- getbeta (type, n, x, openval0, PIAJ, intervals, phij)
         pdt <- 0
         for (b in 1:J) {
@@ -47,8 +46,9 @@ pr0njmx <- function (n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk) {
         S <- length(s)
         csk <- PIA0[n,s, ,x, drop = FALSE]
         cski <- rep(as.numeric(csk),mm)
-        i <- cbind(cski, rep(rep(1:kk, each=S), mm), rep(1:mm, each=S*kk))
+        i <- cbind(cski, rep(rep(1:kk, each = S), mm), rep(1:mm, each = S*kk))
         gsk <- array(0, dim=c(S, kk, mm))
+        # warning("bug in pr0njmx: indexing assumes gk0 is array but it isn't")
         gsk[cski>0] <- gk0[i]
         size <- t(Tsk[,s])      
         pjm[j, ] <- if (binomN %in% c(-2,0)) {
@@ -66,18 +66,17 @@ pr0njmx <- function (n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk) {
 }
 
 PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, 
-                      gk0, binomN, Tsk, intervals, moveargsi, movemodel, usermodel,
-                      kernel, mqarray, cellsize) {
-    
+    gk0, binomN, Tsk, intervals, moveargsi, movementcode, 
+    edgecode, usermodel, kernel, mqarray, cellsize) {
     One <- function (n) {
         ## precompute this animal's session-specific Pr for mask points
         pjm <- pr0njmx(n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk)
         phij <- getphij (n, x, openval0, PIAJ, intervals)
         beta <- getbeta (type, n, x, openval0, PIAJ, intervals, phij)
-        if (movemodel>1) {
+        if (movementcode>1) {
             moveargsi <- pmax(moveargsi,0)
             moveargs <- getmoveargs (n, x, openval0, PIAJ, intervals, moveargsi)
-            kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize,
+            kernelp <- fillkernelp (jj, movementcode-2, kernel, usermodel, cellsize,
                                     moveargsi, moveargs, normalize = TRUE)
         }
         pdt <- 0
@@ -89,11 +88,11 @@ PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0
                 pbd <- pbd * (1-phij[d]);             ## departed at d
                 
                 # static home ranges: take sum over M of product over J
-                if (movemodel==0) {
+                if (movementcode==0) {
                     prodpj <- apply(pjm[b:d,, drop = FALSE], 2, prod)
                     prw0 <- sum(prodpj) / mm
                 }
-                else if (movemodel==1) {
+                else if (movementcode==1) {
                     ## over primary sessions in which may have been alive
                     ## centers allowed to differ between primary sessions
                     ## mobile home ranges: take product over J of sum over M
@@ -102,14 +101,14 @@ PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0
                 }
                 else {  ## normal, exponential etc.
                     pm <-  pjm[b, ] / mm
+            
                     if (d>b) {
                         for (j in (b+1):d) {
-                            pm <- convolvemq(j-1, kernelp, mqarray, pm)
+                            pm <- convolvemq(j-1, kernelp, edgecode, mqarray, pm)
                             pm <- pm * pjm[j, ]
                         }
                     }
                     prw0 <- sum(pm)
-                    
                 }
                 pdt <- pdt + pbd * (1 - prw0)     ## sum over b,d
             }

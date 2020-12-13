@@ -26,9 +26,10 @@ void convolvemq (
     int    mm,        // number of points on mask 
     int    kn,        // number of points on kernel 
     int    j,         // session number 1..jj 
-    const  RMatrix<int> mqarray, // input 
+    int    edgecode,              // adjust for incomplete kernel
+    const  RMatrix<int> &mqarray, // input [& 2020-10-31]
     std::vector<double> &kernelp, // p(move|dx,dy) for points in kernel 
-    std::vector<double> &pjm     // return value 
+    std::vector<double> &pjm      // return value 
     );
 //--------------------------------------------------------------------------
 

@@ -5,6 +5,7 @@
 ## 2018-02-12, 2019-05-19,
 ## 2019-06-19 removed nonspatial to prwi.R
 ## 2019-06-19 merged multicatch into general prwisecr
+## 2020-12-12 moved mqsetup to utility.R
 
 ## openval has
 ## column 1 lambda0
@@ -53,39 +54,10 @@ pski <- function(binomN, count, Tski, g) {
 
 #########################################################################################
 
-# The mqarray is a lookup array giving the pixel in the output mask
-# that corresponds to a particular m in the input mask and q in the
-# kernel [q * mm + m].
-#
-# Destinations that lie outside the mask receive a value of -1.
-#
-# mqsetup() initialises mqarray for a particular mask and kernel.
-
-mqsetup <- function (
-    mask,      ## x,y points on mask (first x, then y)
-    kernel,    ## list of dx,dy points on kernel with p(move|dx,dy) mask (first x, then y)
-    cellsize   ## side of grid cell (m) for each mask point
-)
-{
-    ## assuming cells of mask and kernel are same size
-    ## and kernel takes integer values centred on current mask point
-
-    oldx <- floor(mask$x/cellsize)
-    oldy <- floor(mask$y/cellsize)
-
-    newx <- as.numeric(outer(oldx, kernel$x, "+"))
-    newy <- as.numeric(outer(oldy, kernel$y, "+"))
-
-    i <- match(paste(newx,newy), paste(oldx,oldy)) - 1
-    i[is.na(i)] <- -1
-
-    matrix(i, nrow = nrow(mask), ncol = nrow(kernel))
-
-}
-
 convolvemq <- function (
     j,         ## session number 1..jj
     kernelp,   ## p(move|dx,dy) for points in kernel
+    edgecode,  ## 0 = no action, 1 = no action, already wrapped, 2 = truncate
     mqarray,   ## input
     pjm
 )
@@ -93,14 +65,25 @@ convolvemq <- function (
     mm <- nrow(mqarray)
     kn <- ncol(mqarray)
     workpjm <- numeric(mm)
-
+    
     ## convolve movement kernel and pjm...
     for (m in 1:mm) {
-        for (q in 1:kn) {              ## over movement kernel
-            mq <- mqarray[m,q] + 1     ## which new point corresponds to kernel point q relative to current mask point m
-            if (mq >= 0) {             ## post-dispersal site is within mask
-                if (mq>mm) stop("mq > mm")
-                workpjm[mq] <- workpjm[mq] + pjm[m] * kernelp[q,j]   ## probability of this move CHECK DIM KERNELP
+        if (edgecode == 2) {
+            q <- mqarray[m,] + 1
+            q <- q[q>0]
+            sump <- sum(kernelp[kn * (j-1) + q], na.rm = T)
+        }
+        else {
+            sump <- 1.0
+        }
+        if (is.na(sump)) browser()   ## debug 2020-12-13
+        if (sump>0) {
+            for (q in 1:kn) {          ## over movement kernel
+                mq <- mqarray[m,q] + 1 ## which new point corresponds to kernel point q relative to current mask point m
+                if (mq > 0) {          ## post-dispersal site is within mask
+                    if (mq>mm) stop("mq > mm")
+                    workpjm[mq] <- workpjm[mq] + pjm[m] * kernelp[q,j]   ## probability of this move CHECK DIM KERNELP
+                }
             }
         }
     }
@@ -108,7 +91,6 @@ convolvemq <- function (
 }
 
 ###################################################################################
-
 prw <- function (n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, pjm) {
     # gk assumed to be hazard if multi (binomN=-2) or Poisson count (binomN=0)
     dead <- FALSE
@@ -145,28 +127,25 @@ prw <- function (n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, pjm
 
         if (dead) break;   # after processing all traps on this occasion
     }
-    ## cat("j ", j, " pjm ", sum(pjm), '\n')
+    ## message("j ", j, " pjm ", sum(pjm))
     pjm
 }
 ###################################################################################
 
 prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
                       openval, PIA, PIAJ, binomN, Tsk, intervals, h, hindex,
-                      CJSp1, calcpdotbd, moveargsi, movemodel,
+                      CJSp1, moveargsi, movementcode, edgecode,
                       usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL) {
 
     ## precompute p0 to save time (multicatch only)
     p0 <- if (binomN == -2) exp(-h) else 1
-
     phij <- getphij (n, x, openval, PIAJ, intervals)
-
-    if (movemodel > 1) {
+    if (movementcode > 1) {
         moveargsi <- pmax(moveargsi,0)
         moveargs <- getmoveargs (n, x, openval, PIAJ, intervals, moveargsi)
-        kernelp <- fillkernelp (jj, movemodel-2, kernel, usermodel, cellsize,
+        kernelp <- fillkernelp (jj, movementcode-2, kernel, usermodel, cellsize,
                                 moveargsi, moveargs, normalize = TRUE)
     }
-
     if(type==6) {
         minb <- fi[n]
         cjs <- 1 - CJSp1
@@ -175,11 +154,6 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
         minb <- 1
         cjs <- 0
         beta <- getbeta (type, n, x, openval, PIAJ, intervals, phij)
-        if (calcpdotbd) {
-            ## Precompute session-specific Pr for all unique parameter combinations 2019-05-05
-            ## Does not allow for learned response
-            pjmat <- pr0njmx(n, x, cumss, jj, mm, binomN, PIA, gk, Tsk)  ## PCH1.R
-        }
     }
     maxb <- fi[n]
     mind <- abs(li[n])
@@ -195,32 +169,6 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
             else {
                 pbd <- beta[b]
                 pdotbd <- 1
-                if (calcpdotbd) {
-                    # compute pdot for this b,d
-                    if (movemodel == 1) {   ## uncorrelated; product over primary sessions
-                        if (d>(b+cjs)) {
-                            pdotbd <- 1 - prod(apply(pjmat[(b+cjs):d,]/mm,2,sum))
-                        }
-                        else {
-                            pdotbd <- 0
-                        }
-                    }
-                    else {
-                        if (d>=(b+cjs)) {
-                            pr0 <- pjmat[b+cjs,] / mm
-                            if (d>(b+cjs)) {
-                                for (j in (b+cjs+1):d) {
-                                    if (movemodel>1) pr0 <- convolvemq(j-1, kernelp, mqarray, pr0)
-                                    pr0 <- pr0 * pjmat[j,]
-                                }
-                            }
-                            pdotbd <- 1-sum(pr0)
-                        }
-                        else {
-                            pdotbd <- 0
-                        }
-                    }
-                }
             }
             if (b<d) pbd <- pbd * prod(phij[b:(d-1)])
             if ((li[n]>0) & (d<jj))    # if not censored, died
@@ -228,7 +176,7 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
 
             prwi <- 1.0
             if (d >= (b+cjs)) {
-                if (movemodel == 0) {
+                if (movementcode == 0) {
 
                     alpha <- rep(1.0/mm,mm)
                     for (j in (b+cjs):d) {
@@ -236,7 +184,7 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
                     }
                     prwi <- sum(alpha)
                 }
-                else if ( movemodel == 1) { # uncorrelated; product over primary sessions
+                else if ( movementcode == 1) { # uncorrelated; product over primary sessions
                     prwi <- 1.0
                     for (j in (b+cjs):d) {
                         alpha <- rep(1.0/mm,mm)
@@ -244,23 +192,23 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
                         prwi <- prwi * sum(alpha)
                     }
                 }
-                else { # movemodel>1
+                else { # movementcode>1
                     alpha <- rep(1.0/mm, mm)
-                    alpha <- prw (n, b+cjs, x, kk, binomN, cumss, PIA, gk, Tsk, w, alpha)
+                    alpha <- prw (n, b+cjs, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, alpha)
                     if (d>(b+cjs)) {
                         for (j in (b+cjs+1):d) {
-                            alpha <- convolvemq(j-1, kernelp, mqarray, alpha)
+                            alpha <- convolvemq(j-1, kernelp, edgecode, mqarray, alpha)
                             alpha <- prw(n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, alpha)
                         }
                     }
                     prwi <- sum(alpha)
                 }
-                # cat("n ", n, " b ", b, " d ", d, " pbd ", pbd, " prwi ", prwi, " pdotbd ", pdotbd, "\n")
+                # message("n ", n, " b ", b, " d ", d, " pbd ", pbd, " prwi ", prwi, " pdotbd ", pdotbd)
             }
             pdt <- pdt + pbd * prwi / pdotbd
         }
     }
-    # cat("n ", n, " pdt ", pdt, "\n")
+    # message("n ", n, " pdt ", pdt)
     pdt
 }
 

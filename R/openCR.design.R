@@ -12,12 +12,14 @@
 ## 2018-11-22 bk, Bk added; bsession etc. redefined
 ## 2018-11-23 tidy up
 ## 2018-12-21 trap covariates
+## 2020-10-19 agecov for recoding age effects
 ################################################################################
 
 openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL, 
-                           sessioncov = NULL, dframe = NULL, contrasts = NULL, 
-                           initialage = 0, maximumage = 1, CJSp1 = FALSE, ...) {
-
+    sessioncov = NULL, agecov = NULL, dframe = NULL, 
+    contrasts = NULL, initialage = 0, minimumage = 0, maximumage = 1, 
+    CJSp1 = FALSE, ...) {
+    
 ## Generate design matrix, reduced parameter array, and parameter index array (PIA)
 ## for each parameter
 ## 'capthist' must be of class 'capthist' or 'list'
@@ -30,7 +32,8 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
             found <- names(cov) %in% vars
             if (is.data.frame(cov) & any(found)) {
                 found <- names(cov)[found]
-                values <- as.data.frame(cov[,found], stringsAsFactors = TRUE)   ## updated sAF 2020-05-28
+                values <- as.data.frame(cov[,found])
+                values <- secr:::stringsAsFactors(values)  ## updated 2020-12-04
                 names(values) <- found
                 if (length(values)>0) {
                     for (variable in found) {
@@ -97,6 +100,8 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     firstofsession    <- match(1:J, primarysession)
     validlevels       <- getvalidlevels (type, parnames, J, CJSp1)
     
+    # primary.secondary <- 
+    
     #--------------------------------------------------------------------------
 
     if (!grepl('secr', type) & any(.openCRstuff$traplearnedresponses %in% vars))
@@ -113,7 +118,8 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     # session covariates   (primary sessions)
     if (!is.null(sessioncov)) {
         scov <- sessioncov  # trick to name a vector 'scov'
-        sessioncov <- as.data.frame(scov, stringsAsFactors = TRUE)   ## updated sAF 2020-05-28
+        sessioncov <- as.data.frame(scov)
+        sessioncov <- secr:::stringsAsFactors(sessioncov)  ## updated 2020-12-04
         if (nrow(sessioncov) != J)
             stop("number of rows in 'sessioncov' should equal ",
                  "number of primary sessions")
@@ -122,16 +128,27 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
     # time covariates   (secondary sessions)
     if (!is.null(timecov)) {
         tcov <- timecov  # trick to name a vector 'tcov'
-        timecov <- as.data.frame(tcov, stringsAsFactors = TRUE)   ## updated sAF 2020-05-28
+        timecov <- as.data.frame(tcov)
+        timecov <- secr:::stringsAsFactors(timecov)  ## updated 2020-12-04
         if (nrow(timecov) != S)
             stop("number of rows in 'timecov' should equal ",
                  "number of occasions (secondary sessions")
+    }
+    #--------------------------------------------------------------------------
+    # age covariates   (primary sessions)
+    if (!is.null(agecov)) {
+        acov <- agecov  # trick to name a vector 'acov'
+        agecov <- as.data.frame(acov)
+        agecov <- secr:::stringsAsFactors(agecov)
+        if (nrow(agecov) != (maximumage - minimumage + 1))
+            stop("number of rows in 'agecov' should equal ",
+                "number of possible ages")
     }
     
     #--------------------------------------------------------------------------
     dims <- c(n,S,K,nmix)       # virtual dimensions
     dframenrow <- prod(dims)    # number of rows
-    autovars <- c(.openCRstuff$learnedresponses, 'session', 't', 'Session', 
+    autovars <- c(.openCRstuff$learnedresponses, 'session', 't', 'tt', 'Session', 
                   'h2', 'h3', 'age', 'Age', 'Age2')
     #--------------------------------------------------------------------------
     # user-specified dframe
@@ -148,25 +165,34 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
 
     dframe$session <- factor(secr::insertdim (rep(1:J, secondarysessions), 2, dims))
     dframe$Session <- secr::insertdim (rep(0:(J-1), secondarysessions), 2, dims)
-
+    dframe$tt <- factor(secr::insertdim (1:S, 2, dims))
+    
     ## t as synonym of session
     if ('t' %in% vars) {
         dframe$t <- factor(secr::insertdim (rep(1:J, secondarysessions), 2, dims))
     }
     ## firstage <- as.numeric(grepl('CJS', type))
-    firstage <- 0
+    # firstage <- 0 # replaced by minimumage
+    
+    # rearranged 2020-10-19
+    if (any(c('age','Age','Age2', names(agecov)) %in% vars)) {
+        age <- age.matrix(capthist, initialage, minimumage, maximumage)
+    }
     if ('age' %in% vars) {
-        age <- age.matrix(capthist, initialage, firstage, maximumage)
         dframe$age <- factor(secr::insertdim (factor(age), 1:2, dims))
     } 
     if ('Age' %in% vars) {
-        age <- age.matrix(capthist, initialage, firstage, maximumage)
         dframe$Age <- secr::insertdim (age, 1:2, dims)
     } 
     if ('Age2' %in% vars) {
-        age <- age.matrix(capthist, initialage, firstage, maximumage)
         dframe$Age2 <- secr::insertdim (age^2, 1:2, dims)
     } 
+    for (i in names(agecov)) {
+        if (i %in% vars) {
+            agecovi <- agecov[,i][age-minimumage+1]
+            dframe[,i] <- secr::insertdim (agecovi, 1:2, dims)
+        }
+    }
     
     #--------------------------------------------------------------------------
 
@@ -358,15 +384,16 @@ openCR.design <- function (capthist, models, type, naive = FALSE, timecov = NULL
 
     #--------------------------------------------------------------------------
     ## all autovars should have now been dealt with
-    vars <- vars[!(vars %in% c(autovars, dframevars))]
+    vars <- vars[!(vars %in% c(autovars, names(agecov), dframevars))]
 
     #--------------------------------------------------------------------------
-    # add zcov, sessioncov
+    # add zcov, sessioncov etc.
 
     findvars (zcov, vars, 1)
     findvars (timecov, vars, 2)
     findvars (trapcov, vars, 3)  ## 2018-12-21
     findvars (sessioncov, vars, 2, scov = TRUE)  ## expands correctly 2018-05-07
+    findvars (agecov, vars, 1, scov = TRUE)      ## new 2020-10-19
     tvc <- timevaryingcov(capthist)
     if (!is.null(tvc) & (length(vars)>0)) {
         findvars.covtime (tvc, vars)

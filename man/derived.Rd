@@ -69,7 +69,8 @@ If \code{newdata} has multiple levels then the value is a list of such objects, 
   probabilities under the fitted model (one for each detected animal).
 
   \code{openCR.esa} returns a vector of effective sampling areas under
-  the fitted model (one for each detected animal).
+  the fitted model (one for each detected animal). If 'bysession = TRUE' the 
+  result is a list with one component per session.
   
 }
 
@@ -77,6 +78,13 @@ If \code{newdata} has multiple levels then the value is a list of such objects, 
 
   \code{\link{openCR.fit}}, \code{\link{print.derivedopenCR}}
   
+}
+
+\note{
+
+Prior to 1.4.5, openCR.esa did not expand the result for squeezed capture 
+histories (freq>1) and did not return a list when bysession = TRUE.
+
 }
 
 \examples{

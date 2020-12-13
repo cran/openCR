@@ -2,11 +2,11 @@
 ## package 'openCR'
 ## LLsurface.openCR.R
 ## evaluate and plot log likelihood surface for two named beta parameters
-## last changed 2018-02-07
+## last changed 2020-11-02 - handle ncores as in LLsurface.secr; no parallel clusters
 ############################################################################################
 
 LLsurface.openCR <- function (object, betapar = c('phi', 'sigma'), xval = NULL, yval = NULL,
-    centre = NULL, realscale = TRUE, plot = TRUE, plotfitted = TRUE, ncores = 1, ...) {
+    centre = NULL, realscale = TRUE, plot = TRUE, plotfitted = TRUE, ncores = NULL, ...) {
 
     if (inherits(object, 'list')) {
         temp <- list()
@@ -78,27 +78,20 @@ LLsurface.openCR <- function (object, betapar = c('phi', 'sigma'), xval = NULL, 
                            fixed = object$fixed, 
                            timecov = object$timecov, 
                            sessioncov = object$sessioncov, 
+                           agecov = object$agecov,
                            dframe = object$dframe, 
                            details = details, 
                            method = object$fit$method, 
-                           ncores = 1)
+                           ncores = ncores)
             )
         }
         
-        cat ('Evaluating log likelihood across grid of', nrow(grid), 'points...\n')
+        message ('Evaluating log likelihood across grid of', nrow(grid), 'points...')
         flush.console()
 
-        if (ncores > 1) {
-            clust <- makeCluster(ncores, methods = FALSE, useXDR = .Platform$endian=='big')
-            clusterEvalQ(clust, requireNamespace('openCR'))   ## faster with this
-            temp <- parRapply (clust, grid, LL)
-            stopCluster(clust)
-        }
-        else {
-            temp <- apply (grid, 1, LL)
-        }
-
+        temp <- apply (grid, 1, LL)
         temp <- matrix(temp, nrow=length(xval))
+        
         if (realscale) {
             xval <- round(untransform(xval, linkx),4)
             yval <- round(untransform(yval, linky),4)

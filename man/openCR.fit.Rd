@@ -17,10 +17,11 @@ nonspatial Jolly-Seber Schwarz-Arnason model (`JSSA', also known as
 
 openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1), 
     distribution = c("poisson", "binomial"), mask = NULL, 
-    detectfn = c("HHN","HHR","HEX","HAN","HCG","HVP"), binomN = 0, 
+    detectfn = c("HHN", "HHR", "HEX", "HAN", "HCG", "HVP"), binomN = 0, 
     movementmodel = c("static", "uncorrelated", "normal", "exponential", "t2D", 
-    "uniform"), start = NULL, link = list(), fixed = list(), timecov = NULL, 
-    sessioncov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
+    "uniform"), edgemethod = c("truncate","wrap","none"), start = NULL, 
+    link = list(), fixed = list(), timecov = NULL, sessioncov = NULL, 
+    agecov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
     method = "Newton-Raphson", trace = NULL, ncores = NULL, ...)
 }
 
@@ -43,6 +44,8 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
   \item{binomN}{ integer code for distribution of counts (see \code{\link[secr]{secr.fit}}) }
 
   \item{movementmodel}{character; model for movement between primary sessions (see Details) }
+  
+  \item{edgemethod}{character; method for movement at edge of mask (see Details)}
 
   \item{start}{ vector of initial values for beta parameters, or fitted
     model(s) from which they may be derived }
@@ -59,6 +62,8 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
 
   \item{sessioncov}{ optional dataframe of values of session-specific
   covariate(s). }
+  
+  \item{agecov}{ optional dataframe of values of age-specific covariate(s) }
 
 \item{dframe}{ optional data frame of design data for detection
   parameters (seldom used) }
@@ -117,10 +122,10 @@ Learned (behavioural) responses (`b', `B', etc.) were redefined and extended in
 version 1.3.0. The \href{../doc/openCR-vignette.pdf}{vignette} should be consulted 
 for current definitions.
 
-Formulae
-may also include named occasion-specific and session-specific covariates in the dataframe
-arguments `timecov' and `sessioncov' (occasion = secondary session of robust design).
-Individual covariates present as an attribute of
+Formulae may also include named occasion-specific and session-specific 
+covariates in the dataframe arguments `timecov' and `sessioncov' 
+(occasion = secondary session of robust design). Named age-specific covariates 
+in 'agecov` are treated similarly. Individual covariates present as an attribute of
 the `capthist' input may be used in CJS and ..CL models. Groups are not
 supported in this version, but may be implemented via a factor-level
 covariate in ..CL models.
@@ -131,7 +136,9 @@ masked area) ("binomial") or unconditional ("poisson").
 \code{distribution} affects the sampling variance of the estimated
 density. The default is "poisson" as in \pkg{secr}.
 
-Movement models are described in the \href{../doc/openCR-vignette.pdf}{vignette}.
+Movement models are described in the \href{../doc/openCR-vignette.pdf}{vignette}. 
+
+\code{edgemethod} controls movement probabilities at the mask edge in spatial models that include movement. "none" typically causes bias in estimates; "wrap" wraps kernel probabilities to the opposing edge of a rectangular mask; "truncate" scales the values of an edge-truncated kernel so that they always sum to 1.0 (safer and more general than "wrap", but slower).
 
 The mlogit link function is used for the JSSA (POPAN) entry parameter 
 `b' (PENT in MARK) and for mixture proportions, regardless of \code{link}.
@@ -139,7 +146,7 @@ The mlogit link function is used for the JSSA (POPAN) entry parameter
 Spatial models use one of the hazard-based detection functions (see \code{\link{detectfn}}) and require data
 from independent point detectors (\pkg{secr} detector types `multi', `proximity' or `count').
 
-Code is executed in multiple threads unless the user specifies \code{ncores = 1} or there is only one core available or \code{details$R == TRUE}. The default value for \code{ncores} is one less than the number of cores available.
+Code is executed in multiple threads unless the user specifies \code{ncores = 1} or there is only one core available or \code{details$R == TRUE}. Setting \code{ncores = NULL} uses the existing value from the environment variable RCPP_PARALLEL_NUM_THREADS (see \code{\link{setNumThreads}}) or 2 if that has not been set. 
 
 The \dots argument may be used to pass a vector of unequal intervals to 
 join (\code{interval}), or to vary the tolerance for merging detector sites (\code{tol}).
@@ -157,51 +164,57 @@ In the case of two fitted models, the values are melded. This is handy for initi
 open spatial model from a closed spatial model and an open non-spatial model. If a beta 
 parameter appears in both models then the first is used.
 
-\code{details} is used for various specialized settings --
+\code{details} is a list used for various specialized settings --
 
-\code{details$autoini} (default 1) is the number of the session used to determine 
-initial values of D, lambda0 and sigma (secr types only).
+\tabular{lll}{
+Component \tab Default \tab Description \cr
+\code{autoini} \tab 1 \tab Number of the session used to determine 
+initial values of D, lambda0 and sigma (secr types only) \cr
 
-\code{details$CJSp1} (default FALSE) may be used to switch CJS model to include detection in the first primary session (estimable with robust design and many spatial models).
+\code{CJSp1} \tab FALSE \tab Modified CJS model including initial detection 
+(estimable with robust design and many spatial models) \cr
 
-\code{details$contrasts} may be used to specify the coding of factor predictors. 
-The value should be suitable for the 'contrasts.arg' argument of \code{\link{model.matrix}}.
+\code{contrasts} \tab NULL \tab Value suitable for the `contrasts.arg' argument 
+of \code{\link{model.matrix}} used to specify the coding of factor predictors \cr
 
-\code{details$control} is a list that is passed to \code{optim} - useful
-for increasing maxit for \code{method = Nelder-Mead} (see vignette).
+\code{control} \tab list() \tab Passed to \code{optim} - useful for increasing
+maxit for \code{method = Nelder-Mead} (see vignette) \cr
 
-\code{details$fixedbeta} may be a vector with one element for each coefficient (beta parameter) in the model. Only 'NA' coefficients will be estimated; others will be fixed at the value given (coefficients define a linear predictor on the link scale). The number and order of coefficients may be determined by calling \code{openCR.fit} with trace = TRUE and interrupting execution after the first likelihood evaluation. 
+\code{debug} \tab 0 \tab debug=1 prints various intermediate values; debug>=2 interrupts execution by calling browser() (position variable) \cr
 
-\code{details$hessian} is a character string controlling the computation
-of the Hessian matrix from which variances and covariances are obtained.
-Options are "none" (no variances), "auto" (the default) or "fdhess" (use
-the function fdHess in \pkg{nlme}).  If "auto" then the Hessian from the
-optimisation function is used.
+\code{fixedbeta} \tab NULL \tab Vector with one element for each coefficient (beta parameter) in the model. Only 'NA' coefficients will be estimated; others will be fixed at the value given (coefficients define a linear predictor on the link scale). The number and order of coefficients may be determined by calling \code{openCR.fit} with trace = TRUE and interrupting execution after the first likelihood evaluation. \cr
 
-\code{details$ignoreusage} may be used to override usage in traps object of capthist.
+\code{grain} \tab 1 \tab Obscure setting for multithreading - see \pkg{RcppParallel} package \cr
+\code{hessian} \tab "auto" \tab Computation of the Hessian matrix from which 
+variances and covariances are obtained. Options are "none" (no variances), 
+"auto" or "fdhess" (use the function fdHess in \pkg{nlme}).  If "auto" then 
+the Hessian from the optimisation function is used. \cr
 
-\code{details$initialage} is either numeric (the uniform age at first capture) 
-or a character value naming an individual covariate with initial ages; 
-see \code{\link{age.matrix}}.
+\code{ignoreusage} \tab FALSE \tab Overrides usage in traps object of capthist \cr
 
-\code{details$LLonly} = TRUE causes the function to returns a single
+\code{initialage} \tab 0 \tab Numeric (uniform age at first capture) 
+or character value naming an individual covariate; see \code{\link{age.matrix}} \cr
+
+\code{kernelradius} \tab 10 \tab Radius in mask cells of discretized kernel (movement models only) \cr
+
+\code{LLonly} \tab FALSE \tab TRUE causes the function to return a single
 evaluation of the log likelihood at the initial values, followed by the 
-initial values.
+initial values \cr
 
-\code{details$maximumage} sets a maximum age; older animals are recycled into 
-this age class; see \code{\link{age.matrix}}.
+\code{minimumage} \tab 0 \tab Sets a minimum age; see \code{\link{age.matrix}} \cr
 
-\code{details$multinom = TRUE} includes the multinomial constant in the 
-reported log-likelihood (default FALSE).
+\code{maximumage} \tab 1 \tab Sets a maximum age; older animals are recycled into 
+this age class; see \code{\link{age.matrix}} \cr
 
-\code{details$R == TRUE} may be used to switch from the default C++ code to 
-slower functions in native R (useful mostly for debugging; not all model types
-implemented).
+\code{multinom} \tab FALSE \tab Include the multinomial constant in the 
+reported log-likelihood. \cr
 
-\code{details$squeeze == TRUE} (the default) compacts the input capthist 
-with function \code{\link{squeeze}} before analysis. The new capthist 
-includes only unique rows. Non-spatial models will fit faster, because non-spatial 
-capture histories are often non-unique.
+\code{R} \tab FALSE \tab Switch from the default C++ code to 
+slower functions in native R (useful for debugging; not all models) \cr
+
+\code{squeeze} \tab TRUE \tab  Apply \code{\link{squeeze}} to capthist before analysis. Non-spatial models fit faster, because histories often non-unique.\cr
+
+}
 
 If \code{method = "Newton-Raphson"} then \code{\link[stats]{nlm}} is
 used to maximize the log likelihood (minimize the negative log
@@ -249,6 +262,7 @@ Otherwise, an object of class `openCR' with components
   \item{detectfn }{saved input}
   \item{binomN }{saved input}
   \item{movementmodel }{saved input}
+  \item{edgemethod }{saved input}
   \item{usermodel }{saved input}
   \item{moveargsi }{relative locations of move.a and move.b arguments}
   \item{start }{vector of starting values for beta parameters} 
@@ -256,6 +270,7 @@ Otherwise, an object of class `openCR' with components
   \item{fixed }{saved input}  
   \item{timecov }{saved input}
   \item{sessioncov }{saved input}
+  \item{agecov }{saved input}
   \item{dframe }{saved input}
   \item{dframe0 }{saved input}
   \item{details }{saved input}
@@ -280,7 +295,10 @@ Otherwise, an object of class `openCR' with components
   \item{version }{openCR version number }
   \item{starttime }{character string of date and time at start of fit }
   \item{proctime }{processor time for model fit, in seconds }
-  
+ 
+ The environment variable RCPP_PARALLEL_NUM_THREADS is updated with the 
+ value of \code{ncores} if provided.
+ 
 }
 
 \references{
@@ -334,6 +352,10 @@ of redundant parameters.
 Earlier versions of \code{\link{openCR.fit}} computed latent class membership 
 probabilities for each individual in finite mixture models and saved them in 
 component `posterior'. Now see \code{\link{classMembership}} for that functionality.
+
+From 1.5.0 onwards the number of threads uses the environment variable 
+RCPP_PARALLEL_NUM_THREADS, as in \code{\link{secr.fit}}. This may be set once
+in a session with \code{secr::setNumThreads}.
 
 }
 

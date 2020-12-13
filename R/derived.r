@@ -14,7 +14,6 @@ derived.openCRlist <- function (object, newdata = NULL, all.levels = FALSE,
 
 derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
                             Dscale = 1, HTbysession = FALSE, ...) {
-
     allvars <- unlist(sapply(object$model, all.vars))
     if ('h2' %in% allvars | 'h3' %in% allvars)
         warning ("derived.openCR does not handle finite mixtures")
@@ -118,24 +117,35 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
                 fj <- c(B[-1]/Dj[-J], NA)
             }
             ## otherwise extract session-specific b
-            else if (type %in% c('JSSAb','JSSAbCL','JSSAsecrb','JSSAsecrbCL','JSSARET')) {
+            else if (type %in% c('JSSAb','JSSAbCL', 'PLBb', 
+                'JSSAsecrb','JSSAsecrbCL', 'PLBsecrb', 
+                'JSSARET')) {
                 b <- getreal('b') # predicted$b[,'estimate']
             }
-            else if (type %in% c('JSSAf','JSSAfCL','JSSAsecrf','JSSAsecrfCL',
-                                 'JSSAg','JSSAgCL','JSSAsecrg','JSSAsecrgCL', 'Pradelg',
-                                 'JSSAk', 'JSSAkCL',
-                                 'JSSAl','JSSAlCL','JSSAsecrl','JSSAsecrlCL', 'Pradel')) {
-
-                if (type %in% c('JSSAl','JSSAlCL','JSSAsecrl','JSSAsecrlCL', 'Pradel')) {
+            else if (type %in% c(
+                'JSSAf', 'JSSAfCL', 'PLBf',
+                'JSSAg', 'JSSAgCL', 'PLBg',
+                'JSSAk', 'JSSAkCL', 'PLBk',
+                'JSSAl', 'JSSAlCL', 'PLBl',
+                'JSSAsecrf', 'JSSAsecrfCL', 'PLBsecrf',
+                'JSSAsecrg', 'JSSAsecrgCL', 'PLBsecrg', 
+                'JSSAsecrl', 'JSSAsecrlCL', 'PLBsecrl', 
+                'Pradelg', 'Pradel')) {
+                
+                if (type %in% c('JSSAl','JSSAlCL', 'PLBl', 
+                    'JSSAsecrl','JSSAsecrlCL', 'PLBsecrl',
+                    'Pradel')) {
                     lambda <- getreal('lambda')
                     f <- lambda-phi
                 }
-                else if (type %in% c('JSSAg','JSSAgCL','JSSAsecrg','JSSAsecrgCL', 'Pradelg')) {
+                else if (type %in% c('JSSAg','JSSAgCL', 'PLBg',
+                    'JSSAsecrg','JSSAsecrgCL', 'PLBsecrg',
+                    'Pradelg')) {
                     gamma <- getreal('gamma')
                     gam1 <- c(gamma[-1],NA)
                     f <- phi * (1/gam1 - 1)
                 }
-                else if (type %in% c('JSSAk','JSSAkCL')) {
+                else if (type %in% c('JSSAk','JSSAkCL', 'PLBk')) {
                     kappa <- getreal('kappa')
                     kappa <- c(1, kappa[-1])
                     f <- tau <- numeric(J)
@@ -184,6 +194,10 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
         for (i in parnames) {
             df[,i] <- getreal(i)
         }
+        ## 2020-11-01 allow for fixed parameters
+        for (i in names(object$fixed)) {
+            df[,i] <- object$fixed[[i]]
+        }
         #
         # if (grepl('secr', type)) {
         #     df$lambda0 <- getreal('lambda0')
@@ -196,22 +210,26 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
 
         df$b <- b
 
+        ## WARNING: UNRESOLVED INCONSISTENCY IN ADJUSTMENT FOR INTERVAL phi, f
         ## bug fix 2018-10-31
         ## df$lambda <- stdrate(phij+ fj)
         df$lambda <- stdrate(phij) + stdrate(fj)
-        
         df$f <- df$lambda - df$phi
         df$gamma <- c(NA, (df$phi / (df$f + df$phi))[-J])
-        df$kappa <- getkappa (df$p, df$phi, df$f)
         
         ## Nonspatial
         ## superN and time-specific Nj
         if (type %in% c('JSSAN',
-                        'JSSAf','JSSAfCL','JSSAl','JSSAlCL', 'JSSAg','JSSAgCL',
-                        'JSSAk', 'JSSAkCL',
-                        'Pradel','Pradelg',
-                        'JSSAb','JSSAbCL','JSSARET', 'JSSAB')) {
-
+            'JSSAf', 'JSSAfCL', 'PLBf',
+            'JSSAl', 'JSSAlCL', 'PLBl',
+            'JSSAg', 'JSSAgCL', 'PLBg',
+            'JSSAk', 'JSSAkCL', 'PLBk',
+            'JSSAb', 'JSSAbCL', 'PLBb',
+            'Pradel','Pradelg',
+            'JSSARET', 'JSSAB')) {
+            
+            df$kappa <- getkappa (df$p, df$phi, df$f)  ## moved from outside nonspatial 2020-12-04
+            
             if (type %in% "JSSAN") {
                 ## as before...
                 Nj <- getreal('N')
@@ -248,10 +266,10 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
         ## Spatial
         ## superD and time-specific Dj
         
-        if (type %in% c('JSSAsecrf','JSSAsecrfCL',
-                        'JSSAsecrl','JSSAsecrlCL',
-                        'JSSAsecrg','JSSAsecrgCL',
-                        'JSSAsecrb','JSSAsecrbCL', 
+        if (type %in% c('JSSAsecrf','JSSAsecrfCL', 'PLBsecrf',
+                        'JSSAsecrl','JSSAsecrlCL', 'PLBsecrl',
+                        'JSSAsecrg','JSSAsecrgCL', 'PLBsecrg',
+                        'JSSAsecrb','JSSAsecrbCL', 'PLBsecrb',
                         'JSSAsecrB',
                         'JSSAsecrD')) {
             if (type %in% c('JSSAsecrf','JSSAsecrb','JSSAsecrl','JSSAsecrg'))
@@ -259,24 +277,24 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
             else if (type %in% "JSSAsecrB" )
                 superD <- sum(BD)
             else {
+                # esa across all sessions (i.e. using probability animal 
+                # initially at x is detected in at least one session)
                 a <- openCR.esa (object, bysession = FALSE)
-                superD <- sum(1/ rep(a, covariates(object$capthist)$freq))
+                superD <- sum(1/ a)
             }
             # assume no mixture for now but see Pledger et al 2010 p885
-            Dj <- numeric(J)
-            if (HTbysession) {
-                a <- openCR.esa(object, bysession = TRUE)  ## session x ch
-                sess <- primarysessions(intervals(object$capthist)) ## differs from 'intervals'
-                OK <- apply(capthist, 1, by, sess, sum)>0
-                freq <- sweep(OK, MARGIN=2, STATS=covariates(object$capthist)$freq, FUN = "*")
-                a1 <- lapply(1:J, function(j) 1/ rep(a[j,], freq[j,]))
-                Dj <- sapply(a1, sum)
+            if (type != 'JSSAsecrD') {  # 2020-10-28 do not recalc Dj
+                Dj <- numeric(J)
+                if (HTbysession) {
+                    a <- openCR.esa(object, bysession = TRUE)  ## session x ch
+                    # 2020-10-28 freq expansion (unsqueezing) shifted to openCR.esa
+                    Dj <- sapply(a, function(x) sum(1/x))
+                }
+                else {
+                    Dj[1] <- superD * b[1]
+                    for (j in 2:J) Dj[j] <- Dj[j-1] * phij[j-1] + superD*b[j]
+                }
             }
-            else {
-                Dj[1] <- superD * b[1]
-                for (j in 2:J) Dj[j] <- Dj[j-1] * phij[j-1] + superD*b[j]
-            }
-
             df$D <- Dj
 
             out <- list(totalobserved = totaln, parameters = parnames, superD = superD,

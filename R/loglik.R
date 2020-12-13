@@ -9,6 +9,7 @@
 # 2018-03-26 switch pch0 to pch1
 # 2019-04-09 ejected open.secr.loglikfn to logliksecr.R
 # 2019-04-09 explicit treatment of count detector; dropuse of data$multi
+# 2020-12-07 CJSmte (Markovian Temporary Emigration) trial - not completed
 
 # types
 
@@ -16,19 +17,20 @@
 # JSSAb = 2
 # JSSAl = 3
 # JSSAf = 4
-# JSSAfCL = 15
-# JSSAlCL = 16
-# JSSAbCL = 17
+# CJSmte = 5
+# JSSAfCL = PLBf = 15
+# JSSAlCL = PLBl = 16
+# JSSAbCL = PLBb = 17
 # JSSAB = 18
 # JSSAN = 19
 # Pradel = 20
 # JSSARET = 21
 # JSSAg = 22
-# JSSAgCL = 23
+# JSSAgCL = PLBg = 23
 # Pradelg = 26
 # JSSAfgCL = 27
 # JSSAk = 28
-# JSSAkCL = 29
+# JSSAkCL = PLBk = 29
 
 #---------------------------------------------------------
 
@@ -65,8 +67,8 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     #-----------------------------------------
     # check valid parameter values
     if (!all(is.finite(realparval))) {
-        cat ('beta vector :', beta, '\n')
-        cat ('real vector :', realparval, '\n')
+        message ('beta vector : ', paste(beta, collapse=', '))
+        message ('real vector : ', paste(realparval, collapse=','))
         warning ("extreme 'beta' in 'openloglikfn' ",
                  "(try smaller stepmax in nlm Newton-Raphson?)")
         return (1e10)
@@ -82,8 +84,11 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         message('Type ', type)
         message('J    ', data$J)
         message('nmix ', data$details$nmix)
+        message('realparval')
         print(realparval)
+        message('table(PIA)')
         print (table(PIA))
+        message('data$intervals')
         print(data$intervals)
         flush.console()
     }
@@ -110,6 +115,22 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     else if (data$details$R & (type %in% c(28,29))) {
         comp <- kappaloglik (type, realparval,  PIA, PIAJ, data)
     }
+    # optional code using m.array
+    # else if (data$details$R & (type %in% c(1))) {
+    #     if (data$details$nmix>1) stop ("R CJS does not use mixture")
+    #     comp <- CJSloglik (
+    #         type,
+    #         x = 1,
+    #         data$capthist,
+    #         data$marray,
+    #         data$J,
+    #         data$cumss,
+    #         nmix = 1,
+    #         realparval,
+    #         PIA[1,,,,drop=FALSE],
+    #         PIAJ[1,,,drop=FALSE],
+    #         data$intervals)
+    # }
     else {
         onehistory <- function (n, pmix) {
             sump <- 0
@@ -128,7 +149,9 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     PIA[n,,,,drop = FALSE],
                     PIAJ[n,,,drop = FALSE],
                     data$intervals,
-                    data$details$CJSp1)
+                    data$details$CJSp1
+                    # , data$moveargsi
+                )
                 sump <- sump + pmix[x,n] * temp
             }
             if (any(sump<=0)) {
@@ -174,6 +197,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         
         #####################################################################
         # Component 2: Probability of missed animals (all-zero histories)
+        # not CJS, CJSmte
         if (type %in% c(2:4,15:19, 21, 22, 23, 27, 28, 29)) {
             pdot <- rep(0, data$nc)
             if (data$learnedresponse)
@@ -213,6 +237,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
 
         #####################################################################
         # Component 3: Probability of observing nc animals
+        # not CJS, CJSmte
         if (type %in% c(2:4,18,19,21, 22, 28)) {
             if (type %in% c(2,3,4,22,28)) {
                 superN <- realparval[nrow(realparval)*3+1] # Nsuper direct
@@ -241,20 +266,24 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
 
     ## debug
     if (data$details$debug>=1) {
-        cat("Likelihood components (comp) ", format(comp, digits=10), "\n")
-        cat("Total ", format(loglik, digits = 10), "\n")
-        browser()
+        message("Likelihood components (comp) ", format(comp, digits=10))
+        message("Total ", format(loglik, digits = 10))
+        if (data$details$debug>1) browser()
     }
 
     .openCRstuff$iter <- .openCRstuff$iter + 1   ## moved outside loop 2011-09-28
     if (data$details$trace) {
         if (!is.null(data$details$fixedbeta))
             beta <- beta[is.na(data$details$fixedbeta)]
-        cat(format(.openCRstuff$iter, width=4),
-            formatC(round(loglik,dig), format='f', digits=dig, width=10),
-            formatC(beta, format='f', digits=dig+1, width=betaw),
-            '\n', sep = " ")
-
+        # cat(format(.openCRstuff$iter, width=4),
+        #     formatC(round(loglik,dig), format='f', digits=dig, width=10),
+        #     formatC(beta, format='f', digits=dig+1, width=betaw),
+        #     '\n', sep = " ")
+        message(format(.openCRstuff$iter, width=4), ' ',
+            formatC(round(loglik,dig), format='f', digits=dig, width=10), ' ',
+            paste(formatC(beta, format='f', digits=dig+1, width=betaw), 
+                collapse = ' '))
+        
         flush.console()
     }
 

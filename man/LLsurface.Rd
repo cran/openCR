@@ -17,7 +17,7 @@ This is a method for the generic function \code{LLsurface} defined in \pkg{secr}
 \usage{
 
 \method{LLsurface}{openCR}(object, betapar = c("phi", "sigma"), xval = NULL, yval = NULL, 
-   centre = NULL, realscale = TRUE, plot = TRUE, plotfitted = TRUE, ncores = 1, ...)
+   centre = NULL, realscale = TRUE, plot = TRUE, plotfitted = TRUE, ncores = NULL, ...)
 
 }
 
@@ -49,8 +49,7 @@ otherwise).
 Contour plots may be customized by passing graphical parameters through
 the \dots argument.
 
-If \code{ncores > 1} the \pkg{parallel} package is used to create
-processes on multiple cores (see \link{Parallel} for more).
+The value of \code{ncores} is passed to \code{openCR.fit}.
 
 }
 
@@ -75,6 +74,9 @@ grid point
   they relate i.e. the beta parameter for the base level of the real
   parameter. This is because link functions are defined for real
   parameters not beta parameters.
+  
+  Handling of multiple threads was changed in version 1.5.0 to align 
+  with \code{\link{LLsurface.secr}}.
 
   The contours are approximate because they rely on interpolation. 
   

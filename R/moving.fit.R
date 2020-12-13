@@ -67,7 +67,7 @@ moving.fit <- function(..., width = 3, centres = NULL, filestem = NULL,
     if (is.null(arg$type)) arg$type <- 'CJS'
     if (is.null(arg$movementmodel)) arg$movementmodel <- 'static'
     ## perform join if ms, etc.
-    ch <- stdcapthist(ch, arg$type, arg$movementmodel, arg$nclone, FALSE)
+    ch <- stdcapthist(ch, arg$type, arg$nclone, FALSE)
     oldoccasion <- 1:ncol(ch)
     # oldinterv <- intervals(ch)
     primary <- primarysessions(intervals(ch))

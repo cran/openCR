@@ -9,8 +9,8 @@ PCH0secrjcpp <- function(type, x, nc, jj, cumss, kk, mm, cc0, PIA0, gk0, binomN,
     .Call(`_openCR_PCH0secrjcpp`, type, x, nc, jj, cumss, kk, mm, cc0, PIA0, gk0, binomN, Tsk)
 }
 
-PCH1secrparallelcpp <- function(x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movemodel, usermodel, kernel, mqarray, cellsize) {
-    .Call(`_openCR_PCH1secrparallelcpp`, x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movemodel, usermodel, kernel, mqarray, cellsize)
+PCH1secrparallelcpp <- function(x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, edgecode, usermodel, kernel, mqarray, cellsize) {
+    .Call(`_openCR_PCH1secrparallelcpp`, x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, edgecode, usermodel, kernel, mqarray, cellsize)
 }
 
 gethcpp <- function(nc1, cc, nmix, nk, ss, mm, PIA, Tsk, hk) {
@@ -37,7 +37,7 @@ allhistparallelcpp <- function(x, type, nc, CJSp1, grain, intervals, cumss, w, f
     .Call(`_openCR_allhistparallelcpp`, x, type, nc, CJSp1, grain, intervals, cumss, w, fi, li, openval, PIA, PIAJ)
 }
 
-allhistsecrparallelcpp <- function(x, type, mm, nc, binomN, CJSp1, calcpdotbd, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movemodel, usermodel, moveargsi, kernel, mqarray, cellsize) {
-    .Call(`_openCR_allhistsecrparallelcpp`, x, type, mm, nc, binomN, CJSp1, calcpdotbd, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movemodel, usermodel, moveargsi, kernel, mqarray, cellsize)
+allhistsecrparallelcpp <- function(x, type, mm, nc, binomN, CJSp1, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize) {
+    .Call(`_openCR_allhistsecrparallelcpp`, x, type, mm, nc, binomN, CJSp1, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize)
 }
 

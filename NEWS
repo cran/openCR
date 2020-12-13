@@ -1,3 +1,32 @@
+version 1.5.0 (2020-12-13)
+
+New features and changed behaviour
+    o number of threads managed via RCPP_PARALLEL_NUM_THREADS as in secr
+    o PLB... aliases for JSSA...CL type names
+    o openCR.fit() new argument 'edgemethod' ("truncate", "wrap", "none")
+    o par.openCR.fit() modified to allow each fit to multithread
+    o openCR.fit() and openCR.design() new argument 'agecov' for grouping ages
+    o openCR.fit() and openCR.design() new argument 'minimumage'
+    o openCR.esa() now returns a list when bysession = TRUE
+    o openCR.esa() unsqueezes result (allows for histories with freq>1)
+
+Bugs fixed
+    o movementmodel "user" failed (typo in openCR.fit line 80)
+    o secr LL component 3 miscalculated when some capthist repeated (biased D-hat)
+    o movement models bias in D-hat due to edge effect
+    o movement models failed when R = TRUE (dim(PIA) error)
+    o derived.openCR() mistakenly report kappa for spatial models
+    o some factor covariates mishandled by openCR.make.newdata() and hence by 
+      predict, derived
+
+Other
+    o more robust user-defined kernel 
+    o calcpdotbd details argument of openCR.fit defunct
+    o correct description of runsim.spatial() intervals argument
+    o par.openCR.fit() ncores>1 is deprecated (slower than ncores=1!)
+    o par.openCR.fit() logfile defaults to automatically generated tempfile
+    o Suggests testthat, adds some unit tests
+
 version 1.4.4 (2020-09-01)
 
 New features and changed behaviour

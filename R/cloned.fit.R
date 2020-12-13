@@ -15,7 +15,7 @@ cloned.fit <- function (object, nclone = 100, newdata = NULL, linkscale = FALSE)
     object$details$nclone <- nclone
     args <- object[c('capthist','type','model',
                      'mask','detectfn','binomN','movementmodel',
-                     'link', 'fixed','timecov','sessioncov','details','method','trace','ncores')]
+                     'link', 'fixed','timecov','sessioncov','agecov','details','method','trace','ncores')]
     args$start <- object$fit$par
     fit1 <- do.call(openCR.fit, args)
     if (linkscale) {

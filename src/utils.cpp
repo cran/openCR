@@ -159,25 +159,45 @@ void convolvemq (
         int    mm,                    // number of points on mask 
         int    kn,                    // number of points on kernel
         int    j,                     // session number 1..jj 
-        const  RMatrix<int> mqarray,  // input 
+        int    edgecode,              // 0 none, no action; 1 wrapped, no action; 2 normalize truncated kernel
+        const  RMatrix<int> &mqarray, // input [& 2020-10-31]
         std::vector<double> &kernelp, // p(move|dx,dy) for points in kernel 
         std::vector<double> &pjm      // return value
 )
 {
     int m, q, mq;
+    double sump;
     std::vector<double> workpjm(mm);
     
     // convolve movement kernel and pjm... 
     for (m = 0; m < mm; m++) {
-        for (q=0; q < kn; q++) {           // over movement kernel 
-            mq = mqarray(m,q);  
-            if (mq >= 0) {                 // post-dispersal site is within mask 
-                workpjm[mq] += pjm[m] * kernelp[kn * (j-1) + q];   // probability of this move 
+        if (edgecode == 2) {
+            // 2020-10-29 adjust for edge-truncated kernel cf convolvemqold
+            sump = 0;
+            for (q=0; q < kn; q++) {           // over movement kernel 
+                if (mqarray(m,q) >= 0) {       // post-dispersal site is within mask 
+                    sump += kernelp[kn * (j-1) + q];
+                }
+            }
+        }
+        else {
+            sump = 1.0;
+        }
+        if (sump>0) {
+            // over movement kernel 
+            for (q=0; q < kn; q++) {           
+                mq = mqarray(m,q);  
+                // post-dispersal site is within mask 
+                if (mq >= 0) {                 
+                    // probability of this move 
+                    workpjm[mq] += pjm[m] * kernelp[kn * (j-1) + q] / sump;   
+                }
             }
         }
     }
-    for (m = 0; m < mm; m++) 
+    for (m = 0; m < mm; m++) {
         pjm[m] = workpjm[m];
+    }
 }
 //--------------------------------------------------------------------------
 

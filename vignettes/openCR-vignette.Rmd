@@ -1,5 +1,5 @@
 ---
-title: '**openCR** 1.4 - open population capture--recapture'
+title: '**openCR** 1.5 - open population capture--recapture'
 author: "Murray Efford"
 date: "`r Sys.Date()`"
 output: 
@@ -20,7 +20,7 @@ mycache <- FALSE
 
 \vspace{12pt}
 
-The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2019) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. The spatial model was described by Efford and Schofield (2020).
+The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2020) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. The spatial model was described by Efford and Schofield (2020).
 
 This is still something of a work in progress, so be careful to check results 'make sense' and be aware of [limitations](#limitations).
 
@@ -30,7 +30,7 @@ This is still something of a work in progress, so be careful to check results 'm
 
 ## Model types
 
-**openCR**  fits nonspatial open-population models of the Cormack-Jolly-Seber (CJS) and Jolly-Seber-Schwarz-Arnason (JSSA[^footnote2] or 'POPAN') types. JSSA models are offered in both full and conditional likelihood forms, each with several parameterizations of recruitment, and incorporating Pollock's robust design. Pradel analyses are also provided.
+**openCR**  fits nonspatial open-population models of the Cormack-Jolly-Seber (CJS) and Jolly-Seber-Schwarz-Arnason (JSSA[^footnote2] or 'POPAN') types. JSSA models are offered in both full and conditional likelihood forms, each with several parameterizations of recruitment, and incorporating Pollock's robust design. Conditional-likelihood JSSA models are also called Pradel--Link--Barker (PLB) models. Pradel analyses are also provided.
 
 [^footnote2]: As far as I know, this abbreviation was first used by Pledger et al. (2010). Recognising the contributions of Crosbie and Manly, Schofield and Barker (2009) and Cowen et al. (2010) referred to it the Crosbie-Manly-Arnason-Schwarz (CMAS) model. Link and Barker (2010) used 'Crosbie-Manly-Schwarz-Arnason' (CMSA) for the same model. CMSA has since been used by various authors, including Schofield and Barker (2016). JSSA is used in **openCR** because this highlights its evolution from the widely known Jolly-Seber model. POPAN refers to the software of Schwarz and Arnason (1996), recycled as the name of a data type in MARK.
 
@@ -114,13 +114,13 @@ Estimates of recruitment or implied recruitment from any one of these six parame
 
 [^footnote4]: except for some mostly trivial differences relating to removals
 
-Schwarz (2001) is illuminating (see also chapter on Jolly-Seber models by Schwarz and Arnason in the MARK book, Cooch and White 2017). Pradel (1996),  Williams, Nichols and Conroy (2002: p.518 et seq.), Pledger et al. (2003, 2010) and Link and Barker (2005) also comment on and compare JS parameterizations. See also the MARK help page on 'Recruitment Parameters in Jolly-Seber models' ('Recruitment Parameters' in the help index).
+Schwarz (2001) is illuminating (see also chapter on Jolly-Seber models by Schwarz and Arnason in the MARK book, Cooch and White 2019). Pradel (1996),  Williams, Nichols and Conroy (2002: p.518 et seq.), Pledger et al. (2003, 2010) and Link and Barker (2005) also comment on and compare JS parameterizations. See also the MARK help page on 'Recruitment Parameters in Jolly-Seber models' ('Recruitment Parameters' in the help index).
 
-## Conditional vs full likelihood JSSA 
+## Conditional (PLB) vs full likelihood JSSA 
 
 For each JSSA recruitment parameterization there is a choice between models that include the total number of detected individuals  ($u_\cdot$ or $n$ in different notations), and models that condition on this number. Conditional-likelihood models do not directly estimate abundance; abundance is estimated as a derived parameter (Schwarz and Arnason 1996). Full-likelihood models include abundance as a parameter. The choice of formulation has virtually no effect on the parameter estimates[^footnote5]. The conditional likelihood form is somewhat faster and easier to fit (Schwarz and Arnason 1996), and it focuses on parameters that are estimated robustly (apparent survival, seniority, population growth rate).
 
-The conditional models discussed by Pradel (1996), Link and Barker (2005), Schofield and Barker (2016) and others lack a distinguishing label to indicate their collective similarity. The label Pradel--Link--Barker PLB is suggested by Efford and Schofield (2020).
+The conditional models discussed by Pradel (1996), Link and Barker (2005), Schofield and Barker (2016) and others lack a distinguishing label to indicate their collective similarity. The label Pradel--Link--Barker PLB was suggested by Efford and Schofield (2020).
 
 [^footnote5]: this may not be true for spatial models with spatially varying density, but these models are not considered in **openCR**.
 
@@ -184,6 +184,8 @@ The various models available in **openCR** are named to encode the distinctions 
 
 Thus 'JSSAsecrfCL' is a spatial JSSA model parameterized in terms of per capita recruitment $f$ and fitted by maximizing the conditional likelihood (a spatial version of Link and Barker (2005), minus parameter covariation). Any movement model is specified separately with the 'movementmodel' argument of `openCR.fit`.
 
+Models of the form 'JSSA...CL' are variations on the Pradel--Link--Barker models. **openCR** 1.5.0 recognises labels of the form 'PLB...' as an alias for each of these models. Thus 'PLBf' is synonymous with 'JSSAfCL', and 'PLBsecrl' is synonymous with 'JSSAsecrlCL'.
+
 Parameters vary with the type of model, as listed below. Each of these primary parameters ('real' parameters in MARK) may also be modelled as a linear combination of predictors on a suitable link scale, allowing the inclusion of covariates and constraints. The coefficients of the parameter-specific linear combinations are called 'beta' parameters in MARK; the likelihood is maximized with respect to the concatenated list of beta parameters.
 
 ## Non-spatial **openCR** models
@@ -208,21 +210,21 @@ Table 1. Parameter definitions and default link functions (nonspatial models)
 
 Table 2. Parameters of nonspatial **openCR** models
  
-| Type    | p | phi | b | f | gamma | lambda | superN | BN | N  |
-|:--------|---|-----|---|---|---|---|---|---|---|    
-| CJS     | + | +   |   |   |   |   |   |   |   |
-| JSSAbCL | + | +   | + |   |   |   |   |   |   |
-| JSSAfCL | + | +   |   | + |   |   |   |   |   |
-| JSSAgCL | + | +   |   |   | + |   |   |   |   |
-| JSSAlCL | + | +   |   |   |   | + |   |   |   |
-| JSSAb   | + | +   | + |   |   |   | + |   |   |
-| JSSAf   | + | +   |   | + |   |   | + |   |   |
-| JSSAg   | + | +   |   |   | + |   | + |   |   |
-| JSSAl   | + | +   |   |   |   | + | + |   |   |
-| JSSAB   | + | +   |   |   |   |   |   | + |   |
-| JSSAN   | + | +   |   |   |   |   |   |   | + |
+| Type    | Alias | p | phi | b | f | gamma | lambda | superN | BN | N  |
+|:--------|----|---|-----|---|---|---|---|---|---|---|    
+| CJS     | |+ | +   |   |   |   |   |   |   |   |
+| JSSAbCL | PLBb | + | +   | + |   |   |   |   |   |   |
+| JSSAfCL | PLBf | + | +   |   | + |   |   |   |   |   |
+| JSSAgCL | PLBg | + | +   |   |   | + |   |   |   |   |
+| JSSAlCL | PLBl | + | +   |   |   |   | + |   |   |   |
+| JSSAb   | | + | +   | + |   |   |   | + |   |   |
+| JSSAf   | | + | +   |   | + |   |   | + |   |   |
+| JSSAg   | | + | +   |   |   | + |   | + |   |   |
+| JSSAl   | | + | +   |   |   |   | + | + |   |   |
+| JSSAB   | | + | +   |   |   |   |   |   | + |   |
+| JSSAN   | | + | +   |   |   |   |   |   |   | + |
 
-Models with type ending in CL are of the Pradel--Link--Barker type.
+Models with type ending in CL are of the Pradel--Link--Barker type, with aliases as shown.
 
 ### Non-spatial models using sufficient statistics
 
@@ -252,23 +254,23 @@ Table 3. Parameter definitions and default link functions (spatial models)
 
 Table 4. Parameters of spatial **openCR** models
 
-| Type        | lambda0 | sigma | z | phi | b | f | gamma | lambda | superD | BD | D |
-|:------------|---|---|---|---|---|---|---|---|---|---|---|    
-| CJSsecr     | + | + | + | + |   |   |   |   |   |   |   |
-| JSSAsecrbCL | + | + | + | + | + |   |   |   |   |   |   |
-| JSSAsecrfCL | + | + | + | + |   | + |   |   |   |   |   |
-| JSSAsecrgCL | + | + | + | + |   |   | + |   |   |   |   |
-| JSSAsecrlCL | + | + | + | + |   |   |   | + |   |   |   |
-| JSSAsecrb   | + | + | + | + | + |   |   |   | + |   |   |
-| JSSAsecrf   | + | + | + | + |   | + |   |   | + |   |   |
-| JSSAsecrg   | + | + | + | + |   |   | + |   | + |   |   |
-| JSSAsecrl   | + | + | + | + |   |   |   | + | + |   |   |
-| JSSAsecrB   | + | + | + | + |   |   |   |   |   | + |   |
-| JSSAsecrD   | + | + | + | + |   |   |   |   |   |   | + |
-| secrCL      | + | + | + |   |   |   |   |   |   |   |   |
-| secrD       | + | + | + |   |   |   |   |   | + |   |   |
+| Type        | Alias | lambda0 | sigma | z | phi | b | f | gamma | lambda | superD | BD | D |
+|:------------|----|---|---|---|---|---|---|---|---|---|---|---|    
+| CJSsecr     | | + | + | + | + |   |   |   |   |   |   |   |
+| JSSAsecrbCL | PLBsecrb | + | + | + | + | + |   |   |   |   |   |   |
+| JSSAsecrfCL | PLBsecrf | + | + | + | + |   | + |   |   |   |   |   |
+| JSSAsecrgCL | PLBsecrg | + | + | + | + |   |   | + |   |   |   |   |
+| JSSAsecrlCL | PLBsecrl | + | + | + | + |   |   |   | + |   |   |   |
+| JSSAsecrb   | | + | + | + | + | + |   |   |   | + |   |   |
+| JSSAsecrf   | | + | + | + | + |   | + |   |   | + |   |   |
+| JSSAsecrg   | | + | + | + | + |   |   | + |   | + |   |   |
+| JSSAsecrl   | | + | + | + | + |   |   |   | + | + |   |   |
+| JSSAsecrB   | | + | + | + | + |   |   |   |   |   | + |   |
+| JSSAsecrD   | | + | + | + | + |   |   |   |   |   |   | + |
+| secrCL      | | + | + | + |   |   |   |   |   |   |   |   |
+| secrD       | | + | + | + |   |   |   |   |   | + |   |   |
 
-Spatial models with type ending in CL have features in common with the Pradel--Link--Barker models, hence the label 'spatial PLB'.
+Spatial models with type ending in CL have features in common with the Pradel--Link--Barker models, hence the aliases as shown.
 
 # Model formulae
 
@@ -286,7 +288,7 @@ Table 5. Built-in predictors ('sessions' refers to primary sessions)
 | t     | all except 'superN', 'superD' | synonym of 'session' |
 | Session     | all except 'superN', 'superD' | Continuous time |
 | b | p, phi, lambda0, sigma | learned response (persists across sessions) |
-| B | p, lambda0, sigma | detector-specific transient (Markovian) response across sessions|
+| B | p, lambda0, sigma | transient (Markovian) response across sessions|
 | bk | p, phi, lambda0, sigma | detector-specific learned response (persists across sessions) |
 | bsession | p, lambda0, sigma | learned response within sessions |
 | Bsession | p, lambda0, sigma | transient (Markovian) response within sessions|
@@ -323,7 +325,7 @@ Covariates for detection parameters in secondary sessions are provided in the 't
 
 ## Closed populations
 
-The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.4 fits simple closed models faster than **secr** 3.2. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
+The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.5 fits simple closed models faster than **secr** 4.3. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
 
 ```{r compare, cache = mycache, warning = FALSE}
 msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
@@ -360,7 +362,9 @@ Finite mixture likelihoods are prone to multimodality. Misleading estimates resu
 
 ## Age
 
-If age is modelled as a factor then it is useful to group older animals in a maximum age class ('maximumage'). Animals are assumed to be first caught at age zero unless 'initialage' is specified. 'maximumage' and 'initialage' are optional components of the 'details' argument of `openCR.fit. 'initialage' can name an individual covariate to avoid the assumption that all animals are the same age at first detection.
+If age is modelled as a factor then it is useful to group older animals in a maximum age class ('maximumage'). 'minimumage', 'maximumage' and 'initialage' are optional components of the 'details' argument of `openCR.fit`. 'initialage' can name an individual covariate to avoid the assumption that all animals are the minimum age at first detection.
+
+The agecov argument of `openCR.fit` may be used to specify a recoding of numerical age, analogous to the sessioncov argument of `secr.fit`. Thus numerical ages may be bracketed into 'young', 'middle' and 'old'. The length of agecov should match the number of numerical ages (maximumage - minimumage + 1).
 
 For a quadratic relationship with age, specify an additive model with both Age and Age2 terms (e.g., model = phi ~ Age + Age2).
 
@@ -497,7 +501,7 @@ coef(fitd)
 
 ## Mean of a parameter across levels of a factor
 
-Suppose you wish to estimate the average of a parameter across levels of a factor such as time (session). Cooch and White (2017 Section 6.15) advocate modifying the design matrix so that one beta parameter (coefficient) relates directly to the mean. This is achieved very simply in `openCR.fit`[^footnote10] by setting the contrast function for the factor to `contr.sum` in the `details` argument[^footnote11]. With the resulting factor coding the first coefficient corresponds to the mean. Applying this to estimate the average time-specific survival rate for the dippers assuming constant recapture probability:
+Suppose you wish to estimate the average of a parameter across levels of a factor such as time (session). Cooch and White (2019 Section 6.15) advocate modifying the design matrix so that one beta parameter (coefficient) relates directly to the mean. This is achieved very simply in `openCR.fit`[^footnote10] by setting the contrast function for the factor to `contr.sum` in the `details` argument[^footnote11]. With the resulting factor coding the first coefficient corresponds to the mean. Applying this to estimate the average time-specific survival rate for the dippers assuming constant recapture probability:
 ```{r contrsum, eval = TRUE, cache = mycache}
 fit <- openCR.fit(dipperCH, model = phi~t, details = list(contrasts = list(t = contr.sum)))
 invlogit(coef(fit)['phi',c('beta','lcl','ucl')])
@@ -513,7 +517,7 @@ Potential movement of home ranges between primary sessions (= dispersal) is a cr
 
 The remaining options (normal, exponential, t2D, uniform, and user-supplied function) fit a dispersal kernel (Nathan et al. 2012) to represent movement between primary sessions. This usually requires at least one more parameter to represent the spatial scale of dispersal. 
 
-IMPORTANT NOTE: Movement models were recoded in **openCR** 1.4.0 and results may differ from previous releases.
+IMPORTANT NOTE: Movement models were recoded in **openCR** >=1.4.0 and results may differ from previous releases.
 
 **Table 6**. Models for movement between primary sessions.
 
@@ -524,7 +528,7 @@ IMPORTANT NOTE: Movement models were recoded in **openCR** 1.4.0 and results may
 | `normal` | `move.a` | Gaussian (bivariate normal) kernel |
 | `exponential` | `move.a` | Laplace (negative exponential) kernel |
 | `t2D` | `move.a`, `move.b` | 2-dimensional $t$-distribution kernel |
-| `uniform` | (none) | Uniform within kernel radius |
+| `uniform` | (none) | Uniform within arbitrary kernel radius |
 | (user function) | `move.a`, `move.b` | User-supplied kernel function (`ncores = 1` only)|
 
 ## Movement kernels {#kernels}
@@ -538,9 +542,11 @@ The extent of the kernel is controlled by details argument 'kernelradius' that g
 | Kernel | `move.a` | `move.b` | pdf | Expected movement* | Proportion* $r > R$ |
 |-----------|------|------|-----------------------|--------------------------|---------------------|
 | normal | $\alpha_g$ | | $\frac{1}{2 \pi \alpha_g^2} \exp\left( \frac{-r^2}{2\alpha_g^2} \right)$ | $\frac{\alpha_g \sqrt \pi}{\sqrt 2}$ | $\exp \left( - \frac{R^2}{2 \alpha_g^2}\right)$|
-| exponential | $\alpha_l$ | | $\frac{1}{2 \pi \alpha_l^2} \exp \left( \frac{-r}{\alpha_l} \right)$ | $2 \alpha_l$ | $\exp \left( - \frac{R}{\alpha_l}\right)$|
+| exponential | $\alpha_l$ | | $\frac{1}{2 \pi \alpha_l^2} \exp \left( \frac{-r}{\alpha_l} \right)$ | $2 \alpha_l$ | ** |
 | t2D | $\alpha_t$ | $\beta$ | $\frac{\beta}{\pi \alpha_t^2} \left( 1 + \frac{r^2}{\alpha_t^2} \right)^{-(\beta+1)}$ | $\alpha_t \frac{\sqrt \pi}{2} \frac{\Gamma \left( \beta-0.5 \right)}{\Gamma (\beta)}$, $\beta > 0.5$| $\left(\frac{\alpha_t^2}{\alpha_t^2 + R^2} \right)^\beta$|
-\* Continuous, untruncated, kernel. Expected values for the discretized and truncated kernel will be less (see `summary.kernel`).
+\* Continuous, untruncated, kernel. Expected values for the discretized and truncated kernel will be less (see `summary.kernel`). 
+
+\*\* use numerical integration
 
 \vspace{12pt}
 
@@ -552,6 +558,20 @@ Clark et al. (1999 p. 1485) found it hard to fit this kernel to seed dispersal d
 ## User-defined kernel
 
 A kernel function may be specified by the user and passed in the argument `movementmodel`. The function should have argument $r$, and optionally $a$, or $a$ and $b$ (the last two correspond to **openCR** parameters `move.a` and `move.b`) It should return a vector of values one for each element of $r$, although length(r) = 1 when the likelihood is evaluated in C++ (`details$R = FALSE`, the default). The code should give a valid result when $r = 0$. With the default link ('log' for both `move.a` and `move.b`) there is no risk of $a \leq 0$ or $b \leq 0$.
+
+## Edge effects
+
+When a kernel is applied to cells near the edge of a habitat mask some projected movements will lie outside the mask. This creates a problem for the model. Kernel cell values are probabilities summing to one; the cell probabilities of a truncated kernel will no longer be true probabilities and results are prone to bias. 
+
+`openCR.fit` offers two approaches to resolve this problem:
+
+1. If the mask is rectangular, the truncated cells (and their probabilities) may be 'wrapped' to the opposing edge of the mask. This works fine if the kernel is not too large. Wrapping does not impose a computational burden. A rectangular mask is generated by `make.mask` with the default `type = 'traprect'`.
+
+2. For any mask, the cell probabilities of a truncated kernel may be scaled (normalized) so that they sum to 1.0. This requires substantial additional computation.
+
+The edge method is chosen by setting the argument 'edgemethod' in `openCR.fit`; the options are 'truncate' (default in 1.5.0), 'wrap', and 'none'. Wrapping is fast, but it will cause an error if the mask is not rectangular. If a rectangular mask does not make sense (e.g., because the habitat is patchy) then you must use `edgemethod = 'truncate'` for unbiased estimates. 
+
+Prior to 1.5.0 there was no adjustment (movement truncated without normalization, equivalent to `edgemethod = 'none'` in later versions) and estimates from movement models could be biased because the probability of a null (all-zero) history was estimated incorrectly.
 
 ## Plotting and summary
 
@@ -597,7 +617,7 @@ The `print` method for objects from `derived` provides some control over formatt
 
 `derived` does not yet provide delta-method SE or confidence intervals for derived parameters. A reliable workaround for abundance paramaters (N, D)[^footnote13] is to (i) infer the point estimates with `derived`[^footnote14], (ii) assemble a start vector on the link scale(s) for an equivalent full-likelihood `openCR.fit` model that includes the derived abundances, and (iii) run `openCR.fit` with `method = "none"` to compute the hessian at the MLE, and hence the full variance-covariance matrix.
 
-[^footnote13]: This may sometimes be feasible for derived recruitment parameters, but given the doubts introduced by differing constraints it is better just to refit the model.
+[^footnote13]: This may sometimes be feasible for derived recruitment parameters, but given the doubts introduced by differing constraints (e.g. constant $f$ vs constant $\lambda$) it is better just to refit the model.
 
 [^footnote14]: These are also the MLE when distribution = "poisson" (e.g., Schofield and Barker 2016).
 
@@ -673,15 +693,21 @@ Spatial models are slow to fit. Consider these options
 
 * Use no more mask points than necessary. Typically about 1000 will do (may not apply for kernel movement models).
 * Data with many occasions (secondary sessions) should be collapsed.
-* If you are interested in several models, fit them all at once with `par.openCR.fit` and ncores > 1. This can save a lot of time.
-* Don't assume that increasing the number of cores will necessarily speed up computations; additional cores impose overheads in cluster setup and communication.
-* Use the conditional likelihood (CL) models: estimates of phi and lambda are often all you need, and `derive` can give estimates of abundance (superN, N, superD, and D) from CL models, as well as alternative measures of recruitment.
+* Use the conditional likelihood (PLB) models: estimates of phi and lambda are often all you need, and `derive` can give estimates of abundance (superN, N, superD, and D) from PLB models, as well as alternative measures of recruitment.
 * Avoid individual covariates with many levels. This applies especially to continuous individual covariates: normally these should be discretized (coded as a few ordered categories, but *not* converted to factor).
-* First fit the most simple model and add complexity, using a simpler related model for 'start'.
+* First fit the most simple model and then add complexity; use a simpler related model for 'start'.
 * 'secr' data with detector type 'multi' fit much faster than 'proximity' data; use this option if it makes sense (and even maybe when it doesn't).
 * For problems with many parameters, 'cyclic fixing' may be useful (Schwarz and Arnason 1996; Pledger et al. 2003).
 
-**openCR** $\ge$ 1.2 is generally faster than **openCR** 1.1 because it automatically uses multiple threads to run some calculations in parallel. The speed difference can be impressive - around 4x. Multithreading uses [RcppParallel](https://rcppcore.github.io/RcppParallel/). A couple of tuning parameters are available. The number of threads is set with ncores argument in `openCR.fit`. By default, **openCR** uses one less than the number of (virtual) cores available (i.e. 7 on a quad-core desktop with hyperthreading). The `grain size' (see [RcppParallel](https://rcppcore.github.io/RcppParallel/) may be varied with details$grain, but seems to have little effect. 
+**openCR** $\ge$ 1.2 uses multiple threads to run some calculations in parallel. Multithreading uses [RcppParallel](https://rcppcore.github.io/RcppParallel/). A couple of tuning parameters are available. The number of threads is set with the 'ncores' argument of `openCR.fit`, or with the `setNumThreads` function of **secr** that sets the environment variable RCPP_PARALLEL_NUM_THREADS. By default **openCR** $\ge$ 1.5.0 uses only 2 cores, for compliance with CRAN rules. You can increase this up to the number of (virtual) cores available (i.e. 8 on a quad-core desktop with hyperthreading), or some lesser number if you want to multitask:
+
+```{r ncores}
+# RCPP_PARALLEL_NUM_THREADS 
+# recommended for quad-core Windows PC
+setNumThreads(7)
+```
+
+The `grain size' (see [RcppParallel](https://rcppcore.github.io/RcppParallel/)) may be varied with details$grain, but it seems to have little effect. 
 
 # Extras
 
@@ -723,7 +749,7 @@ if (requireNamespace("R2ucare"))
     ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
 ```
 
-This invocation of `ucare.cjs` calls the **R2ucare** functions `test3sr`, `test3sm`, `test2ct`, `test2cl` and `overall_CJS` for each sex and provides a condensed report. For interpretation see the original papers, the **R2ucare** [vignette](https://cran.r-project.org/package=R2ucare/vignettes/vignette_R2ucare.html), and Chapter 5 of the MARK book (Cooch and White 2017).  Lebreton et al. (1992: 86) indicate only Test 3SR is meaningful for these data (see also [openCR-examples.pdf][openCR-examples.pdf]).
+This invocation of `ucare.cjs` calls the **R2ucare** functions `test3sr`, `test3sm`, `test2ct`, `test2cl` and `overall_CJS` for each sex and provides a condensed report. For interpretation see the original papers, the **R2ucare** [vignette](https://cran.r-project.org/package=R2ucare/vignettes/vignette_R2ucare.html), and Chapter 5 of the MARK book (Cooch and White 2019).  Lebreton et al. (1992: 86) indicate only Test 3SR is meaningful for these data (see also [openCR-examples.pdf][openCR-examples.pdf]).
 
 ## Limitations of **openCR** {#limitations}
 
@@ -739,7 +765,7 @@ This invocation of `ucare.cjs` calls the **R2ucare** functions `test3sr`, `test3
 8. Mark-resight
 9. SE for derived parameters and estimates with mlogit link (to be fixed)
 
-Parameter counting and overdispersion adjustment are probably the most critical omissions. See Cooch and White (2017) for detailed coverage in the context of MARK.
+Parameter counting and overdispersion adjustment are probably the most critical omissions. See Cooch and White (2019) for detailed coverage in the context of MARK.
 
 ## Differences from **secr**  {#differences}
 
@@ -812,8 +838,8 @@ Nathan , R., Klein, E., Robledo-Arnuncio, J. J. and Revilla, E. (2012)
 Dispersal kernels: a review. In: J Clobert et al. *Dispersal Ecology and Evolution*. 
 Oxford University Press. Pp 187--210.
 
-Cooch, E. and White, G. (eds) (2017) *Program MARK: A Gentle
-Introduction*. 17th edition. Available online at
+Cooch, E. and White, G. (eds) (2019) *Program MARK: A Gentle
+Introduction*. 19th edition. Available online at
 http://www.phidot.org/software/mark/docs/book/.
 
 Crosbie, S. F. and Manly, B. F. J. (1985) Parsimonious modelling of capture--mark--recapture studies.
@@ -822,8 +848,8 @@ Crosbie, S. F. and Manly, B. F. J. (1985) Parsimonious modelling of capture--mar
 Efford, M. G. (2004) Density estimation in live-trapping
 studies. *Oikos* **106**, 598--610.
 
-Efford, M. G. (2019). secr: Spatially explicit capture--recapture models. R package version
-  3.2.1. https://CRAN.R-project.org/package=secr/
+Efford, M. G. (2020). secr: Spatially explicit capture--recapture models. R package version
+  4.3.2. https://CRAN.R-project.org/package=secr/
   
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:

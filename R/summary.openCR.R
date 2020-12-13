@@ -3,7 +3,7 @@
 summary.openCR <- function (object, newdata = NULL, alpha = 0.05, svtol = 1e-5, deriv = FALSE, ...) {
     
     secrmodel <- grepl("secr", object$type)
-    CLtype <- grepl("CL", object$type) || grepl("CJS", object$type) 
+    CLtype <- grepl("CL", object$type) || grepl("PLB", object$type) || grepl("CJS", object$type) 
     ch <- object$capthist
     det <- detector(traps(ch))[1]
     out <- vector('list')

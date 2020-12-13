@@ -151,6 +151,11 @@ fitnm <- openCR.fit(ovenCH, type = 'JSSAlCL', model = list(phi ~ t, lambda~t),
                     start = fitnr)
 AIC(fitnm,fitnr)
 
+## ----ncores-----------------------------------------------------------------------------
+# RCPP_PARALLEL_NUM_THREADS 
+# recommended for quad-core Windows PC
+setNumThreads(7)
+
 ## ----ucare------------------------------------------------------------------------------
 if (requireNamespace("R2ucare"))
     ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
