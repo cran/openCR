@@ -23,7 +23,7 @@ gethR <- function (mm, PIA, Tsk, hk) {
         for (s in 1:ss) {
             for(x in 1:nmix) {
                 for (k in 1:nk) {                         
-                    xmat[nc1*(s-1)+n, (x-1)*nk + k] = PIA[n,s,k,x]
+                    xmat[nc1*(s-1)+n, (x-1)*nk + k] = PIA[1,n,s,k,x]
                     xmat[nc1*(s-1)+n, nmix*nk + k] = Tsk[k,s]
                 }
             }
@@ -50,7 +50,7 @@ gethR <- function (mm, PIA, Tsk, hk) {
                 for (k in 1:nk) {
                     Tski <- Tsk[k,s]
                     for (x in 1:nmix) {
-                        c <- PIA[n,s,k,x];
+                        c <- PIA[1,n,s,k,x];
                         ## c==0 (PIA=0) implies detector not used on this occasion
                         if (c > 0) {
                             for (m in 1:mm) {

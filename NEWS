@@ -1,3 +1,47 @@
+version 2.0.1 (2021-05-09)
+
+New features and changed behaviour
+    o none
+
+Other
+    o run tests with Sys.setenv(RCPP_PARALLEL_BACKEND = "tinythread") 
+      to avoid CRAN errors
+    o added URL to DESCRIPTION
+    o onLoad() allows for possibility of single CPU (previous minimum 2)
+
+version 2.0.0 (2021-05-04)
+
+New features and changed behaviour
+    o stratified models
+    o generic method strata() for retrieving and assigning stratum names
+    o stratify() function to arrange data for stratified model
+    o openCR.fit() sparse movement kernels (new argument 'sparsekernel')
+    o openCR.fit() kernelradius elevated to full argument from 'details'
+    o make.kernel() saves empirical cumulative distribution function as attribute
+    o make.kernel() accepts fitted model as input
+    o pkernel() computes cumulative probability distribution of distance
+    o qkernel() computes quantiles of distance distribution
+    o dkernel() computes probability density of distance distribution
+    o matchscale() kernel scale parameter giving required quantile of distance
+    o plot.kernel() acquires argument 'title'
+    o new movementmodel "annular" in openCR.fit(), make.kernel() etc.
+    o HPX new detection function for binary detection
+    
+Bugs fixed
+    o age miscoded in openCR.make.newdata(), hence bad prediction for age models
+    o summary.kernel() proportion truncated misreported for exponential movement
+    o LLsurface.openCR() failed
+
+Other
+    o vignette drops call for multiple cores
+    o Age2 included in openCR.make.newdata()
+    o plotKernel() removed (superceded by plot method for kernel objects)
+    o 'openCR' object returned by openCR.fit includes kernel coordinates
+    o optional logmultinomial term precalculated and not affected by covariates
+    o fixed doi format in a citation
+    o avoid ':::' (use local versions of unexported 'secr' functions)
+    o Imports RcppParallel version >= 5.1.1 to dodge problems in earlier releases
+
 version 1.5.0 (2020-12-13)
 
 New features and changed behaviour

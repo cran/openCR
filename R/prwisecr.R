@@ -69,8 +69,9 @@ convolvemq <- function (
     ## convolve movement kernel and pjm...
     for (m in 1:mm) {
         if (edgecode == 2) {
+            ## warning: unresolved problem with some kernel/mask comb
             q <- mqarray[m,] + 1
-            q <- q[q>0]
+            q <- q[q>0]   # vector of indices to inside landing points
             sump <- sum(kernelp[kn * (j-1) + q], na.rm = T)
         }
         else {
@@ -108,7 +109,7 @@ prw <- function (n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, pjm
             }
             ## Captured in trap k
             else {
-                c <- PIA[n, s, k, x]
+                c <- PIA[1,n, s, k, x]
                 if (c >= 1) {    ## drops unset traps
                     pjm <- pjm * Tsk[k,s] * (1-p0[x,,hindex[n,s]]) *  gk[c, k, ] / h[x,,hindex[n,s]]
                 }
@@ -116,7 +117,7 @@ prw <- function (n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, pjm
         }
         else {
             for (k in 1:kk) {
-                c <- PIA[n,s,k,x]
+                c <- PIA[1,n,s,k,x]
                 if (c >= 1) {    # drops unset traps
                     count <- w[n,s,k]
                     if (count<0) {count <- -count; dead <- TRUE }
@@ -134,7 +135,7 @@ prw <- function (n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, pjm
 
 prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
                       openval, PIA, PIAJ, binomN, Tsk, intervals, h, hindex,
-                      CJSp1, moveargsi, movementcode, edgecode,
+                      CJSp1, moveargsi, movementcode, sparsekernel, edgecode,
                       usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL) {
 
     ## precompute p0 to save time (multicatch only)
@@ -143,8 +144,8 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
     if (movementcode > 1) {
         moveargsi <- pmax(moveargsi,0)
         moveargs <- getmoveargs (n, x, openval, PIAJ, intervals, moveargsi)
-        kernelp <- fillkernelp (jj, movementcode-2, kernel, usermodel, cellsize,
-                                moveargsi, moveargs, normalize = TRUE)
+        kernelp <- fillkernelp (jj, movementcode-2, sparsekernel, kernel, 
+            usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
     }
     if(type==6) {
         minb <- fi[n]

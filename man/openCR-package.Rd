@@ -27,8 +27,8 @@
   \tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 1.5.0\cr
-Date: \tab 2020-12-13\cr
+Version: \tab 2.0.1\cr
+Date: \tab 2021-05-09\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 

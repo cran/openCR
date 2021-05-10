@@ -12,7 +12,7 @@ Session-specific estimates of the chosen parameter are plotted.
 \usage{
 
 \method{plot}{openCR} (x, par = "phi", newdata = NULL, add = FALSE, xoffset = 0, ylim = NULL, 
-    useintervals = TRUE, CI = TRUE, intermediate.x = TRUE, alpha = 0.05, ...)
+    useintervals = TRUE, CI = TRUE, intermediate.x = TRUE, alpha = 0.05, stratum = 1, ...)
     
 }
 
@@ -29,6 +29,7 @@ Session-specific estimates of the chosen parameter are plotted.
   \item{intermediate.x}{logical; if TRUE then turnover parameters are plotted at 
         the mid point on the x axis of the interval to which they relate}
   \item{alpha}{numeric confidence level default (alpha = 0.05) is 95\% interval}
+  \item{stratum}{numeric; stratum to plot if more than one}
   \item{\dots}{other arguments passed to \code{\link{plot}}, \code{\link{points}} and \code{\link{segments}}}
 }
 

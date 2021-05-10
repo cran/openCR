@@ -25,8 +25,8 @@ superpopulation size and the turnover parameters.
     HTbysession = FALSE, ...)
 \method{derived}{openCRlist}(object, newdata = NULL, all.levels = FALSE, Dscale = 1, 
     HTbysession = FALSE, ...)
-openCR.esa(object, bysession = FALSE)
-openCR.pdot(object, bysession = FALSE)
+openCR.esa(object, bysession = FALSE, stratum = 1)
+openCR.pdot(object, bysession = FALSE, stratum = 1)
 
 }
 
@@ -38,6 +38,7 @@ openCR.pdot(object, bysession = FALSE)
   \item{HTbysession}{logical; Horvitz-Thompson estimates by session (see Details)}
   \item{...}{other arguments (not used)}
   \item{bysession}{logical; if TRUE then esa or pdot is computed separately for each session}
+  \item{stratum}{integer}
 }
 
 \details{

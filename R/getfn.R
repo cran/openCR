@@ -15,7 +15,7 @@ getD <- function ( type, J, nmix, pmix, openval, PIAJ, intervals) {
         # JSSAsecrl = 12
         # JSSAsecrb = 13
         # JSSAsecrg = 24
-        return(openval[PIAJ[1,1,1], 4])
+        return(openval[PIAJ[1,1,1,1], 4])
     }
     else {
         # JSSAsecrD = 8
@@ -23,9 +23,9 @@ getD <- function ( type, J, nmix, pmix, openval, PIAJ, intervals) {
 
         sumB <- 0
         for (x in 1:nmix) {
-            phij <- openval[PIAJ[1,1:(J-1),x], 2]^intervals    ## per session
+            phij <- openval[PIAJ[1,1,1:(J-1),x], 2]^intervals    ## per session
             if (type %in% 8) {
-                D <- openval[PIAJ[1, 1:J, x], 3]
+                D <- openval[PIAJ[1,1, 1:J, x], 3]
                 B <- D
                 for (j in 1:(J-1)) {
                     B[j+1] = D[j+1] - D[j] * phij[j]
@@ -33,7 +33,7 @@ getD <- function ( type, J, nmix, pmix, openval, PIAJ, intervals) {
                 sumB <- sumB + sum(B) * pmix[x]
             }
             else { ## type == 14
-                B <- openval[PIAJ[1,1:J,x],3] 
+                B <- openval[PIAJ[1,1,1:J,x],3] 
                 sumB <- sumB + sum(B) * pmix[x]
             }
         }
@@ -50,16 +50,16 @@ getN <- function ( type, ncf, J, nmix, pmix, openval, PIAJ, intervals) {
         # JSSAf = 4
         # JSSAg = 22
         # JSSAk = 28
-        return(openval[PIAJ[1,1,1], 4])
+        return(openval[PIAJ[1,1,1,1], 4])
     }
     else {
         # JSSAB = 18
         # JSSAN = 19
         sumB <- 0
         for (x in 1:nmix) {
-            phij <- openval[PIAJ[1,1:(J-1),x], 2]^intervals    ## per session
+            phij <- openval[PIAJ[1,1,1:(J-1),x], 2]^intervals    ## per session
             if (type %in% 19) {
-                N <- openval[PIAJ[1, 1:J, x], 3]
+                N <- openval[PIAJ[1,1, 1:J, x], 3]
                 B <- N
                 for (j in 1:(J-1)) {
                     B[j+1] = N[j+1] - N[j] * phij[j]
@@ -67,7 +67,7 @@ getN <- function ( type, ncf, J, nmix, pmix, openval, PIAJ, intervals) {
                 sumB <- sumB + sum(B) * pmix[x]
             }
             else { ## type == 18
-                B <- openval[PIAJ[1,1:J,x],3] 
+                B <- openval[PIAJ[1,1,1:J,x],3] 
                 sumB <- sumB + sum(B) * pmix[x]
             }
         }
@@ -78,18 +78,18 @@ getN <- function ( type, ncf, J, nmix, pmix, openval, PIAJ, intervals) {
 #------------------------------------------------------------------------
 
 getp <- function (n, x, openval, PIA) {
-    return(openval[PIA[n,,1,x], 1])    # p for each secondary session
+    return(openval[PIA[1,n,,1,x], 1])    # p for each secondary session
 }
 #------------------------------------------------------------------------
 
 getpj <- function (n, x, openval, PIAJ) {
-    return(openval[PIAJ[n,,x], 1])    # p for each primary session
+    return(openval[PIAJ[1,n,,x], 1])    # p for each primary session
 }
 #------------------------------------------------------------------------
 
 getphij <- function (n, x, openval, PIAJ, intervals) {
     J1 <- 1:length(intervals)
-    phi <- openval[PIAJ[n,J1,x], 2]
+    phi <- openval[PIAJ[1,n,J1,x], 2]
     c(exp(log(phi) * intervals),0)     ## phi for each primary session, zero for last
 }
 #------------------------------------------------------------------------
@@ -100,9 +100,9 @@ getmoveargs <- function (n, x, openval, PIAJ, intervals, moveargsi) {
     ## in the realparameter table (openval, openval0) when detectfn has 3 parameters
     J <- length(intervals) + 1
     moveargs <- matrix(0, nrow = J, ncol = 2)
-    moveargs[,1] <- openval[PIAJ[n,,x], moveargsi[1]+1, drop = FALSE]
+    moveargs[,1] <- openval[PIAJ[1,n,,x], moveargsi[1]+1, drop = FALSE]
     if (moveargsi[2]>0)
-        moveargs[,2] <- openval[PIAJ[n,,x], moveargsi[2]+1, drop = FALSE]
+        moveargs[,2] <- openval[PIAJ[1,n,,x], moveargsi[2]+1, drop = FALSE]
     moveargs[nrow(moveargs),] <- 0    ## movea for each primary session, zero for last
     moveargs
 }
@@ -111,21 +111,21 @@ getmoveargs <- function (n, x, openval, PIAJ, intervals, moveargsi) {
 getgamj <- function (n, x, openval, PIAJ, intervals) {
     J <- length(intervals)+1
     J2 <- 2:J
-    g <- openval[PIAJ[n, J2, x],3]
+    g <- openval[PIAJ[1,n, J2, x],3]
     c(0, exp(log(g) * intervals))
 }
 #------------------------------------------------------------------------
 
 getkapj <- function (n, x, openval, PIAJ) {
-    c(1, openval[PIAJ[n,-1, x],3])
+    c(1, openval[PIAJ[1,n,-1, x],3])
 }
 #------------------------------------------------------------------------
 
 getgamjl <- function (n, x, openval, PIAJ, intervals) {
     J1 <- 1:length(intervals)
-    phi <- openval[PIAJ[n, J1, x],2]
+    phi <- openval[PIAJ[1,n, J1, x],2]
     phij <- exp(log(phi) * intervals)
-    lam <- openval[PIAJ[n, J1, x],3]
+    lam <- openval[PIAJ[1,n, J1, x],3]
     lamj <- exp(log(lam) * intervals)
     c(0, phij/lamj)
 }
@@ -133,21 +133,21 @@ getgamjl <- function (n, x, openval, PIAJ, intervals) {
 
 getfj <- function (n, x, openval, PIAJ, intervals, phij) {
     J1 <- 1:length(intervals)
-    f <- openval[PIAJ[n, J1, x], 3]
+    f <- openval[PIAJ[1,n, J1, x], 3]
     c(exp(log(phij[J1]+f) * intervals) - exp(log(phij[J1] * intervals)), 0)
 }
 #------------------------------------------------------------------------
 
 getlj <- function (n, x, openval, PIAJ, intervals) {
     J1 <- 1:length(intervals)
-    l <- openval[PIAJ[n, J1, x], 3]
+    l <- openval[PIAJ[1,n, J1, x], 3]
     c(exp(log(l) * intervals), 0)
 }
 #------------------------------------------------------------------------
 
 getbeta0 <- function (n, x, openval, PIAJ) {
-    J <- ncol(PIAJ)
-    beta <- openval[PIAJ[n, , x], 3]   
+    J <- dim(PIAJ)[3] # ncol(PIAJ)
+    beta <- openval[PIAJ[1,n, , x], 3]   
     sumexp <- sum(exp(beta[-1]))
     if (J>1) {
         beta[2:J] <- exp(beta[2:J]) / (1 + sumexp)
@@ -215,7 +215,7 @@ getbetak <- function (n, x, openval, PIAJ, phij, intervals) {
 
 # parameterisation cf Pledger et al. 2010 p 885
 getbetaB <- function (n, x, openval, PIAJ) {
-    B <-  openval[PIAJ[n, , x],3]
+    B <-  openval[PIAJ[1,n, , x],3]
     B / sum(B)
 }
 #------------------------------------------------------------------------
@@ -223,7 +223,7 @@ getbetaB <- function (n, x, openval, PIAJ) {
 getbetaD <- function (n, x, openval, PIAJ, phij) {
     J <- length(phij)
     J1 <- 1:(J-1)
-    D <- openval[PIAJ[n, , x],3]
+    D <- openval[PIAJ[1,n, , x],3]
     B <- D
     B[2:J] <- D[2:J] - D[J1] * phij[J1]
     B/sum(B)

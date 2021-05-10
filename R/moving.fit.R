@@ -67,7 +67,8 @@ moving.fit <- function(..., width = 3, centres = NULL, filestem = NULL,
     if (is.null(arg$type)) arg$type <- 'CJS'
     if (is.null(arg$movementmodel)) arg$movementmodel <- 'static'
     ## perform join if ms, etc.
-    ch <- stdcapthist(ch, arg$type, arg$nclone, FALSE)
+    HPXpoly <- detector(traps(ch))[1] %in% c('polygon','polygonX') && (arg$detectfn == 'HPX')
+    ch <- stdcapthist(ch, arg$type, arg$nclone, FALSE, HPXpoly, stratified = FALSE)   ## 2021-04-18 not yet adapted for stratified data
     oldoccasion <- 1:ncol(ch)
     # oldinterv <- intervals(ch)
     primary <- primarysessions(intervals(ch))

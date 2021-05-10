@@ -33,6 +33,7 @@ struct Somesecrhistories : public Worker {
     const RMatrix<double> h;
     const RMatrix<int>    hindex;
     int                   movementcode;
+    bool                  sparsekernel;
     int                   edgecode;
     const String          usermodel;
     const RVector<int>    moveargsi;
@@ -66,6 +67,7 @@ struct Somesecrhistories : public Worker {
         const NumericMatrix h,
         const IntegerMatrix hindex, 
         int   movementcode,
+        bool  sparsekernel,
         int   edgecode,
         String usermodel,
         const IntegerVector moveargsi,
@@ -78,9 +80,9 @@ struct Somesecrhistories : public Worker {
             grain(grain),
             intervals(intervals), cumss(cumss), w(w), fi(fi), li(li), gk(gk), 
             openval(openval), PIA(PIA), PIAJ(PIAJ), Tsk(Tsk), h(h), hindex(hindex), 
-            movementcode(movementcode), edgecode(edgecode), usermodel(usermodel),  
-            moveargsi(moveargsi), kernel(kernel), mqarray(mqarray), 
-            cellsize(cellsize), output(output) {
+            movementcode(movementcode), sparsekernel(sparsekernel), edgecode(edgecode), 
+            usermodel(usermodel), moveargsi(moveargsi), kernel(kernel), 
+            mqarray(mqarray), cellsize(cellsize), output(output) {
         
         // now can initialise these derived counts
         kk = Tsk.nrow();             // number of detectors
@@ -156,13 +158,13 @@ struct Somesecrhistories : public Worker {
             getmoveargs (n, x, nc, jj, openval, PIAJ, moveargsi, moveargs);
             if (grain<1) { 
                 // single thread allows usermodel
-                fillkernelp (kn, jj, movementcode-2, cellsize, kernel, moveargsi, 
-                    usermodel, moveargs, kernelp);
+                fillkernelp (kn, jj, movementcode-2, sparsekernel, cellsize, 
+                    kernel, moveargsi, usermodel, moveargs, kernelp);
             }
             else {
                 // cannot call R function from RcppParallel worker ncores > 1, 
                 // so use this function with no usermodel option:
-                fillkernelparallel (kn, jj, movementcode-2, cellsize, 
+                fillkernelparallel (kn, jj, movementcode-2, sparsekernel, cellsize, 
                     kernel, moveargsi, moveargs, kernelp);
             }
         }        
@@ -306,13 +308,13 @@ struct Somesecrhistories : public Worker {
             getmoveargs (n, x, nc, jj, openval, PIAJ, moveargsi, moveargs);
             if (grain<1) { 
                 // single thread allows usermodel
-                fillkernelp (kn, jj, movementcode-2, cellsize, kernel, moveargsi, 
+                fillkernelp (kn, jj, movementcode-2, sparsekernel, cellsize, kernel, moveargsi, 
                     usermodel, moveargs, kernelp);
             }
             else {
                 // cannot call R function from RcppParallel worker ncores > 1, 
                 // so use this function with no usermodel option:
-                fillkernelparallel (kn, jj, movementcode-2, cellsize, 
+                fillkernelparallel (kn, jj, movementcode-2, sparsekernel, cellsize, 
                     kernel, moveargsi, moveargs, kernelp);
             }
         }        
@@ -413,6 +415,7 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
     const NumericMatrix h,
     const IntegerMatrix hindex, 
     int   movementcode,
+    bool  sparsekernel,
     int   edgecode,
     const String usermodel,
     const IntegerVector moveargsi, 
@@ -428,7 +431,7 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
             grain, intervals, cumss, 
             w, fi, li, gk, openval, PIA, PIAJ, Tsk, 
             h, hindex,
-            movementcode, edgecode,
+            movementcode, sparsekernel, edgecode,
             usermodel,
             moveargsi, kernel, mqarray, 
             cellsize, output);

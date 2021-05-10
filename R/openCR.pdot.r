@@ -1,10 +1,10 @@
 ################################################################################
 ## package 'openCR'
 ## openCR.pdot.R
-## 2011-12-30, 2013-01-20
+## 2021-04-20 stratified
 ################################################################################
 
-openCR.pdot <- function (object, bysession = FALSE) {
+openCR.pdot <- function (object, bysession = FALSE, stratum = 1) {
 
     # Return pdot for open population model
     beta     <- object$fit$par
@@ -12,11 +12,20 @@ openCR.pdot <- function (object, bysession = FALSE) {
     link     <- object$link
     fixed    <- object$fixed
     design0  <- object$design    # object$design0  stopgap
-    capthist <- object$capthist
     details  <- object$details
     type     <- object$type
-    intervals <- object$intervals
-    cumss    <- getcumss(object$capthist)
+    
+    if (!is.null(object$stratified) && object$stratified) {
+        capthist <- object$capthist[[stratum]]
+    }
+    else {
+        capthist <- object$capthist
+    }
+    
+    primaryintervals <- primaryintervals(object)[[stratum]]
+    cumss    <- getcumss(capthist)
+    PIA0  <- design0$PIA [stratum,,,,, drop = FALSE]
+    PIAJ0 <- design0$PIAJ[stratum,,,, drop = FALSE]
     
     #--------------------------------------------------------------------
     # Fixed beta
@@ -29,7 +38,7 @@ openCR.pdot <- function (object, bysession = FALSE) {
     # Real parameters
     realparval0 <- makerealparameters (design0, beta, parindx, link, fixed)
     nc  <- nrow(capthist)
-    J <- length(intervals) + 1
+    J <- length(primaryintervals) + 1
     
     # type <- switch(type, CJS = 1, JSSAb = 2, JSSAl = 3, JSSAf = 4, JSSAg = 22, JSSAgCL = 23,
     #     JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAB = 18, JSSAN = 19, JSSARET = 21,
@@ -43,7 +52,7 @@ openCR.pdot <- function (object, bysession = FALSE) {
     
     ## mixture proportions
     if (details$nmix > 1) {
-        pmix <- fillpmix2(nc, details$nmix, design0$PIA, realparval0)
+        pmix <- fillpmix2(nc, details$nmix, PIA0, realparval0)
     }
     else {
         pmix <- matrix(1, nrow = details$nmix, ncol = nc)
@@ -57,9 +66,9 @@ openCR.pdot <- function (object, bysession = FALSE) {
                 cumss,
                 details$nmix,
                 realparval0,
-                design0$PIA,
-                design0$PIAJ,
-                intervals)
+                PIA0,
+                PIAJ0,
+                primaryintervals)
         }
         else {
             pch1 <-  PCH1cpp(
@@ -70,15 +79,15 @@ openCR.pdot <- function (object, bysession = FALSE) {
             as.integer(cumss),
             as.integer(details$nmix),
             as.matrix(realparval0),
-            as.integer(design0$PIA),
-            as.integer(design0$PIAJ),
-            as.double(intervals))
+            as.integer(PIA0),
+            as.integer(PIAJ0),
+            as.double(primaryintervals))
         }
         pmix[x,] * pch1
     }
     onepbysession <- function (x) {
         one <- function(n) {    
-            p <- getp (n, x, realparval0, design0$PIA)
+            p <- getp (n, x, realparval0, PIA0)
             sessp <- function (j) {
                 s <- (cumss[j]+1) : cumss[j+1]
                 1-prod(1 - p[s])       ## Pr detected

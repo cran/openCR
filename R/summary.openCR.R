@@ -60,7 +60,7 @@ summary.openCR <- function (object, newdata = NULL, alpha = 0.05, svtol = 1e-5, 
             out$mask <- cbind(out$mask, Area = maskarea(object$mask))
     }
     out$modeldetails <- data.frame(type = object$type,
-                                   fixed = secr:::fixed.string(object$fixed),
+                                   fixed = fixed.string(object$fixed),
                                    distribution = if (!CLtype) object$distribution else 'none')
     if (secrmodel) {
         if (any(det %in% .openCRstuff$countdetectors)) {

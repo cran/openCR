@@ -14,6 +14,39 @@
 ## open population capture-recapture model fit
 ####################################################
 
+#---------------------------------------------------
+# 2021-04-22
+
+strata <- function (object, ...) UseMethod("strata")
+
+strata.default <- function (object, ...)     {
+    ## bypass strata attribute for multi-session objects 
+    ## use names(object) for lists i.e. multi-session objects
+    if (ms(object)) {
+        temp <- names(object)
+    }
+    else {
+        temp <- attr(object,'stratum', exact = TRUE)
+        if (is.null(temp)) temp <- 1   
+    }
+    names(temp) <- NULL
+    as.character(temp)     
+}
+
+'strata<-' <- function (object, value) {
+    if (ms(object)) {
+        if (length(value) != length(object))
+            stop ("invalid replacement value")
+        for (i in 1:length(object)) strata(object[[i]]) <- value[i] 
+        structure (object, names = as.character(value))
+    }
+    else {
+        if (length(value) > 1)
+            stop ("requires only one name per stratum")
+        structure (object, stratum = as.character(value))
+    }
+}
+#---------------------------------------------------
 
 coef.openCR <- function (object, alpha=0.05, ...) {
     beta   <- object$fit$par
@@ -52,43 +85,49 @@ print.openCR <- function (x, newdata = NULL, alpha = 0.05, svtol = 1e-5, ...) {
     ###################
     ## Data description
 
-    if (ms(x$capthist)) {
-        print (summary(x$capthist, terse = TRUE))
-        q <- sapply(x$capthist, function(y) attr(y,'q'))
-        stop("do not expect multisession capthist in openCR object")
-    }
-    else {
-        freq <- covariates(x$capthist)$freq 
+    onestratum <- function (capthist, i) {
+        freq <- covariates(capthist)$freq 
         if (is.null(freq)) freq <- rep(1,nrow(x$capthist))
         n  <- sum(freq)                 # number caught
-        ncapt <- sum(freq * apply(abs(x$capthist),1,sum))
-
-        nprimary <- length(x$intervals)+1
-        nsecondary <- ncol(x$capthist)
-
-        ## no groups... unlikely  !
-        ## if ('g' %in% x$vars) {
-        ##     Groups  <- table(group.factor(x$capthist, x$groups))
-        ##     temp <- paste (names(Groups), Groups, collapse=', ', sep='=')
-        ##     temp <- paste('(',temp,')', sep='')
-        ##   }
-        ##   else
+        ncapt <- sum(freq * apply(abs(capthist),1,sum))
+        intervals <- intervals(capthist)
+        nprimary <- sum(intervals>0)+1
+        nsecondary <- ncol(capthist)
         temp <- ''
+        cat ('\n')
+        if (nstrata>1) cat ('Stratum         : ', stratanames[i], temp, '\n')
+        
         cat ('N animals       : ', n, temp, '\n')
         cat ('N detections    : ', ncapt, '\n')
         cat ('N sessions      : ', nprimary)
         if (nsecondary>nprimary) cat (paste0(' (secondary ', nsecondary, ')'))
         cat('\n')
-        cat ('Intervals       : ', paste(x$intervals, collapse = ' '), '\n')
+        cat ('Intervals       : ', paste(intervals, collapse = ' '), '\n')
+        
     }
-
+    stratanames <- strata(x$capthist)
+    nstrata <- length(stratanames)
+    if (nstrata>1) {
+        cat ('Stratified model, ', nstrata, ' strata \n')
+        print (summary(x$capthist, terse = TRUE))
+        q <- sapply(x$capthist, function(y) attr(y,'q'))
+        mapply(onestratum, x$capthist, 1:nstrata)
+    }
+    else {
+        onestratum(x$capthist, 1)
+    }
     ####################
     ## Model description
-
+    
     Npar <- max(unlist(x$parindx))
-    ## allow for fixed beta parameters 2009 10 19
-    if (!is.null(x$details$fixedbeta))
+    if (!is.null(x$stratified) && x$stratified)
+        n <- sum(unlist(sapply(covariates(x$capthist), '[[', 'freq')))
+    else 
+        n <- sum(covariates(x$capthist)$freq)
+    
+    if (!is.null(x$details$fixedbeta)) {
         Npar <- Npar - sum(!is.na(x$details$fixedbeta))
+    }
     AICval <- 2*(x$fit$value + Npar)
     AICcval <- ifelse ((n - Npar - 1) > 0,
         2*(x$fit$value + Npar) + 2 * Npar * (Npar+1) / (n - Npar - 1),
@@ -138,7 +177,6 @@ print.openCR <- function (x, newdata = NULL, alpha = 0.05, svtol = 1e-5, ...) {
 
     cat ('\n')
     cat ('Fitted (real) parameters evaluated at base levels of covariates', '\n')
-
     if (!is.null(x$realpar))
         print( x$realpar )
     else {
@@ -159,7 +197,6 @@ vcov.openCR <- function (object, realnames = NULL, newdata = NULL, byrow = FALSE
 ## or vcv each real parameters between points given by newdata (byrow = FALSE)
 ## or vcv for real parameters at points given by newdata (byrow = TRUE)
 
-    
     ## include object$details$fixedbeta! 2018-03-09
     
     if (is.null(object$beta.vcv)) {
@@ -185,9 +222,10 @@ vcov.openCR <- function (object, realnames = NULL, newdata = NULL, byrow = FALSE
 
         if (byrow) {
             ## need delta-method variance of reals given object$beta.vcv & newdata
-            if (is.null(newdata))
+            if (is.null(newdata)) {
                 newdata <- openCR.make.newdata (object)
-            
+                # newdata <- makeNewData (object)
+            }
             rowi <- function (i) {
                 grad <- matrix(0, nrow = nreal, ncol = nbeta)
                 dimnames(grad) <- list(realnames, names(beta))

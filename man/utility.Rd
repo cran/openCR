@@ -13,8 +13,9 @@ Simple conventional summaries of data held in secr `capthist' objects.
 
 \usage{
 
-JS.counts(object, primary.only = TRUE)
-m.array(object, primary.only = TRUE, never.recaptured = TRUE, last.session = TRUE)
+JS.counts(object, primary.only = TRUE, stratified = FALSE)
+m.array(object, primary.only = TRUE, never.recaptured = TRUE, 
+    last.session = TRUE, stratified = FALSE)
 bd.array(beta, phi)
 
 }
@@ -22,6 +23,7 @@ bd.array(beta, phi)
 \arguments{
   \item{object}{secr capthist object or similar}
   \item{primary.only}{logical; if TRUE then counts are tabuated for primary sessions }
+  \item{stratified}{logical; if TRUE then sessions of multisession object summarised separately }
   \item{never.recaptured}{logical; if TRUE then a column is added for animals never recaptured }
   \item{last.session}{logical; if TRUE releases are reported for the last session}
   \item{beta}{numeric vector of entry probabilities, one per primary session}
@@ -31,7 +33,7 @@ bd.array(beta, phi)
 
 \details{
 
-The input is a capthist object representing a multi-session capture--recapture study. This may be (i) a single-session capthist in which occasions are understood to represent primary sessions, or (ii) a multi-session capthist object that is automatically converted to a single session object with \code{\link[secr]{join}} (any secondary sessions (occasions) are first collapsed with \code{reduce(object, by = 'all')}*).
+The input is a capthist object representing a multi-session capture--recapture study. This may be (i) a single-session capthist in which occasions are understood to represent primary sessions, or (ii) a multi-session capthist object that is automatically converted to a single session object with \code{\link[secr]{join}} (any secondary sessions (occasions) are first collapsed with \code{reduce(object, by = 'all')}*, or (iii) a multi-session capthist object in which sessions are interpreted as strata.
 
 The argument \code{primary.only} applies for single-session input with a robust-design structure defined by the \code{\link{intervals}}. \code{last.session} results in a final row with no recaptures.
 

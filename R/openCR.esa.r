@@ -20,7 +20,7 @@
 # secrCL = 30
 # secrD = 31
 
-openCR.esa <- function (object, bysession = FALSE) {
+openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
 
     if (!(grepl('secr',object$type) & inherits(object,'openCR')) )
         stop ("requires fitted openCR secr model")
@@ -29,29 +29,54 @@ openCR.esa <- function (object, bysession = FALSE) {
     parindx  <- object$parindx
     link     <- object$link
     fixed    <- object$fixed
-    capthist <- object$capthist
-    mask     <- object$mask
     details  <- object$details
     type     <- object$type
-    intervals <- object$intervals
-    cumss    <- getcumss(object$capthist)
-    binomN <- object$binomN
+    binomN   <- object$binomN
     if (is.null(binomN)) binomN <- 1
+    
+    if (!is.null(object$stratified) && object$stratified) {
+        capthist <- object$capthist[[stratum]]
+        mask     <- object$mask[[stratum]]
+    }
+    else {
+        capthist <- object$capthist
+        mask     <- object$mask
+    }
+    
+    cumss <- getcumss(capthist)
+    PIA0  <- object$design0$PIA[stratum,,,,, drop = FALSE]
+    PIAJ0 <- object$design0$PIAJ[stratum,,,, drop = FALSE]
+    primaryintervals <- primaryintervals(object)[[stratum]]
+
     ## openCR >= 1.2.0
     individual <- object$design0$individual
     ## openCR < 1.2.0
-    if (is.null(individual)) individual <- individualcovariates(object$design0$PIA)
+    if (is.null(individual)) individual <- individualcovariates(PIA0)
 
     ###### movement kernel and related
-    cellsize <- mqarray <- 0
+    cellsize <- 0
     kernel <- data.frame(rownames = NULL)
     movementcode <- movecode(object$movementmodel)
+    sparsekernel <- sparsebool(object$sparsekernel, object$movementmodel)
     edgecode <- edgemethodcode(object$edgemethod)
-    if (object$movementmodel %in% c('normal','exponential','user','t2D')) {
-        k2 <- details$kernelradius
+    # 2021-02-21 modified for annular
+    if (object$movementmodel %in% c('normal','exponential','user','t2D', 
+        'annular', 'annular2', 'annularR')) {
+        k2 <- object$kernelradius
         cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
         kernel <- expand.grid(x = -k2:k2, y = -k2:k2)
         kernel <- kernel[(kernel$x^2 + kernel$y^2) <= (k2+0.5)^2, ]
+        if (object$movementmodel == 'annular') {
+            r <- (kernel$x^2 + kernel$y^2)
+            kernel <- kernel[(r==0) | (r>(k2-0.5)), ]
+        }
+        if (object$movementmodel == 'annular2') {
+            r <- (kernel$x^2 + kernel$y^2)
+            origin <- r==0
+            ring1 <- r > (k2/2-0.5) && r<(k2/2+0.5)
+            ring2 <- r > (k2-0.5)
+            kernel <- kernel[origin | ring1 | ring2, ]
+        }
         mqarray <- mqsetup (mask, kernel, cellsize, edgecode)   
     }
 
@@ -67,7 +92,7 @@ openCR.esa <- function (object, bysession = FALSE) {
 
     realparval0 <- makerealparameters (object$design0, beta, parindx, link, fixed)
     nc  <- nrow(capthist)
-    J <- length(intervals) + 1
+    J <- length(primaryintervals) + 1
 
     type <- typecode(type)  # convert to integer
     trps <- traps(capthist)
@@ -85,18 +110,18 @@ openCR.esa <- function (object, bysession = FALSE) {
     usge <- usage(trps)
     if (is.null(usge)) usge <- matrix(1, nrow = k, ncol = ncol(capthist))
 
+    distmat <- getdistmat(trps, mask, object$detectfn == 20)
     temp <- makegkParallelcpp (as.integer(object$detectfn), 
                                as.integer(.openCRstuff$sigmai[type]),
                                as.integer(details$grain),
                                as.matrix(realparval0),
-                               as.matrix(trps),
-                               as.matrix(object$mask))
+                               as.matrix(distmat))
     gk0 <- array(temp[[1]], dim=c(nrow(realparval0), k, m)) # 2020-10-28 as array
     hk0 <- array(temp[[2]], dim=c(nrow(realparval0), k, m)) # 2020-10-28 as array
 
     ## mixture proportions
     if (details$nmix > 1) {
-        temp <- fillpmix2(nc, details$nmix, object$design0$PIA, realparval0)
+        temp <- fillpmix2(nc, details$nmix, PIA0, realparval0)
         pmix <- matrix(temp, ncol = nc)
     }
     else {
@@ -106,7 +131,7 @@ openCR.esa <- function (object, bysession = FALSE) {
         if (object$details$R) {
             pch1 <-  PCH1secr(
                 type,
-                as.logical(object$design0$individual),
+                as.logical(individual),
                 x,
                 nc,
                 J,
@@ -114,14 +139,15 @@ openCR.esa <- function (object, bysession = FALSE) {
                 k,
                 m,
                 realparval0,
-                object$design0$PIA,
-                object$design0$PIAJ,
+                PIA0,
+                PIAJ0,
                 if (detectr %in% c("multi", "poissoncount")) hk0 else gk0,
                 binomN,
                 usge,
-                intervals,
+                primaryintervals,
                 object$moveargsi,
                 movementcode,                     # what about edgecode? 2020-12-12
+                sparsekernel, 
                 object$usermodel,
                 kernel,
                 mqarray,
@@ -138,14 +164,15 @@ openCR.esa <- function (object, bysession = FALSE) {
                 as.integer(nc),
                 as.integer(cumss),
                 as.matrix (realparval0),
-                as.integer(object$design0$PIA),
-                as.integer(object$design0$PIAJ),
+                as.integer(PIA0),
+                as.integer(PIAJ0),
                 as.double (if (detectr == "poissoncount") hk0 else gk0),  ## 2019-05-08, 17
                 as.integer(binomN),
                 as.matrix (usge),
-                as.double (intervals),
+                as.double (primaryintervals),
                 as.integer(object$moveargsi),
                 as.integer(movementcode),
+                as.logical(sparsekernel),
                 as.integer(edgecode),
                 as.character(object$usermodel),
                 as.matrix(kernel),
@@ -165,7 +192,7 @@ openCR.esa <- function (object, bysession = FALSE) {
             as.integer(k),
             as.integer(m),
             as.integer(nrow(realparval0)),
-            as.integer(object$design0$PIA),
+            as.integer(PIA0),
             as.double (gk0),
             as.integer(binomN),
             as.matrix (usge)) 
@@ -176,15 +203,15 @@ openCR.esa <- function (object, bysession = FALSE) {
         a <- sapply(1:details$nmix, oneabysession, simplify = FALSE)
         a <- t(apply(abind(a, along=3), 1:2, sum))   ## session * ch, summed over latent classes
         a <- a * area * m
-        sess <- primarysessions(intervals(object$capthist)) ## differs from 'intervals'
-        OK <- apply(object$capthist, 1, by, sess, sum)>0
-        freq <- sweep(OK, MARGIN=2, STATS=covariates(object$capthist)$freq, FUN = "*")
+        sess <- primarysessions(intervals(capthist)) ## differs from 'primaryintervals'
+        OK <- apply(capthist, 1, by, sess, sum)>0
+        freq <- sweep(OK, MARGIN=2, STATS=covariates(capthist)$freq, FUN = "*")
         a <- lapply(1:J, function(j) rep(a[j,], freq[j,]))
     }
     else {
         a <- sapply(1:details$nmix, onea)
         a <- apply(a, 1, sum)    ## sum over latent classes
-        a <- rep(a, covariates(object$capthist)$freq)
+        a <- rep(a, covariates(capthist)$freq)
         a <- a * area * m
     }
     ## adjusts for covariates(object$capthist)$freq - no need to do this downstream

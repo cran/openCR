@@ -9,7 +9,9 @@
 formatted for `secr'. Several parameterisations are provided for the
 nonspatial Jolly-Seber Schwarz-Arnason model (`JSSA', also known as
 `POPAN'). Corresponding spatial models are designated
-`JSSAsecr'. Cormack-Jolly-Seber (CJS) models are also fitted.
+`JSSAsecr'. The prefix `PLB' (Pradel-Link-Barker) is used for versions of the 
+JSSA models that are conditional on the number observed. Cormack-Jolly-Seber 
+(CJS) models are also fitted.
 
 }
 
@@ -17,12 +19,14 @@ nonspatial Jolly-Seber Schwarz-Arnason model (`JSSA', also known as
 
 openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1), 
     distribution = c("poisson", "binomial"), mask = NULL, 
-    detectfn = c("HHN", "HHR", "HEX", "HAN", "HCG", "HVP"), binomN = 0, 
+    detectfn = c("HHN", "HHR", "HEX", "HAN", "HCG", "HVP", "HPX"), binomN = 0, 
     movementmodel = c("static", "uncorrelated", "normal", "exponential", "t2D", 
-    "uniform"), edgemethod = c("truncate","wrap","none"), start = NULL, 
-    link = list(), fixed = list(), timecov = NULL, sessioncov = NULL, 
+    "uniform", "annular"), edgemethod = c("truncate","wrap","none"), 
+    kernelradius = 10, sparsekernel = FALSE, start = NULL, link = list(), 
+    fixed = list(), stratumcov = NULL, sessioncov = NULL, timecov = NULL, 
     agecov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
-    method = "Newton-Raphson", trace = NULL, ncores = NULL, ...)
+    method = "Newton-Raphson", trace = NULL, ncores = NULL, 
+    stratified = FALSE, ...)
 }
 
 \arguments{
@@ -46,6 +50,10 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
   \item{movementmodel}{character; model for movement between primary sessions (see Details) }
   
   \item{edgemethod}{character; method for movement at edge of mask (see Details)}
+  
+  \item{kernelradius}{integer; radius in mask cells of discretized kernel (movement models only)}
+  
+  \item{sparsekernel}{logical; if TRUE then only cardinal and intercardinal axes are included}
 
   \item{start}{ vector of initial values for beta parameters, or fitted
     model(s) from which they may be derived }
@@ -57,12 +65,15 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
  \item{fixed}{ list with optional components corresponding to each
  `real' parameter, the scalar value to which parameter is to be fixed }
 
-  \item{timecov}{ optional dataframe of values of occasion-specific
+  \item{stratumcov}{ optional dataframe of values of stratum-specific
   covariate(s). }
-
+  
   \item{sessioncov}{ optional dataframe of values of session-specific
   covariate(s). }
   
+  \item{timecov}{ optional dataframe of values of occasion-specific
+  covariate(s). }
+
   \item{agecov}{ optional dataframe of values of age-specific covariate(s) }
 
 \item{dframe}{ optional data frame of design data for detection
@@ -81,12 +92,19 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
 
   \item{ncores}{integer number of cores for parallel processing (see Details) }
   
+  \item{stratified}{logical; if TRUE then sessions of capthist interpreted 
+  as indpendent strata}
+  
   \item{\dots}{ other arguments passed to join() }
 }
 
 \details{
 
-The permitted nonspatial models are CJS, Pradel, Pradelg, JSSAbCL, JSSAfCL, JSSAgCL, JSSAlCL, JSSAb, JSSAf, JSSAg, JSSAl, JSSAB and JSSAN. The permitted spatial models are CJSsecr, JSSAsecrbCL, JSSAsecrfCL, JSSAsecrgCL, JSSAsecrlCL, JSSAsecrb, JSSAsecrf, JSSAsecrg, JSSAsecrl, JSSAsecrB, JSSAsecrN, secrCL, and secrD. See the \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for a table of the `real' parameters associated with each model type.
+The permitted nonspatial models are CJS, Pradel, Pradelg, JSSAbCL = PLBb, JSSAfCL = PLBf, JSSAgCL = PLBg, JSSAlCL = PLBl, JSSAb, JSSAf, JSSAg, JSSAl, JSSAB and JSSAN. 
+
+The permitted spatial models are CJSsecr, JSSAsecrbCL = PLBsecrb, JSSAsecrfCL = PLBsecrf, JSSAsecrgCL = PLBsecrg, JSSAsecrlCL = PLBsecrl, JSSAsecrb, JSSAsecrf, JSSAsecrg, JSSAsecrl, JSSAsecrB, JSSAsecrN, secrCL, and secrD. 
+
+See \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for a table of the `real' parameters associated with each model type.
 
 Parameterisations of the JSSA models differ in how they include
 recruitment: the core parameterisations express recruitment either as a
@@ -136,9 +154,9 @@ masked area) ("binomial") or unconditional ("poisson").
 \code{distribution} affects the sampling variance of the estimated
 density. The default is "poisson" as in \pkg{secr}.
 
-Movement models are described in the \href{../doc/openCR-vignette.pdf}{vignette}. 
+Movement models and their discretized kernels are described in the \href{../doc/openCR-vignette.pdf}{vignette}. 
 
-\code{edgemethod} controls movement probabilities at the mask edge in spatial models that include movement. "none" typically causes bias in estimates; "wrap" wraps kernel probabilities to the opposing edge of a rectangular mask; "truncate" scales the values of an edge-truncated kernel so that they always sum to 1.0 (safer and more general than "wrap", but slower).
+\code{edgemethod} controls movement probabilities at the mask edge in spatial models that include movement. "none" typically causes bias in estimates; "wrap" wraps kernel probabilities to the opposing edge of a rectangular mask; "truncate" scales the values of an edge-truncated kernel so that they always sum to 1.0 (safer and more general than "wrap").
 
 The mlogit link function is used for the JSSA (POPAN) entry parameter 
 `b' (PENT in MARK) and for mixture proportions, regardless of \code{link}.
@@ -147,6 +165,8 @@ Spatial models use one of the hazard-based detection functions (see \code{\link{
 from independent point detectors (\pkg{secr} detector types `multi', `proximity' or `count').
 
 Code is executed in multiple threads unless the user specifies \code{ncores = 1} or there is only one core available or \code{details$R == TRUE}. Setting \code{ncores = NULL} uses the existing value from the environment variable RCPP_PARALLEL_NUM_THREADS (see \code{\link{setNumThreads}}) or 2 if that has not been set. 
+
+Optional stratification was introduced in \pkg{openCR} 2.0.0. See \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for details.
 
 The \dots argument may be used to pass a vector of unequal intervals to 
 join (\code{interval}), or to vary the tolerance for merging detector sites (\code{tol}).
@@ -195,8 +215,6 @@ the Hessian from the optimisation function is used. \cr
 \code{initialage} \tab 0 \tab Numeric (uniform age at first capture) 
 or character value naming an individual covariate; see \code{\link{age.matrix}} \cr
 
-\code{kernelradius} \tab 10 \tab Radius in mask cells of discretized kernel (movement models only) \cr
-
 \code{LLonly} \tab FALSE \tab TRUE causes the function to return a single
 evaluation of the log likelihood at the initial values, followed by the 
 initial values \cr
@@ -214,6 +232,7 @@ slower functions in native R (useful for debugging; not all models) \cr
 
 \code{squeeze} \tab TRUE \tab  Apply \code{\link{squeeze}} to capthist before analysis. Non-spatial models fit faster, because histories often non-unique.\cr
 
+\code{initialstratum} \tab 1 \tab Number of stratum to use for finding default starting values (cf autoini in \pkg{secr}) \cr
 }
 
 If \code{method = "Newton-Raphson"} then \code{\link[stats]{nlm}} is
@@ -243,16 +262,6 @@ position 1, followed by the named coefficients.
 
 Otherwise, an object of class `openCR' with components
 
-                  model = model,
-                  distribution = distribution,
-                  mask = mask,
-                  detectfn = detectfn,
-                  binomN = binomN,
-                  movementmodel = movementmodel,
-                  usermodel = usermodel,
-                  moveargsi = moveargsi,
-                  start = start,
-
   \item{call }{function call }
   \item{capthist }{saved input (unique histories; see covariates(capthist)$freq for frequencies)}
   \item{type }{saved input}
@@ -264,7 +273,8 @@ Otherwise, an object of class `openCR' with components
   \item{movementmodel }{saved input}
   \item{edgemethod }{saved input}
   \item{usermodel }{saved input}
-  \item{moveargsi }{relative locations of move.a and move.b arguments}
+  \item{moveargsi }{relative positions of move.a and move.b arguments}
+  \item{kernel}{coordinates of kernel (movement models only)}
   \item{start }{vector of starting values for beta parameters} 
   \item{link }{saved input}
   \item{fixed }{saved input}  
@@ -288,7 +298,7 @@ Otherwise, an object of class `openCR' with components
   \item{betanames }{names of beta parameters}
   \item{realnames }{names of fitted (real) parameters }
   \item{sessionlabels}{name of each primary session}
-  \item{fit }{list describing the fit (output from \code{nlm} or
+  \item{fit}{list describing the fit (output from \code{nlm} or
     \code{optim}) }
   \item{beta.vcv }{variance-covariance matrix of beta parameters }  
   \item{eigH }{vector of eigenvalue corresponding to each beta parameter }

@@ -8,8 +8,8 @@
 }
 \usage{
 
-openCR.design(capthist, models, type, naive = FALSE,
-    timecov = NULL, sessioncov = NULL, agecov = NULL, 
+openCR.design(capthist, models, type, naive = FALSE, stratumcov = NULL, 
+    sessioncov = NULL, timecov = NULL, agecov = NULL, 
     dframe = NULL, contrasts = NULL, initialage = 0, 
     minimumage = 0, maximumage = 1, CJSp1 = FALSE, ...)
 
@@ -22,8 +22,10 @@ openCR.design(capthist, models, type, naive = FALSE,
   \item{naive}{ logical if TRUE then modelled parameter is for a naive
     animal (not caught previously)}
   \item{timecov}{ optional vector or dataframe of values of occasion-specific covariate(s). }
+  \item{stratumcov}{ optional dataframe of values of stratum-specific covariate(s) }
   \item{sessioncov}{ optional dataframe of values of session-specific covariate(s) }
   \item{agecov}{ optional dataframe of values of age-specific covariate(s) }
+  
   \item{dframe}{ optional data frame of design data for detection parameters }
   \item{contrasts}{contrast specification as for \code{\link[stats]{model.matrix}}}
   \item{initialage}{numeric or character (name of individual covariate containing initial ages)}

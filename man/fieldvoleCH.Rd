@@ -56,7 +56,7 @@ use, dispersal and survival with robust-design spatial capture--recapture data.
 
 Ergon, T. and Lambin, X. (2013) Data from: Separating mortality and emigration:
 Modelling space use, dispersal and survival with robust-design spatial capture--recapture data.
-Dryad Digital Repository. URL \url{https://dx.doi.org/10.5061/dryad.r17n5}.
+Dryad Digital Repository. \doi{10.5061/dryad.r17n5}.
 
 Reich, B. J. and Gardner, B. (2014) A spatial capture--recapture model for
 territorial species. \emph{Environmetrics} \bold{25}, 630--637.

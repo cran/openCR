@@ -21,13 +21,14 @@ prwi (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJS
 
 prwisecr (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
     PIA, PIAJ, binomN, Tsk, intervals, h, hindex, CJSp1, moveargsi, 
-    movementcode, edgecode, usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL)
+    movementcode, sparsekernel, edgecode, usermodel, kernel = NULL, 
+    mqarray = NULL, cellsize = NULL)
 
 PCH1 (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
 
 PCH1secr (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, gk0,
-    binomN, Tsk, intervals,  moveargsi, movementcode, edgecode, usermodel, kernel, 
-    mqarray, cellsize) 
+    binomN, Tsk, intervals,  moveargsi, movementcode, sparsekernel, edgecode, 
+    usermodel, kernel, mqarray, cellsize) 
 
 pradelloglik (type, w, openval, PIAJ, intervals)
 
@@ -56,6 +57,7 @@ cyclic.fit (..., maxcycle = 10, tol = 1e-5, trace = FALSE)
   
   \item{moveargsi}{integer 2-vector for index of move.a, move.b (negative if unused)}
   \item{movementcode}{integer 0 static, 1 uncorrelated etc.}
+  \item{sparsekernel}{logical; if TRUE then only cardinal and intercardinal axes are included}
   \item{edgecode}{integer 0 none, 1 wrap, 2 truncate}
   \item{usermodel}{function to fill kernel}
   \item{kernel}{dataframe with columns x,y relative coordinates of kernel cell centres}

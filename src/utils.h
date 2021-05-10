@@ -36,6 +36,7 @@ void convolvemq (
 void fillkernelp (int kn, 
                   int jj, 
                   int kerneltype, 
+                  bool sparsekernel,
                   double cellsize,
                   const RMatrix<int> kernel, 
                   const RVector<int> moveargsi, 
@@ -49,6 +50,7 @@ void fillkernelp (int kn,
 void fillkernelparallel (int kn, 
                          int jj, 
                          int kerneltype, 
+                         bool sparsekernel,
                          double cellsize,
                          const RMatrix<int> kernel, 
                          const RVector<int> moveargsi, 
@@ -62,6 +64,14 @@ double hfn
      const RMatrix<double> traps,
      const RMatrix<double> mask, 
      int sigmai, int detectfn);
+//--------------------------------------------------------------------------
+
+double hfnd
+    (int k, int m, int c, 
+        const RMatrix<double> openval,  
+        const RMatrix<double> distmat,
+        int sigmai, 
+        int detectfn);
 //--------------------------------------------------------------------------
 
 void getp (int n, int x, int nc, int ss, 

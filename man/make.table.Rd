@@ -11,7 +11,7 @@ Session-specific estimates of real parameters (p, phi, etc.) are arranged in a r
 
 \usage{
 
-make.table(fits, parm = "phi", fields = "estimate", ...)
+make.table(fits, parm = "phi", fields = "estimate", strata = 1, ...)
 
 }
 
@@ -19,6 +19,7 @@ make.table(fits, parm = "phi", fields = "estimate", ...)
   \item{fits}{openCRlist object}
   \item{parm}{character name of real parameter estimate to tabulate}
   \item{fields}{character column from predict (estimate, SE.estimate, lcl, ucl)}
+  \item{strata}{character or integer; indices of strata to report}
   \item{...}{arguments passed to \code{\link{predict.openCRlist}}}
 }
 
@@ -41,8 +42,8 @@ A table object.
 
 \examples{
 
-arglist <- list(constant = list(capthist=ovenCHp, model=phi~1), 
-                session.specific = list(capthist=ovenCHp, model=phi~session))
+arglist <- list(constant = list(capthist = ovenCHp, model = phi~1), 
+    session.specific = list(capthist = ovenCHp, model = phi~session))
 fits <- par.openCR.fit(arglist, trace = FALSE)
 print(make.table(fits), na=".")
 

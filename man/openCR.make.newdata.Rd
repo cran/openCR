@@ -1,5 +1,9 @@
 \name{openCR.make.newdata}
 \alias{openCR.make.newdata}
+\alias{openCR.make.newdata}
+% \name{makeNewData}
+% \alias{makeNewData}
+% \alias{makeNewData}
 
 \title{ Create Default Design Data }
 
@@ -12,7 +16,8 @@ for the base levels of all predictors in an openCR object.
 
 \usage{
 
-openCR.make.newdata(object, all.levels = FALSE)
+% \method{makeNewData}{openCR}(object, all.levels = FALSE, ...)
+openCR.make.newdata(object, all.levels = FALSE, ...)
 
 }
 
@@ -20,15 +25,19 @@ openCR.make.newdata(object, all.levels = FALSE)
 
 \item{object}{fitted openCR model object}
 \item{all.levels}{logical; if TRUE then all covariate factor levels appear in the output}
+\item{\dots}{other arguments (not used)}
 
 }
 
 \details{
 
-
 \code{openCR.make.newdata} is used by \code{predict} in lieu of
 user-specified `newdata'. There is seldom any need to call
 \code{openCR.make.newdata} directly.
+
+% \code{makeNewData} is used by \code{predict} in lieu of
+% user-specified `newdata'. There is seldom any need to call
+% \code{makeNewData} directly.
 
 }
 
@@ -49,6 +58,7 @@ predictors used by \code{object$model}.
 
 ## null example (no covariates)
 ovenCJS <- openCR.fit(ovenCH)
+% makeNewData(ovenCJS)
 openCR.make.newdata(ovenCJS)
 
 }

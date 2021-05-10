@@ -10,6 +10,7 @@
 # 2019-04-09 ejected open.secr.loglikfn to logliksecr.R
 # 2019-04-09 explicit treatment of count detector; dropuse of data$multi
 # 2020-12-07 CJSmte (Markovian Temporary Emigration) trial - not completed
+# 2021-04-19 stratified
 
 # types
 
@@ -36,9 +37,9 @@
 
 open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
 
-    # Return the negative log likelihood
-    # Transformed parameter values are passed in the vector 'beta'
-    # details$trace=T sends a one-line report to the screen
+# Return the negative log likelihood
+# Transformed parameter values are passed in the vector 'beta'
+# details$trace=T sends a one-line report to the screen
 
 {
     #--------------------------------------------------------------------
@@ -51,242 +52,235 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     if (data$details$debug>0) {
         print(beta)
     }
-    freq <- covariates(data$capthist)$freq
-
-    if (is.null(freq)) freq <- rep(1, data$nc)
-    if (length(freq) == 1) freq <- rep(freq, data$nc)
-    ncf <- sum(freq)
-
     #--------------------------------------------------------------------
     # Real parameters
     realparval  <- makerealparameters (data$design, beta, data$parindx, data$link, data$fixed)
     if (data$learnedresponse)
-    realparval0 <- makerealparameters (data$design0, beta, data$parindx, data$link, data$fixed)
+        realparval0 <- makerealparameters (data$design0, beta, data$parindx, data$link, data$fixed)
     else realparval0 <- realparval
-
     #-----------------------------------------
     # check valid parameter values
     if (!all(is.finite(realparval))) {
         message ('beta vector : ', paste(beta, collapse=', '))
         message ('real vector : ', paste(realparval, collapse=','))
         warning ("extreme 'beta' in 'openloglikfn' ",
-                 "(try smaller stepmax in nlm Newton-Raphson?)")
+            "(try smaller stepmax in nlm Newton-Raphson?)")
         return (1e10)
     }
     type <- typecode(data$type)
     if (type<0) stop ("Invalid likelihood type")
-    if (type %in% 28:29 & any(data$intervals !=1)) stop ("kappa parameterisation available only if all intervals = 1")
-
-    PIA <- data$design$PIA
-    PIAJ <- data$design$PIAJ
-
-    if (data$details$debug>1) {
-        message('Type ', type)
-        message('J    ', data$J)
-        message('nmix ', data$details$nmix)
-        message('realparval')
-        print(realparval)
-        message('table(PIA)')
-        print (table(PIA))
-        message('data$intervals')
-        print(data$intervals)
-        flush.console()
-    }
-
-    if (data$details$debug>2) browser()
-
-    if (type %in% c(20,26)) {
-        # Pradel model
-        if (data$details$R) {
-            comp <- pradelloglik(type, data$JScounts, realparval,  PIAJ, data$intervals)
+    if (type %in% 28:29 & any(unlist(data$stratumdata$primaryintervals) !=1)) 
+        stop ("kappa parameterisation available only if all intervals = 1")
+    
+    onestratumll <- function(stratum) {
+        freq <- covariates(stratum$capthist)$freq
+        if (is.null(freq)) freq <- rep(1, stratum$nc)
+        if (length(freq) == 1) freq <- rep(freq, stratum$nc)
+        ncf <- sum(freq)
+        
+        PIA  <- data$design$PIA [stratum$i,,,,, drop = FALSE]
+        PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
+        if (data$learnedresponse)
+            PIA0 <- data$design0$PIA[stratum$i,,,,, drop = FALSE]
+        else
+            PIA0 <- PIA
+        
+        if (data$details$debug>1) {
+            message('Stratum ', stratum$i)
+            message('Type    ', type)
+            message('J       ', stratum$J)
+            message('nmix    ', data$details$nmix)
+            message('realparval')
+            print(realparval)
+            message('table(PIA)')
+            print (table(PIA))
+            message('intervals')
+            print(stratum$primaryintervals)
+            flush.console()
+        }
+        
+        if (type %in% c(20,26)) {
+            # Pradel model
+            if (data$details$R) {
+                comp <- pradelloglik(type, stratum$JScounts, realparval,  PIAJ, 
+                    stratum$primaryintervals)
+            }
+            else {
+                comp <- pradelloglikcpp(
+                    as.integer(type),
+                    as.integer(stratum$JScounts),
+                    as.integer(stratum$nc),               ## needed for nrows of PIAJ
+                    as.integer(stratum$J),
+                    as.integer(data$details$nmix),
+                    as.matrix(realparval),
+                    as.integer(PIAJ),                     ## index of nc,S,mix to rows
+                    as.double(stratum$primaryintervals))  ## number of interval == J-1
+            }
+        }
+        else if (data$details$R & (type %in% c(28,29))) {
+            comp <- kappaloglik (type, realparval,  PIA, PIAJ, stratum, 
+                data$details$nmix, 
+                data$details$CJSp1, 
+                data$distrib)
         }
         else {
-            comp <- pradelloglikcpp(
-                as.integer(type),
-                as.integer(data$JScounts),
-                as.integer(data$nc),         ## needed for nrows of PIAJ
-                as.integer(data$J),
-                as.integer(data$details$nmix),
-                as.matrix(realparval),
-                as.integer(PIAJ),             # index of nc,S,mix to rows
-                as.double(data$intervals))                # number of interval == J-1
-        }
-    }
-    else if (data$details$R & (type %in% c(28,29))) {
-        comp <- kappaloglik (type, realparval,  PIA, PIAJ, data)
-    }
-    # optional code using m.array
-    # else if (data$details$R & (type %in% c(1))) {
-    #     if (data$details$nmix>1) stop ("R CJS does not use mixture")
-    #     comp <- CJSloglik (
-    #         type,
-    #         x = 1,
-    #         data$capthist,
-    #         data$marray,
-    #         data$J,
-    #         data$cumss,
-    #         nmix = 1,
-    #         realparval,
-    #         PIA[1,,,,drop=FALSE],
-    #         PIAJ[1,,,drop=FALSE],
-    #         data$intervals)
-    # }
-    else {
-        onehistory <- function (n, pmix) {
-            sump <- 0
-            for (x in 1:nrow(pmix)) {
-                temp <- prwi(
-                    type,
-                    1,   # n
-                    x,
-                    data$J,
-                    data$cumss,
-                    data$details$nmix,
-                    data$capthist[n,, drop = FALSE],
-                    data$fi[n],
-                    data$li[n],
-                    realparval,
-                    PIA[n,,,,drop = FALSE],
-                    PIAJ[n,,,drop = FALSE],
-                    data$intervals,
-                    data$details$CJSp1
-                    # , data$moveargsi
-                )
-                sump <- sump + pmix[x,n] * temp
-            }
-            if (any(sump<=0)) {
-                -1e10
-            }
-            else
-                freq[n] * log(sump)
-        }
-        allhistparallel <- function () {
-            sump <- numeric(data$nc)
-            for (x in 1:nrow(pmix)) {
-                temp <-  allhistparallelcpp(
-                    as.integer(x-1),
-                    as.integer(type),
-                    as.integer(data$nc),
-                    as.integer(data$details$CJSp1),
-                    as.integer(data$details$grain),
-                    as.double (data$intervals),
-                    as.integer(data$cumss),
-                    as.integer(data$capthist),
-                    as.integer(data$fi),
-                    as.integer(data$li),
-                    as.matrix (realparval),
-                    as.integer(PIA),
-                    as.integer(data$design$PIAJ))
-                sump <- sump + pmix[x,] * temp
-            }
-            freq * log(sump)  ## return vector of individual LL contributions
-        }
-
-
-        comp <- numeric(5)
-        pmix <- fillpmix2(data$nc, data$details$nmix, PIA, realparval)
-        
-        #####################################################################
-        # Component 1: Probability of observed histories - all models
-        # if (is.null(cluster)) {
-        if (data$details$R)
-            temp <- sapply(1:data$nc, onehistory, pmix = pmix)
-        else
-            temp <- allhistparallel()
-        comp[1] <- sum(temp)
-        
-        #####################################################################
-        # Component 2: Probability of missed animals (all-zero histories)
-        # not CJS, CJSmte
-        if (type %in% c(2:4,15:19, 21, 22, 23, 27, 28, 29)) {
-            pdot <- rep(0, data$nc)
-            if (data$learnedresponse)
-                PIA0 <- data$design0$PIA
-            else
-                PIA0 <- PIA
-            for (x in 1:data$details$nmix) {   # loop over latent classes
-                if (data$details$R) {
-                    pch1 <- PCH1(
+            onehistory <- function (n, pmix) {
+                sump <- 0
+                for (x in 1:nrow(pmix)) {
+                    temp <- prwi(
                         type,
+                        1,   # n
                         x,
-                        data$nc,
-                        data$cumss,
+                        stratum$J,
+                        stratum$cumss,
                         data$details$nmix,
-                        realparval0,
-                        PIA0,
-                        PIAJ,
-                        data$intervals)
+                        stratum$capthist[n,, drop = FALSE],
+                        stratum$fi[n],
+                        stratum$li[n],
+                        realparval,
+                        PIA [stratum$i, n,,,, drop = FALSE],
+                        PIAJ[stratum$i, n,,, drop = FALSE],
+                        stratum$primaryintervals,
+                        data$details$CJSp1
+                        # , data$moveargsi
+                    )
+                    sump <- sump + pmix[x,n] * temp
                 }
-                else {
-                pch1 <-  PCH1cpp(
+                if (any(sump<=0)) {
+                    -1e10
+                }
+                else
+                    freq[n] * log(sump)
+            }
+            allhistparallel <- function () {
+                sump <- numeric(stratum$nc)
+                for (x in 1:nrow(pmix)) {
+                    temp <-  allhistparallelcpp(
+                        as.integer(x-1),
+                        as.integer(type),
+                        as.integer(stratum$nc),
+                        as.integer(data$details$CJSp1),
+                        as.integer(data$details$grain),
+                        as.double (stratum$primaryintervals),
+                        as.integer(stratum$cumss),
+                        as.integer(stratum$capthist),
+                        as.integer(stratum$fi),
+                        as.integer(stratum$li),
+                        as.matrix (realparval),
+                        as.integer(PIA),
+                        as.integer(PIAJ))
+                    sump <- sump + pmix[x,] * temp
+                }
+                freq * log(sump)  ## return vector of individual LL contributions
+            }
+            
+            
+            comp <- numeric(5)
+            pmix <- fillpmix2(stratum$nc, data$details$nmix, PIA, realparval)
+            
+            #####################################################################
+            # Component 1: Probability of observed histories - all models
+            # if (is.null(cluster)) {
+            if (data$details$R)
+                temp <- sapply(1:stratum$nc, onehistory, pmix = pmix)
+            else
+                temp <- allhistparallel()
+            comp[1] <- sum(temp)
+            
+            #####################################################################
+            # Component 2: Probability of missed animals (all-zero histories)
+            # not CJS, CJSmte
+            if (type %in% c(2:4,15:19, 21, 22, 23, 27, 28, 29)) {
+                pdot <- rep(0, stratum$nc)
+                for (x in 1:data$details$nmix) {   # loop over latent classes
+                    if (data$details$R) {
+                        pch1 <- PCH1(
+                            type,
+                            x,
+                            stratum$nc,
+                            stratum$cumss,
+                            data$details$nmix,
+                            realparval0,
+                            PIA0,
+                            PIAJ,
+                            stratum$primaryintervals)
+                    }
+                    else {
+                        pch1 <-  PCH1cpp(
                             as.integer(type),
                             as.integer(x-1),
-                            as.integer(data$nc),
-                            as.integer(data$J),
-                            as.integer(data$cumss),
+                            as.integer(stratum$nc),
+                            as.integer(stratum$J),
+                            as.integer(stratum$cumss),
                             as.integer(data$details$nmix),
                             as.matrix(realparval0),
                             as.integer(PIA0),
                             as.integer(PIAJ),
-                            as.double(data$intervals))
+                            as.double(stratum$primaryintervals))
+                    }
+                    pdot <- pdot + pmix[x] * pch1
                 }
-                pdot <- pdot + pmix[x] * pch1
+                comp[2] <- - sum(freq * log(pdot))
             }
-            comp[2] <- - sum(freq * log(pdot))
+            
+            #####################################################################
+            # Component 3: Probability of observing nc animals
+            # not CJS, CJSmte
+            if (type %in% c(2:4,18,19,21, 22, 28)) {
+                if (type %in% c(2,3,4,22,28)) {
+                    superN <- realparval[nrow(realparval)*3 + stratum$i] # stratum i Nsuper direct
+                }
+                else {
+                    superN <- getN(type, ncf, stratum$J, data$details$nmix, pmix, 
+                        realparval, PIAJ, stratum$primaryintervals)
+                }
+                meanpdot <- ncf / sum(1/rep(pdot,freq))  ## cf CLmeanesa in 'secr'
+                comp[3] <- switch (data$distrib+1,
+                    dpois(ncf, superN * meanpdot, log = TRUE),
+                    ## lnbinomial (ncf, superN, meanpdot),
+                    lnbinomial (ncf, superN + ncf, meanpdot),
+                    NA)
+            }
+            
         }
+        comp
+    }  # end of onestratumll
 
-        #####################################################################
-        # Component 3: Probability of observing nc animals
-        # not CJS, CJSmte
-        if (type %in% c(2:4,18,19,21, 22, 28)) {
-            if (type %in% c(2,3,4,22,28)) {
-                superN <- realparval[nrow(realparval)*3+1] # Nsuper direct
-            }
-            else {
-                superN <- getN(type, ncf, data$J, data$details$nmix, pmix, realparval, PIAJ, data$intervals)
-            }
-            meanpdot <- ncf / sum(1/rep(pdot,freq))  ## cf CLmeanesa in 'secr'
-            comp[3] <- switch (data$distrib+1,
-                               dpois(ncf, superN * meanpdot, log = TRUE),
-                               ## lnbinomial (ncf, superN, meanpdot),
-                               lnbinomial (ncf, superN + ncf, meanpdot),
-                               NA)
-        }
-
-    }
-
+    #####################################################################
+    # main line
+    
+    if (data$details$debug>2) browser()
+    
+    comp <- lapply(data$stratumdata, onestratumll)
+    comp <- matrix(unlist(comp), ncol = 5)
+    comp <- apply(comp,2,sum)
+    
     ## optional multinomial term
     if (data$details$multinom & (type %in% c(2,3,4,15,16,17,18,19,21,22,23,27))) {
-        nh <- table(rep(apply(data$capthist, 1, paste, collapse=''), freq))
-        comp[5] <- lgamma(ncf+1) - sum(lgamma(nh+1))
+        comp[5] <- data$logmult    ## precalculated 2021-03-30
     }
-
+    
     ## log-likelihood as sum of components 1-3 and 5
     loglik <- sum(comp)
-
+    
     ## debug
     if (data$details$debug>=1) {
         message("Likelihood components (comp) ", format(comp, digits=10))
         message("Total ", format(loglik, digits = 10))
         if (data$details$debug>1) browser()
     }
-
+    
     .openCRstuff$iter <- .openCRstuff$iter + 1   ## moved outside loop 2011-09-28
     if (data$details$trace) {
         if (!is.null(data$details$fixedbeta))
             beta <- beta[is.na(data$details$fixedbeta)]
-        # cat(format(.openCRstuff$iter, width=4),
-        #     formatC(round(loglik,dig), format='f', digits=dig, width=10),
-        #     formatC(beta, format='f', digits=dig+1, width=betaw),
-        #     '\n', sep = " ")
         message(format(.openCRstuff$iter, width=4), ' ',
             formatC(round(loglik,dig), format='f', digits=dig, width=10), ' ',
             paste(formatC(beta, format='f', digits=dig+1, width=betaw), 
                 collapse = ' '))
-        
         flush.console()
     }
-
+    
     if (oneeval) {
         c(loglik, beta)
     }
@@ -294,7 +288,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         if (is.finite(loglik)) -loglik   # return the negative loglikelihood
         else 1e10
     }
-
-}
+    
+    }
 ############################################################################################
 

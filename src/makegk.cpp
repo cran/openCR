@@ -97,3 +97,64 @@ List makegkParallelcpp (int detectfn, int sigmai, int grain,
     return List::create(gk, hk);
 }
 //==============================================================================
+
+struct Hckmd : public Worker {
+    
+    // input data
+    int sigmai;
+    int detectfn;
+    const RMatrix<double> openval;
+    const RMatrix<double> distmat;
+
+    // output vector to write to
+    RVector<double> hk;
+    RVector<double> gk;
+    
+    // initialize from Rcpp input and output matrixes (the RMatrix class
+    // can be automatically converted to from the Rcpp matrix type)
+    Hckmd(int sigmai, int detectfn,
+        const NumericMatrix openval, 
+        const NumericMatrix distmat, 
+        NumericVector hk,
+        NumericVector gk)
+        : sigmai(sigmai), detectfn(detectfn), openval(openval), 
+            distmat(distmat), hk(hk), gk(gk) {}
+    
+    // function call operator that work for the specified range (begin/end)
+    void operator()(std::size_t begin, std::size_t end) {
+        int cc = openval.nrow();
+        int kk = distmat.nrow();
+        for (std::size_t m = begin; m < end; m++) {
+            for (int k=0; k < kk; k++) {
+                for (int c=0; c < cc; c++) {
+                    int gi = i3(c,k,m, cc, kk);
+                    hk[gi] = hfnd(k, m, c, openval, distmat, sigmai, detectfn);
+                    gk[gi] = 1 - exp(-hk[gi]);
+                }
+            }
+            
+        }
+    }
+};
+
+// [[Rcpp::export]]
+List makegkParalleldcpp (int detectfn, int sigmai, int grain,
+    const NumericMatrix& openval, 
+    const NumericMatrix& distmat
+) 
+{
+    NumericVector hk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
+    NumericVector gk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
+    
+    Hckmd hckmd (sigmai, detectfn, openval, distmat, hk, gk);
+    
+    if (grain>0) {
+        // call it with parallelFor
+        parallelFor(0, distmat.ncol(), hckmd, grain);
+    }
+    else {
+        hckmd.operator()(0,distmat.ncol());    // for debugging avoid multithreading to allow R calls
+    }
+    return List::create(gk, hk);
+}
+//==============================================================================

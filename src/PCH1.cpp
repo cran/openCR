@@ -164,6 +164,7 @@ struct pch1struct : public Worker {
     const RVector<double> intervals;
     const RVector<int> moveargsi;
     int   movementcode;
+    bool  sparsekernel;
     int   edgecode;
     String usermodel;
     const RMatrix<int> kernel;
@@ -187,6 +188,7 @@ struct pch1struct : public Worker {
         const NumericVector intervals,
         const IntegerVector moveargsi,
         int   movementcode,
+        bool  sparsekernel,
         int   edgecode,
         String usermodel,
         const IntegerMatrix kernel,
@@ -198,8 +200,8 @@ struct pch1struct : public Worker {
             cumss(cumss), openval0(openval0), PIA0(PIA0), PIAJ(PIAJ), 
             gk0(gk0), binomN(binomN), Tsk(Tsk), intervals(intervals), 
             moveargsi(moveargsi), movementcode(movementcode), 
-            edgecode(edgecode), usermodel(usermodel),
-            kernel(kernel), mqarray(mqarray), 
+            sparsekernel(sparsekernel), edgecode(edgecode), 
+            usermodel(usermodel), kernel(kernel), mqarray(mqarray), 
             cellsize(cellsize), output(output) 
     {
         kn = kernel.nrow();
@@ -229,10 +231,10 @@ struct pch1struct : public Worker {
         if (movementcode>1) {
             getmoveargs (n, x, nc, jj, openval0, PIAJ, moveargsi, moveargs);
             if (grain > 0)   // usermodel not allowed with multiple threads 
-                fillkernelparallel (kn, jj, movementcode-2, cellsize, 
+                fillkernelparallel (kn, jj, movementcode-2, sparsekernel, cellsize, 
                     kernel, moveargsi, moveargs, kernelp);
             else
-                fillkernelp (kn, jj, movementcode-2, cellsize, 
+                fillkernelp (kn, jj, movementcode-2, sparsekernel, cellsize, 
                     kernel, moveargsi, usermodel, moveargs, kernelp);
         }
         
@@ -306,6 +308,7 @@ NumericVector PCH1secrparallelcpp (int x, int type, int grain,
     const NumericVector intervals,
     const IntegerVector moveargsi,
     int   movementcode,
+    bool  sparsekernel,
     int   edgecode,
     const String usermodel,
     const IntegerMatrix kernel,
@@ -317,8 +320,8 @@ NumericVector PCH1secrparallelcpp (int x, int type, int grain,
     // Construct and initialise
     pch1struct pch1 (x, type, grain, jj, mm, nc, 
         cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals,
-        moveargsi, movementcode, edgecode, usermodel, kernel, mqarray, 
-        cellsize, output);
+        moveargsi, movementcode, sparsekernel, edgecode, usermodel, kernel, 
+        mqarray, cellsize, output);
     
     if (individual) {
         if (grain>0) {

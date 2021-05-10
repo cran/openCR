@@ -66,7 +66,7 @@ pr0njmx <- function (n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk) {
 }
 
 PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, 
-    gk0, binomN, Tsk, intervals, moveargsi, movementcode, 
+    gk0, binomN, Tsk, intervals, moveargsi, movementcode, sparsekernel,
     edgecode, usermodel, kernel, mqarray, cellsize) {
     One <- function (n) {
         ## precompute this animal's session-specific Pr for mask points
@@ -76,8 +76,8 @@ PCH1secr <- function (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0
         if (movementcode>1) {
             moveargsi <- pmax(moveargsi,0)
             moveargs <- getmoveargs (n, x, openval0, PIAJ, intervals, moveargsi)
-            kernelp <- fillkernelp (jj, movementcode-2, kernel, usermodel, cellsize,
-                                    moveargsi, moveargs, normalize = TRUE)
+            kernelp <- fillkernelp (jj, movementcode-2, sparsekernel, kernel, 
+                usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
         }
         pdt <- 0
         for (b in 1:jj) {

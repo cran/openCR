@@ -1,18 +1,40 @@
-plot.openCR <- function(x, par = 'phi', newdata = NULL, add = FALSE, xoffset = 0, ylim = NULL,
-                        useintervals = TRUE, CI = TRUE, intermediate.x = TRUE,  alpha = 0.05, ...) {
+###############################################################################
+# plot.openCR.R
+## 2021-04-20 stratum argument
+###############################################################################
+
+plot.openCR <- function(
+    x, par = 'phi', newdata = NULL, add = FALSE, xoffset = 0, ylim = NULL,
+    useintervals = TRUE, CI = TRUE, intermediate.x = TRUE,  alpha = 0.05, 
+    stratum = 1, ...) {
     if (useintervals)
-        xv <- cumsum(c(0, x$intervals))
+        xv <- cumsum(c(0, x$primaryintervals[[stratum]]))
     else
-        xv <- 0:length(x$intervals)
+        xv <- 0:length(x$primaryintervals[[stratum]])
     sessionxv <- xv
     if (intermediate.x & (par %in% c('phi', 'f', 'lambda', 'b', 'BN','BD')))
         xv <- (xv + c(xv[-1],NA))/2
     xv <- xv + xoffset
 
-    sessnames <- sessionlabels(x$capthist)
+    if (ms(x$capthist)) { ## assume stratified
+        if (stratum >length(x$capthist)) stop("attempt to plot unavailable stratum")
+        sessnames <- sessionlabels(x$capthist[[stratum]])
+    }
+    else {
+        if (stratum != 1) stop("attempt to plot unavailable stratum")
+        sessnames <- sessionlabels(x$capthist)
+    }
+    if (!is.null(newdata) && !('stratum' %in% names(newdata)))
+        newdata$stratum <- rep(stratum, nrow(newdata))
     if (is.null(sessnames)) sessnames <- 1:length(xv)
 
-    pred <- predict(x, newdata=newdata, alpha = alpha)[[par]][1:length(xv),]
+    if (is.null(newdata)) {
+        newdata <- openCR.make.newdata(x, all.levels = FALSE)
+        # newdata <- makeNewData (x, all.levels = FALSE)
+    }
+    newdata <- newdata[newdata$stratum == stratum,]
+    pred <- predict(x, newdata = newdata, alpha = alpha)[[par]]
+    pred <- pred[1:length(xv),]
 
     xl <- range(sessionxv)
     yl <- ylim

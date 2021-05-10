@@ -10,6 +10,8 @@
 ## 2020-12-07 CJSmte type experimental - to be added?
 ## 2020-12-08 primaryonly tweaked to give 3-D output (single NULL traps)
 ## 2020-12-12 mqsetup moved from prwisecr.R
+## 2021-03-30 logmultinomial local version of function
+## 2021-04-24 2.0.0 stratification
 ###############################################################################
 
 typecode <- function (type) {
@@ -37,9 +39,18 @@ typecode <- function (type) {
 
 movecode <- function (movementmodel) {
     switch (movementmodel, static = 0, uncorrelated = 1, normal = 2, 
-        exponential = 3, user = 4, t2D = 5, uniform = 6)
+        exponential = 3, user = 4, t2D = 5, uniform = 6, annular = 7, 
+        annular2 = 8, annularR = 9)
 }
 
+sparsebool <- function(sparsekernel, movementmodel) {
+  out <- sparsekernel
+  if (is.null(out)) {
+    out <- movementmodel %in% c('normalS', 'exponentialS', 't2DS')  # for short-term backward compatibility
+  }
+  out
+}
+  
 edgemethodcode <- function (edgemethod) {
     if (is.null(edgemethod)) edgemethod <- 'none' 
     if (!edgemethod %in% c('none','wrap','truncate')) {
@@ -54,6 +65,8 @@ edgemethodcode <- function (edgemethod) {
 .openCRstuff$iter <- 0
 .openCRstuff$suspendedtypes <- c('JSSAfgCL', 'JSSAfg')
 
+.openCRstuff$polydetectors <- c('polygon','transect','polygonX','transectX')
+
 # location of 'sigma' in parameter vector
 # zero-based, so take care to add 1 when used as index in R 2019-04-21
 # moveargs (move.a etc) follow sigma
@@ -61,11 +74,27 @@ edgemethodcode <- function (edgemethod) {
 .openCRstuff$sigmai[c(6,15)] <- 2
 .openCRstuff$sigmai[c(7,12,13,24,31)] <- 4
 
-.openCRstuff$learnedresponses <- c('b','bk', 'B', 'bsession',
-                                   'k', 'ksession', 'Ksession',
-                                   'bksession', 'Bsession','Bksession')
+.openCRstuff$detectionfunctions <- c('hazard halfnormal', 'hazard hazard rate', 
+    'hazard exponential', 'hazard annular normal', 'hazard cumulative gamma', 
+    'hazard variable power','hazard pixelar')
+
+.openCRstuff$DFN <- c('HHN', 'HHR', 'HEX', 'HAN', 'HCG', 'HVP','HPX')
+
+.openCRstuff$learnedresponses <- c('b','bk', 'B', 'bsession', 'k', 'ksession', 
+    'Ksession', 'bksession', 'Bsession', 'Bksession')
+
 .openCRstuff$traplearnedresponses <- c('bk', 'Bk', 'k', 'ksession', 'Ksession',
-                                   'bksession', 'Bksession')
+    'bksession', 'Bksession')
+
+# detection function numbers 14-20 are subset of those used by 'secr'
+detectionfunctionnumber <- function (detname) {
+    dfn <- match (toupper(detname), .openCRstuff$DFN)
+    if (is.na(dfn))
+        dfn <- match (tolower(detname), .openCRstuff$detectionfunctions)
+    if (is.na(dfn))
+        stop ("detection function ", detname, " not recognised in openCR")
+    dfn+13
+}
 
 replacedefaults <- function (default, user) replace(default, names(user), user)
 
@@ -103,15 +132,19 @@ padarray <- function (x, dims) {
     temp
 }
 
+###############################################################################
+# LOCAL VERSIONS OF secr FUNCTIONS 2021-05-03
+
 ## regularize a list of formulae
-## added 2009 08 05
 LHS <- function (form) {
     trms <- as.character (form)
     if (length(trms)==2) '' else trms[2]
 }
 RHS <- function (form) {
     trms <- as.character (form)
-    if (length(trms)==3) as.formula(paste(trms[c(1,3)])) else form
+    ## if (length(trms)==3) as.formula(paste(trms[c(1,3)])) else form
+    ## 2021-05-09 for compatibility with R 4.0
+    if (length(trms)==3) as.formula(paste(trms[c(1,3)], collapse = " ")) else form
 }
 stdform <- function (flist) {
     lhs <- sapply(flist, LHS)
@@ -120,6 +153,16 @@ stdform <- function (flist) {
     else names(temp) <- ifelse(names(flist) == '', lhs, names(flist))
     temp
 }
+
+stringsAsFactors <- function (DF) {
+    # convert any character columns of a data.frame (or list) to factor
+    if (is.list(DF) && length(DF)>0) {    ## bug fix 2020-08-14
+        chr <- sapply(DF, is.character)
+        DF[chr] <- lapply(DF[chr], as.factor)
+    }
+    DF
+}
+##############################################################################
 
 ## Start of miscellaneous functions
 
@@ -138,21 +181,6 @@ lnbinomial <- function (x,size,prob) {
 
 var.in.model <- function(v,m) v %in% unlist(lapply(m, all.vars))
 ############################################################################################
-
-get.nmix <- function (model) {
-    model$D <- NULL  ## ignore density model
-    nmix <- 1
-    if (any(var.in.model('h2', model))) {
-        nmix <- 2
-        if (any(var.in.model('h3', model)))
-            stop ("do not combine h2 and h3")
-    }
-    if (any(var.in.model('h3', model)))
-        nmix <- 3
-##    if ((nmix == 3))
-##        stop ('3-part mixtures not yet implemented')
-    nmix
-}
 
 add.cl <- function (df, alpha, loginterval, lowerbound = 0) {
 
@@ -180,7 +208,9 @@ model.string <- function (model, userDfn) {
     temp <- paste (names(model), as.character(model), collapse=' ', sep='')
     temp
 }
+
 fixed.string <- function (fixed) {
+    # copied from 'secr'
     if (is.null(fixed) | length(fixed)==0) 'none'
     else paste (names(fixed), as.character(fixed), collapse=', ', sep=' = ')
 }
@@ -419,6 +449,30 @@ se.Xuntransform <- function (beta, sebeta, linkfn, varnames)
 ############################################################################################
 
 adjustlevels <- function (field, dframe, validlevels ) {
+  # This function overwrites primary session numbers for which a given 
+  # parameter (field) cannot be estimated with the (dummy) session number of 
+  # one where it can be estimated, thus keeping the PIA tidy.
+  if (ms(validlevels)) {
+    if (!is.factor(dframe$stratum)) stop ("stratum should be factor")
+    if (!is.factor(dframe$session)) stop ("session should be factor")
+    if (!is.null(dframe$t) && !is.factor(dframe$t)) stop ("t should be factor")
+    for (i in 1:length(validlevels)) {
+      stratum <- levels(dframe$stratum)[i]
+      OK <- validlevels[[i]][field,]
+      OKlevels <- levels(dframe$session)[OK]
+      if (length(OKlevels)<1) {
+        stop ("stratum ", i, " has no valid levels of ", field)
+      }
+      notok <- dframe$stratum==stratum & !(dframe$session %in% OKlevels)
+      if ('session' %in% names(dframe)) {
+        dframe$session[notok] <- OKlevels[1]
+      }
+      if ('t' %in% names(dframe)) {   ## synonym for 'session'
+        dframe$t[notok] <- OKlevels[1]
+      }
+    }
+  }
+  else {
     OK <- validlevels[field,]
     if ('session' %in% names(dframe)) {
         levels(dframe$session)[!OK] <- levels(dframe$session)[match(TRUE,OK)]
@@ -426,12 +480,11 @@ adjustlevels <- function (field, dframe, validlevels ) {
     if ('t' %in% names(dframe)) {   ## synonym for 'session'
         levels(dframe$t)[!OK] <- levels(dframe$t)[match(TRUE,OK)]
     }
-    dframe
+  }
+  dframe
 }
 
 ############################################################################################
-# getvalidlevels <- function (type, parnames, J) {
-# 2018-10-29
 getvalidlevels <- function (type, parnames, J, CJSp1) {
         
     # flag impossible parameters by primary session
@@ -491,22 +544,44 @@ getvalidlevels <- function (type, parnames, J, CJSp1) {
     validlevels
 }
 ############################################################################################
-lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL, validlevels, contrasts = NULL) {
+lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL, 
+  validlevels, contrasts = NULL) {
     vars <- all.vars(model)
-    if (any(!(vars %in% names(newdata))))
-        stop ("one or more model covariates not found in 'newdata'")
+    if (any(!(vars %in% names(newdata)))) {
+      stop ("one or more model covariates not found in 'newdata'")
+    }
     newdata <- as.data.frame(newdata)
-
     lpred <- matrix(ncol = 2, nrow = nrow(newdata),dimnames=list(NULL,c('estimate','se')))
-
     # adjust for CJS nonidentifiable parameters
     # see also make.designmatrix in openCR.design.R
-    if (!is.null(newdata$session))
+    # notOK is vector of length equal to rows of newdata
+    # validity is dependent on newdata$stratum
+    # clunky - must be better way!
+    if (ms(validlevels)) {
+      nstrata <- length(validlevels)
+      nsessions <- sapply(validlevels, ncol)
+      valid <- lapply(validlevels, '[', field,)
+      validmat <- matrix(FALSE, ncol = max(nsessions), nrow = nstrata)
+      for (i in 1:nstrata) validmat[i,1:nsessions[i]] <- valid[[i]]
+      
+      if (!is.null(newdata$session))
+        notOK <- !validmat[cbind(newdata$stratum, newdata$session)]
+      else
+        notOK <- !validmat[cbind(newdata$stratum, newdata$t)]
+    }
+    else {
+      if (!is.null(newdata$session))
         notOK <- !validlevels[field,newdata$session]   ## BEFORE adjust levels
-    else
+      else
         notOK <- !validlevels[field,newdata$t]   ## BEFORE adjust levels
-    newdata <- adjustlevels(field, newdata, validlevels)
-    mat <- model.matrix(model, data=newdata, contrasts.arg = contrasts)
+    }
+    
+    newdata1 <- adjustlevels(field, newdata, validlevels)
+    # avoid contrasts error 2021-04-26
+    if (length(levels(newdata1$stratum))==1) {
+      newdata1$stratum <- rep(1, nrow(newdata1))
+    }
+    mat <- model.matrix(model, data=newdata1, contrasts.arg = contrasts)
 
     ## drop pmix beta0 column from design matrix (always zero)
     if (field=='pmix') {
@@ -519,8 +594,9 @@ lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL, validl
     else {
         vcv <- beta.vcv[indx,indx]    ## OR maybe all betas?
         nrw <- nrow(mat)
-        vcv <- apply(expand.grid(1:nrw, 1:nrw), 1, function(ij)
-            mat[ij[1],, drop=F] %*% vcv %*% t(mat[ij[2],, drop=F]))  # link scale
+        vcv <- apply(expand.grid(1:nrw, 1:nrw), 1, function(ij) {
+            mat[ij[1],, drop=F] %*% vcv %*% t(mat[ij[2],, drop=F])
+          })  # link scale
         vcv <- matrix (vcv, nrow = nrw)
         lpred[,2] <- diag(vcv)^0.5
         temp <- cbind(newdata,lpred)
@@ -656,7 +732,7 @@ getcumss <- function(capthist) {
 fillpmix2 <- function (nc, nmix, PIA, realparval) {
     pmix <- matrix(1, nrow = nc, ncol = nmix) 
     if (nmix>1) {        
-        c <- as.numeric(PIA[,1,1,])
+        c <- as.numeric(PIA[1,,1,1,])     # PIA stratum selected previously
         pmix[] <- realparval[c, 'pmix']   # assumes dim 2 of realparval has name
     }
     t(pmix)
@@ -687,8 +763,9 @@ age.matrix <- function (capthist, initialage = 0, minimumage = 0, maximumage = 1
             stop ("initialage covariate ", initialage, " not found")
         initialage <- covariates(capthist)[[initialage]]
     }
-    else
+    else {
         initialage <- rep(initialage, length.out = n)
+    }
     out <- t(sapply(1:n, makeage))
     dimnames(out) <- dimnames(capthist)[1:2]
     if (collapse)
@@ -777,30 +854,46 @@ unsqueeze <- function(x) {
 
 ## code used in openCR.fit to put capthist object in a standard form
 ## 2018-02-11
+## modified 2021-04-18 for stratified input
 
-stdcapthist <- function (capthist, type, nclone, squ, ...) {
-    if (!inherits(capthist, 'capthist'))
-        stop ("requires 'capthist' object")
+stdcapthist <- function (capthist, type, nclone, squ, HPXpoly, stratified, ...) {
+  if (!inherits(capthist, 'capthist'))
+    stop ("requires 'capthist' object")
+  if (stratified) {
+    # check multiple occasions etc.
+    # form into list of ch
+    if (!ms(capthist)) stop("stratification requires multisession capthist")
+    if (type %in% c('secrCL','secrD')) {
+      for (i in 1:length(capthist)) 
+        intervals(capthist[[i]]) <- rep(0, ncol(capthist[[i]])-1)
+    }
+    out <- lapply(capthist, stdcapthist, type, nclone, squ, HPXpoly, stratified = FALSE, ...)
+    class(out) <- c("capthist","list")
+    out
+  }
+  else {
     if (!ms(capthist) & is.null(intervals(capthist))) {
-        # warning ("intervals for single-session capthist set to 1")
-        intervals(capthist) <- rep(1, ncol(capthist)-1)
+      # warning ("intervals for single-session capthist set to 1")
+      intervals(capthist) <- rep(1, ncol(capthist)-1)
     }
     
     if (ms(capthist)) {    ## collapse ms to single
-        capthist <- join(capthist, drop.sites = !grepl('secr',type), ...)
+      capthist <- join(capthist, drop.sites = !grepl('secr',type), ...)
     }
     interv <- intervals(capthist)
     sessnames <- sessionlabels(capthist)
     timevarcov <- timevaryingcov(capthist)
     if (grepl('secr', type)) {
-        if (detector(traps(capthist))[1] == 'single') {
-            capthist <- reduce(capthist, output = 'multi', dropunused = FALSE)
-            warning ("capthist coerced to 'multi' detector type")
-        }
-        else if (!(detector(traps(capthist))[1] %in% c('proximity','count','multi'))) {
-            capthist <- reduce(capthist, output = 'proximity', dropunused = FALSE)
-            warning ("capthist coerced to 'proximity' detector type")
-        }
+      if (detector(traps(capthist))[1] == 'single') {
+        capthist <- reduce(capthist, output = 'multi', dropunused = FALSE)
+        warning ("capthist coerced to 'multi' detector type")
+      }
+      else if (HPXpoly) {
+      }
+      else if (!(detector(traps(capthist))[1] %in% c('proximity','count','multi'))) {
+        capthist <- reduce(capthist, output = 'proximity', dropunused = FALSE)
+        warning ("capthist coerced to 'proximity' detector type")
+      }
     }
     intervals(capthist) <- interv   ## restore if reduce.capthist has lost them
     sessionlabels(capthist) <- sessnames
@@ -808,21 +901,22 @@ stdcapthist <- function (capthist, type, nclone, squ, ...) {
     
     # no cloning multiplier
     if (all(nclone == 1)) {
-        if (squ) capthist <- squeeze(capthist)
+      if (squ) capthist <- squeeze(capthist)
     }
     # cloning multiplier
     else {   
-        if (is.null(covariates(capthist)$freq)) {
-            if (is.null(covariates(capthist))) {
-                covariates(capthist) <- data.frame(freq = rep(1,nrow(capthist)))
-            }
-            else {
-                covariates(capthist)$freq <- rep(1,nrow(capthist))
-            }
+      if (is.null(covariates(capthist)$freq)) {
+        if (is.null(covariates(capthist))) {
+          covariates(capthist) <- data.frame(freq = rep(1,nrow(capthist)))
         }
-        covariates(capthist)$freq <- covariates(capthist)$freq * nclone
+        else {
+          covariates(capthist)$freq <- rep(1,nrow(capthist))
+        }
+      }
+      covariates(capthist)$freq <- covariates(capthist)$freq * nclone
     }
     capthist
+  }
 }
 
 ########################################################################################
@@ -858,16 +952,20 @@ complete.beta.vcv <- function (object) {
 ###############################################################################
 
 ## Based on Charles C. Berry on R-help 2008-01-13
-## drop = FALSE 2018-11-22
 n.unique.rows <- function(x) {
     order.x <- do.call(order, as.data.frame(x))
-    equal.to.previous <- rowSums(x[tail(order.x,-1),,drop = FALSE] != x[head(order.x,-1),,drop = FALSE])==0 
+    equal.to.previous <- rowSums(
+      x[tail(order.x,-1),,drop = FALSE] != 
+      x[head(order.x,-1),,drop = FALSE]
+    ) == 0 
     1 + sum(!equal.to.previous)
 }
+###############################################################################
 
 individualcovariates <- function (PIA) {
-    pia <- matrix(PIA, nrow = nrow(PIA))
-    n.unique.rows(pia) > 1
+  pia <- aperm(PIA, c(2,1,3,4,5))
+  pia <- matrix(pia, nrow = nrow(pia))
+  n.unique.rows(pia) > 1
 }
 ###############################################################################
 
@@ -909,25 +1007,166 @@ mqsetup <- function (
   edgecode
 )
 {
-  ## assuming cells of mask and kernel are same size
-  ## and kernel takes integer values centred on current mask point
-  
-  oldx <- round((mask$x-min(mask$x))/cellsize)
-  oldy <- round((mask$y-min(mask$y))/cellsize)
-  
-  newx <- as.integer(outer(oldx, kernel$x, "+"))
-  newy <- as.integer(outer(oldy, kernel$y, "+"))
-  
-  # mqarray shared with C++ so indices are zero-based
-  if (edgecode == 1)    # "wrap"
-    newxy <- rectwrap(oldx,oldy,newx,newy)
-  else                  # "truncate", "none"
-    newxy <- paste(newx, newy)
-  
-  i <- match(newxy, paste(oldx,oldy)) - 1
-  i[is.na(i)] <- -1
-  matrix(i, nrow = nrow(mask), ncol = nrow(kernel))
-  
+  if (ms(mask)) {
+    lapply(mask, mqsetup, kernel, cellsize, edgecode)
+  }
+  else {
+    ## assuming cells of mask and kernel are same size
+    ## and kernel takes integer values centred on current mask point
+    
+    oldx <- round((mask$x-min(mask$x))/cellsize)
+    oldy <- round((mask$y-min(mask$y))/cellsize)
+    
+    newx <- as.integer(outer(oldx, kernel$x, "+"))
+    newy <- as.integer(outer(oldy, kernel$y, "+"))
+    
+    # mqarray shared with C++ so indices are zero-based
+    if (edgecode == 1)    # "wrap"
+      newxy <- rectwrap(oldx,oldy,newx,newy)
+    else                  # "truncate", "none"
+      newxy <- paste(newx, newy)
+    
+    i <- match(newxy, paste(oldx,oldy)) - 1
+    i[is.na(i)] <- -1
+    matrix(i, nrow = nrow(mask), ncol = nrow(kernel))
+  }
 }
 
 ###############################################################################
+
+## local logmultinomial 2021-03-30, 2021-04-19
+logmultinom <- function (capthist, stratified = FALSE) {
+  if (stratified) {
+    sum(sapply(capthist, logmultinom, stratified = FALSE))
+  }
+  else {
+    nr <- nrow(capthist)
+    ch <- matrix(capthist, nrow = nr)
+    freq <- covariates(capthist)$freq
+    if (is.null(freq)) freq <- rep(1, nr)
+    fr <- table(rep(make.lookup(ch)$index, freq))
+    lgamma(sum(fr) + 1) - sum(lgamma(fr + 1))    
+  }
+}
+
+##############################################
+xydist <- function (xy1, xy2) {
+    nr <- nrow(xy1)
+    nc <- nrow(xy2)
+    x1 <- matrix(xy1[,1], nr, nc)
+    x2 <- matrix(xy2[,1], nr, nc, byrow=T)
+    y1 <- matrix(xy1[,2], nr, nc)
+    y2 <- matrix(xy2[,2], nr, nc, byrow=T)
+    max(abs(x1-x2), abs(y1-y2))
+}
+
+##############################################
+getdistmat <- function (traps, mask, HPX = FALSE) {
+  ## Static distance matrix
+  if (HPX) {
+    if (any(detector(traps) %in% .openCRstuff$polydetectors)) {
+      trps <- split(traps, polyID(traps))
+      inside <- t(sapply(trps, pointsInPolygon, xy = mask))
+      d <- 1-inside   # 0 inside, 1 outside
+      d[d>0] <- 1e10  # 0 inside, 1e10 outside
+      d
+    }
+    else {
+      # maximum of squared distance in x- or y- directions
+      xydist(traps, mask)
+    }
+  }
+  else {
+    if (any(detector(traps) %in% .openCRstuff$polydetectors)) {
+      ## do not use result if detector is one of
+      ## polygonX, polygon, transectX, transect, telemetry
+      stop("polygon detectors can only be used with detectfn = 'HPX' in openCR")
+    }
+    else {
+      # Euclidean distance
+      edist(traps, mask)
+    }
+  }
+}
+
+###################################################
+
+primaryintervals <- function (object, ...) {
+  ## 2021-04-26 list, one vector per stratum
+  ## for backward compatibility -
+  out <- list(object$intervals)
+  if (is.null(out[[1]])) {
+    out <- object$primaryintervals 
+  }
+  if (!is.list(out)) stop ("primarysessions should be stratum list")
+  out
+}
+#--------------------------------------------------------------------------
+
+# function to ensure covariates are in standard form (stratum list of dataframes)
+stdcovlist <- function (cov, covname, nstrata, expected = NULL) {
+  vector.as.df <- function (vect) {
+    df <- data.frame(vect)
+    names(df) <- covname
+    df
+  }
+  if (is.null(cov)) {
+    NULL
+  }
+  else {
+    if (is.data.frame(cov)) {
+      dflist <- rep(list(cov), nstrata)
+    }
+    else {
+      if (is.list(cov)) {
+        if (length(cov) != nstrata) {
+          stop ("length of covariate list does not equal number of strata")
+        }
+        if (is.data.frame(cov[[1]])) {
+          dflist <- cov
+        }
+        else {
+          dflist <- lapply(cov, vector.as.df)
+        }
+      }
+      else {
+        df <- vector.as.df(cov)
+        dflist <- rep(list(df), nstrata)
+      }
+    }
+    
+    # force common factor levels
+    # fails if names differ across strata? as it should
+    # use 'secr' function shareFactorLevels that works on covariates attribute       
+    tmp <- mapply('covariates<-' , dflist, dflist, SIMPLIFY = FALSE)
+    dflist <- covariates(shareFactorLevels(tmp))
+    
+    # check number of components per stratum
+    if (!is.null(expected) && any(sapply(dflist, nrow) != expected)) {
+      stop ("number of covariate values differs from expected in one or more strata")
+    }
+    if (nstrata == 1)
+      dflist[[1]]
+    else
+      dflist
+  }
+}
+#--------------------------------------------------------------------------
+
+get.nmix <- function (model) {
+    # simplified local version of 'secr' function get.nmix
+    model$D <- NULL  ## ignore density model
+    model$pmix <- NULL ## pmix alone cannot make this a mixture model
+    nmix <- 1
+    if (any(var.in.model('h2', model))) {
+        nmix <- 2
+        if (any(var.in.model('h3', model)))
+            stop ("do not combine h2 and h3")
+    }
+    if (any(var.in.model('h3', model))) {
+        nmix <- 3
+    }
+    nmix
+}
+############################################################################################
+

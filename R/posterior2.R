@@ -32,6 +32,7 @@ classMembership <- function (object, ...) UseMethod("classMembership")
 
 classMembership.openCR <- function (object, fullCH = NULL, ...) {
     
+    if (!is.null(object$stratified) && object$stratified) stop ("classMembership not ready for stratified data")
     # Return the probability of membership in latent classes for h2 and h3 models
     
     nmix <- object$details$nmix
@@ -99,16 +100,21 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
         
         ## integer code for movement model
         movementcode <- movecode(object$movementmodel)
+        sparsekernel <- sparsebool(object$sparsekernel, object$movementmodel)
         edgecode <- edgemethodcode(object$edgemethod)
 
         cellsize <- mqarray <- 0
         kernel <- mqarray <- matrix(0,1,2)  ## default
-        if (movementcode %in% 2:5) {
+        if (movementcode %in% c(2:5, 7,8)) {
             ## movement kernel
-            k2 <- object$details$kernelradius
+            k2 <- object$kernelradius
             cellsize <- attr(object$mask,'area')^0.5 * 100   ## metres, equal mask cellsize
             kernel <- expand.grid(x = -k2:k2, y = -k2:k2)
-            kernel <- kernel[(kernel$x^2 + kernel$y^2) <= (k2+0.5)^2, ]
+            kernel <- kernel[(kernel$x^2 + kernel$y^2) <= (k2+0.5)^2, ]   ## autoclip
+            if (sparsekernel) {
+                ok <- kernel$x==0 | kernel$y == 0 | kernel$x == kernel$y | kernel$x == -kernel$y
+                kernel <- kernel[ok,]
+            }
             mqarray <- mqsetup (object$mask, kernel, cellsize, edgecode) # 2020-11-02
         }
         
@@ -127,13 +133,12 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
             traps(CH) <- traps(capthist)
         }
         ##--------------------------------------------------------------
-        
+        distmat <- getdistmat(trps, object$mask, object$detectfn==20)
         temp <- makegkParallelcpp (as.integer(object$detectfn),
                                    as.integer(.openCRstuff$sigmai[type]),
                                    as.integer(object$details$grain),
                                    as.matrix(realparval),
-                                   as.matrix(trps),
-                                   as.matrix(object$mask))
+                                   as.matrix(distmat))
         gk <- temp[[1]]
         hk <- temp[[2]]
         pmix <- fillpmix2(nc, nmix, PIA, realparval)
@@ -180,6 +185,7 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
                     as.matrix (hx),                
                     as.matrix (hi),      
                     as.integer(movementcode),
+                    as.logical(sparsekernel),
                     as.integer(edgecode),
                     as.character(object$usermodel),  ## 2019-05-07
                     as.integer(object$moveargsi),

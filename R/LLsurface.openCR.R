@@ -82,15 +82,17 @@ LLsurface.openCR <- function (object, betapar = c('phi', 'sigma'), xval = NULL, 
                            dframe = object$dframe, 
                            details = details, 
                            method = object$fit$method, 
-                           ncores = ncores)
+                           ncores = ncores)[1]
             )
         }
         
-        message ('Evaluating log likelihood across grid of', nrow(grid), 'points...')
+        message ('Evaluating log likelihood across grid of ', nrow(grid), ' points...')
         flush.console()
 
-        temp <- apply (grid, 1, LL)
-        temp <- matrix(temp, nrow=length(xval))
+        ## 2021-02-26
+        ## temp <- apply (grid, 1, LL)
+        temp <- apply (as.matrix(grid), 1, LL)
+        temp <- matrix(temp, nrow = length(xval))
         
         if (realscale) {
             xval <- round(untransform(xval, linkx),4)

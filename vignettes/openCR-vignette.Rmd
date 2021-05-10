@@ -1,5 +1,5 @@
 ---
-title: '**openCR** 1.5 - open population capture--recapture'
+title: '**openCR** 2.0 - open population capture--recapture'
 author: "Murray Efford"
 date: "`r Sys.Date()`"
 output: 
@@ -163,7 +163,13 @@ Data should be provided to `openCR.fit` as **secr** 'capthist' objects. The occa
 
 The optional `intervals` attribute of the capthist object defines the structure. If intervals are not specified then they default to 1.0 and each occasion is treated as a primary session. If intervals are specified then some may be zero; occasions separated by 'zero' intervals are treated as secondary sessions within the same primary session, as in MARK. 
 
-A multi-session capthist object will be converted automatically to a single-session object using function `secr::join`. An appropriate intervals attribute is constructed, using the intervals attribute of the multi-session object for the intervals between primary sessions (1.0 if not specified), and setting other intervals to zero.
+```{r figfunc, ref.label = "figurefunctions", echo = FALSE} 
+# load code from Appendix 1
+```
+```{r fig1plot, ref.label = "fig1", fig.width=8, fig.height=3.5, echo = FALSE} 
+# run code from Appendix 1
+```
+**Fig. 1.** Structure of data for open-population analysis in **openCR**. Primary sessions initially correspond to the sessions (components) of a multi-session **secr** capthist object; each primary session may have one or more secondary sessions as numbered (top). For model fitting in `openCR.fit` the multi-session capthist is 'joined' to form a single-session capthist with an 'intervals' attribute; non-zero intervals indicate breaks between primary sessions (bottom). The `join` step is automatic when a multi-session capthist is provided to `openCR.fit` if `stratified = FALSE`. (See [Appendix 1](#appendix1) for code to make this figure).
 
 To construct your own capthist objects --
 
@@ -172,6 +178,27 @@ To construct your own capthist objects --
 3. Read a MARK .inp input file with `read.inp`.
 
 Examples of data input code also appear on the help pages for data objects `FebpossumCH`, `fieldvoleCH`, `microtusCH` and `dipperCH`.
+
+A multi-session capthist object will be converted automatically to a single-session object using function `secr::join` unless `stratified = TRUE` (see below). An appropriate intervals attribute is constructed, using the intervals attribute of the multi-session object for the intervals between primary sessions (1.0 if not specified), and setting other intervals to zero.
+
+Table 1. Input formats for \textbf{openCR} 2.0
+
+| Input | `stratified` | Interpretation |
+|:-----------------|:----------|:----------------------------------------------------|
+| single-session capthist  | not used | secondary sessions split into primary sessions by 'intervals' |
+| multi-session capthist| FALSE | single stratum (each 'session' is one primary session) |
+| multi-session capthist| TRUE  | multi-stratum (each 'session' is one stratum) |
+
+## Stratification
+
+From **openCR** 2.0 onwards any model may be stratified. For stratified models (`stratified = TRUE` in `openCR.fit`) each session of a multi-session capthist object is interpreted as an independent stratum that contributes one component of the log likelihood. Each stratum (session) has its own detectors and capture data. This assumes that primary sessions within each stratum have previously been joined manually in a nominally 'single-session' capthist. The function `stratify` helps you construct stratified capthist objects from collections of single-session objects.
+
+```{r fig2plot, ref.label = "fig2", fig.width=8, fig.height=4.5, echo = FALSE} 
+# run code from Appendix 1
+```
+**Fig. 2.** Structure of data for stratified open-population analysis in **openCR**. Each stratum is a pre-joined (single-session) component of a multi-session capthist object. The internal structure and detector may differ between strata.
+
+Stratified models may use 'stratum' as a factor-valued predictor. Groups of strata may be contrasted using stratum-level covariates as described later.
 
 # Model types
 
@@ -184,7 +211,7 @@ The various models available in **openCR** are named to encode the distinctions 
 
 Thus 'JSSAsecrfCL' is a spatial JSSA model parameterized in terms of per capita recruitment $f$ and fitted by maximizing the conditional likelihood (a spatial version of Link and Barker (2005), minus parameter covariation). Any movement model is specified separately with the 'movementmodel' argument of `openCR.fit`.
 
-Models of the form 'JSSA...CL' are variations on the Pradel--Link--Barker models. **openCR** 1.5.0 recognises labels of the form 'PLB...' as an alias for each of these models. Thus 'PLBf' is synonymous with 'JSSAfCL', and 'PLBsecrl' is synonymous with 'JSSAsecrlCL'.
+Models of the form 'JSSA...CL' are variations on the Pradel--Link--Barker models. **openCR** 2.0.0 recognises labels of the form 'PLB...' as an alias for each of these models. Thus 'PLBf' is synonymous with 'JSSAfCL', and 'PLBsecrl' is synonymous with 'JSSAsecrlCL'.
 
 Parameters vary with the type of model, as listed below. Each of these primary parameters ('real' parameters in MARK) may also be modelled as a linear combination of predictors on a suitable link scale, allowing the inclusion of covariates and constraints. The coefficients of the parameter-specific linear combinations are called 'beta' parameters in MARK; the likelihood is maximized with respect to the concatenated list of beta parameters.
 
@@ -192,7 +219,7 @@ Parameters vary with the type of model, as listed below. Each of these primary p
 
 ### Parameters and model types
 
-Table 1. Parameter definitions and default link functions (nonspatial models)
+Table 2. Parameter definitions and default link functions (nonspatial models)
 
 | Parameter | Symbol | Link | Description |
 |:--------|:-------|:-------|:----------------------------------------------------|
@@ -208,7 +235,7 @@ Table 1. Parameter definitions and default link functions (nonspatial models)
 
 \* parameters marked with an asterisk are scaled by the interval between primary sessions. 
 
-Table 2. Parameters of nonspatial **openCR** models
+Table 3. Parameters of nonspatial **openCR** models
  
 | Type    | Alias | p | phi | b | f | gamma | lambda | superN | BN | N  |
 |:--------|----|---|-----|---|---|---|---|---|---|---|    
@@ -228,13 +255,13 @@ Models with type ending in CL are of the Pradel--Link--Barker type, with aliases
 
 ### Non-spatial models using sufficient statistics
 
-**openCR** mostly fits models by modelling capture histories one-by-one. An alternative faster method is to evaluate the likelihood expressed in terms of sufficient statistics. Sufficient statistics vary among models, but they are typically counts such as provided by the function `JS.counts`. The 'sufficient statistics' approach is not compatible with individual covariates. The non-spatial model types 'Pradel' and 'Pradelg' are implemented in **openCR** using sufficient statistics (Pradel 1996) and therefore fall outside the main framework (Table 2). They correspond to 'JSSAlCL' and 'JSSAgCL' respectively, and estimate the same parameters as those models. Estimates should coincide except when there are losses on capture. 'Pradel' is parameterized in terms of population growth rate (lambda) and 'Pradelg' is parameterized in terms of seniority (gamma). 
+**openCR** mostly fits models by modelling capture histories one-by-one. An alternative faster method is to evaluate the likelihood expressed in terms of sufficient statistics. Sufficient statistics vary among models, but they are typically counts such as provided by the function `JS.counts`. The 'sufficient statistics' approach is not compatible with individual covariates. The non-spatial model types 'Pradel' and 'Pradelg' are implemented in **openCR** using sufficient statistics (Pradel 1996) and therefore fall outside the main framework (Table 3). They correspond to 'JSSAlCL' and 'JSSAgCL' respectively, and estimate the same parameters as those models. Estimates should coincide except when there are losses on capture. 'Pradel' is parameterized in terms of population growth rate (lambda) and 'Pradelg' is parameterized in terms of seniority (gamma). 
 
 Additionally, the function `JS.direct` computes classic Jolly--Seber estimates using the sufficient statistics.
 
 ## Spatial **openCR** models
 
-Table 3. Parameter definitions and default link functions (spatial models)
+Table 4. Parameter definitions and default link functions (spatial models)
 
 | Parameter | Symbol | Link | Description |
 |:--------|:-------|:-----------|:--------------------------------------------------|
@@ -252,7 +279,7 @@ Table 3. Parameter definitions and default link functions (spatial models)
 
 \* parameters marked with an asterisk are scaled by the interval between primary sessions. 
 
-Table 4. Parameters of spatial **openCR** models
+Table 5. Parameters of spatial **openCR** models
 
 | Type        | Alias | lambda0 | sigma | z | phi | b | f | gamma | lambda | superD | BD | D |
 |:------------|----|---|---|---|---|---|---|---|---|---|---|---|    
@@ -274,16 +301,17 @@ Spatial models with type ending in CL have features in common with the Pradel--L
 
 # Model formulae
 
-Formulae define a linear model for each 'real' parameter (p, phi, sigma etc.) on the link scale (logit, log etc.). Alternative link functions not shown in Tables 1 and 3 are 'loglog' and 'sin', both as defined in MARK.
+Formulae define a linear model for each 'real' parameter (p, phi, sigma etc.) on the link scale (logit, log etc.). Alternative link functions not shown in Tables 2 and 4 are 'loglog' and 'sin', both as defined in MARK.
 
 The default linear combination for each parameter is a constant, null model (~1, parameter constant over time, unaffected by individual differences etc.). To include other effects build formulae using either predefined (built-in) predictors listed here, or the names of covariates.
 
 ## Built-in predictors
 
-Table 5. Built-in predictors ('sessions' refers to primary sessions)
+Table 6. Built-in predictors ('sessions' refers to primary sessions)
 
 | Predictor   | Parameters | Description |
 |:-----|--------------------| -------------------------------------------|    
+| stratum     | all  | Factor, one level per stratum (`stratified = TRUE`) |
 | session     | all except 'superN', 'superD' | Factor, one level per primary session |
 | t     | all except 'superN', 'superD' | synonym of 'session' |
 | Session     | all except 'superN', 'superD' | Continuous time |
@@ -313,19 +341,21 @@ IMPORTANT NOTE: Learned response predictors ('b', 'bsession' etc.) were re-defin
 
 ## User-provided covariates
 
-The rules for covariates largely follow **secr** ([secr-overview.pdf]). Covariates may be at the level of primary session, secondary session (detection parameters only), individual (CL models only), or detector (spatial models only). Further complexity may be modelled by providing custom design data cutting across these categories (see below).
+The rules for covariates largely follow **secr** ([secr-overview.pdf]). Covariates may be at the level of stratum, primary session, secondary session (detection parameters only), individual (CL models only), or detector (spatial models only). Further complexity may be modelled by providing custom design data cutting across these categories (see below).
 
-Individual and detector covariates are named columns in the 'covariates' attributes of the respective capthist and traps object. Covariate names should differ from the built-in predictors (Table 5).
+Individual and detector covariates are named columns in the 'covariates' attributes of the respective capthist and traps object. Covariate names should differ from the built-in predictors (Table 6).
 
-Primary session covariates are provided to `openCR.fit` in the argument 'sessioncov', rather than associated with a data object. If 'sessioncov' is a vector (length equal to number of primary sessions) rather than a dataframe then it may be referenced as 'scov' in model formulae. 
+Stratum covariates are provided to `openCR.fit` in the argument 'stratumcov'. That should be a dataframe with one row per stratum; the name of any column may be used in a model formula.
 
-Covariates for detection parameters in secondary sessions are provided in the 'timecov' argument; if 'timecov' is a vector (length equal to total number of secondary sessions) rather than a dataframe then it may be referenced as 'tcov' in model formulae. 
+Primary session covariates are provided to `openCR.fit` in the argument 'sessioncov', rather than associated with a data object. If 'sessioncov' is a vector (length equal to number of primary sessions) rather than a dataframe then it may be referenced as 'scov' in model formulae. For stratified data, 'sessioncov' may be a list with one component per stratum (the lazy option of providing a single vector or dataframe works only if all strata have the same sessions).
+
+Covariates for detection parameters in secondary sessions are provided in the 'timecov' argument. If 'timecov' is a vector (length equal to total number of secondary sessions) rather than a dataframe then it may be referenced as 'tcov' in model formulae. For stratified data, 'timecov' may be a list with one component per stratum (the lazy option of providing a single vector or dataframe works only if all strata have the same primary and secondary sessions).
 
 # More on modelling
 
 ## Closed populations
 
-The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored. **openCR** 1.5 fits simple closed models faster than **secr** 4.3. This surprising result is due to multithreading, improved coding, and avoidance of some modelling complexity.
+The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a closed population (no mortality, no recruitment, no movement); the intervals attribute is ignored.
 
 ```{r compare, cache = mycache, warning = FALSE}
 msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
@@ -334,7 +364,8 @@ secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
 openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
 
 # massage the predict.openCR results to the same format as predict.secr
-pred_openCR <- plyr::rbind.fill(predict(openCR))[c(2,1,3),-1]
+pred_openCR <- plyr::rbind.fill(predict(openCR))
+pred_openCR <- pred_openCR[c(2,1,3), !(names(pred_openCR) %in% c('stratum','session'))]
 rownames(pred_openCR) <- secr$realnames
 
 # compare estimates
@@ -388,20 +419,21 @@ In this example we define a function to construct custom design data for a learn
 
 ```{r makedf, cache = mycache}
 makedf.b <- function (ch, spatial = FALSE, nmix = 1, naive = FALSE) {
-    ch <- squeeze(ch)
-    # Construct matrix of logical values TRUE iff caught before 
-    detected <- apply(abs(ch),1:2,sum)>0
-    detected <- t(apply(detected, 1, cumsum)>0)
-    if (naive)
-        b <- rep(FALSE, prod(dim(ch)[1:2]))
-    else
-        b <- t(apply(detected, 1, function(x) {x[which.max(x)] <- FALSE; x}))
-    # For a simple non-spatial case: data.frame(customb = as.vector(b))  
-    # More generally:
-    n <- nrow(ch)
-    S <- ncol(ch)
-    K <- if (spatial) dim(ch)[3] else 1
-    data.frame(customb = insertdim(b, 1:2, c(n,S,K,nmix)))  
+  R <- 1 # assume single stratum
+  ch <- squeeze(ch)
+  # Construct matrix of logical values TRUE iff caught before 
+  detected <- apply(abs(ch),1:2,sum)>0
+  detected <- t(apply(detected, 1, cumsum)>0)
+  if (naive)
+    b <- rep(FALSE, prod(dim(ch)[1:2]))
+  else
+    b <- t(apply(detected, 1, function(x) {x[which.max(x)] <- FALSE; x}))
+  # For a simple non-spatial case: data.frame(customb = as.vector(b))  
+  # More generally:
+  n <- nrow(ch)
+  S <- ncol(ch)
+  K <- if (spatial) dim(ch)[3] else 1
+  data.frame(customb = insertdim(b, c(2,3,1), c(R,n,S,K,nmix)))  
 }
 ```
 
@@ -431,6 +463,7 @@ An ad hoc adjustment for transience may be programmed as follows (cf Pradel et a
 
 ```{r transient, cache = mycache}
 makedf.resident <- function (ch, spatial = FALSE, nmix = 1) {
+  nstrata <- 1 # assume single stratum
     ch <- squeeze(ch)
     n <- nrow(ch)
     S <- ncol(ch)
@@ -438,7 +471,7 @@ makedf.resident <- function (ch, spatial = FALSE, nmix = 1) {
     primary <- primarysessions(intervals(ch))
     detected <- apply(abs(ch),1:2,sum)>0
     nprimary <- apply(detected, 1, function(x) length(unique(primary[x])))
-    data.frame(resident = insertdim(nprimary>1, 1, c(n,S,K,nmix)))  
+    data.frame(resident = insertdim(nprimary>1, 1, c(nstrata, n, S, K, nmix)))  
 }
 ```
 
@@ -513,51 +546,71 @@ The mean is backtransformed from the link scale. This results in some bias owing
 
 # Movement models
 
-Potential movement of home ranges between primary sessions (= dispersal) is a critical part of open-population models. The argument `movementmodel` of `openCR.fit` allows the possibilities in Table 6. Two of these do not model movement at all. The default 'static' is a null model in which each animal retains the same home range. The 'uncorrelated' option models the locations of an animal independently in each primary session; information is sacrificed and no particular movement model is implied.
+Potential movement of home ranges between primary sessions (= dispersal) is a critical part of open-population models. The argument `movementmodel` of `openCR.fit` allows the possibilities in Table 7. Two of these do not model movement at all. The default 'static' is a null model in which each animal retains the same home range. The 'uncorrelated' option models the locations of an animal independently in each primary session; information is sacrificed and no particular movement model is implied.
 
 The remaining options (normal, exponential, t2D, uniform, and user-supplied function) fit a dispersal kernel (Nathan et al. 2012) to represent movement between primary sessions. This usually requires at least one more parameter to represent the spatial scale of dispersal. 
 
-IMPORTANT NOTE: Movement models were recoded in **openCR** >=1.4.0 and results may differ from previous releases.
+**Table 7**. Models for movement between primary sessions.
 
-**Table 6**. Models for movement between primary sessions.
-
-| Movement model | Parameter(s) | Description |
+| Movement model | Parameter(s) | Description (aliases in parentheses) |
 |-------------|------------|--------------------------------------------|
 | `static` | (none) | Centres constant across primary sessions |
 | `uncorrelated` | (none) | Centres unconstrained |
-| `normal` | `move.a` | Gaussian (bivariate normal) kernel |
-| `exponential` | `move.a` | Laplace (negative exponential) kernel |
-| `t2D` | `move.a`, `move.b` | 2-dimensional $t$-distribution kernel |
+| `normal` | `move.a` | Bivariate normal kernel (Gaussian, BVN)|
+| `exponential` | `move.a` | Bivariate negative exponential kernel (Laplace, BVE) |
+| `t2D` | `move.a`, `move.b` | Bivariate $t$-distribution kernel (2Dt, BVT)|
+| `annular` | `move.a` | non-zero only at centre and edge cells |
 | `uniform` | (none) | Uniform within arbitrary kernel radius |
 | (user function) | `move.a`, `move.b` | User-supplied kernel function (`ncores = 1` only)|
 
 ## Movement kernels {#kernels}
 
-All movement kernels are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin (Table 7). 
+All movement kernels are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin (Table 8). 
 
-The extent of the kernel is controlled by details argument 'kernelradius' that gives the radius in terms of mask cells. The default radius (10) results in a discretized kernel of 349 cells (square of 441 cells minus corners). Cell-specific values are normalised so that they sum to 1.0 across the kernel. Dispersal probability effectively falls to zero at the boundary of the kernel, so the kernel radius is a critical part of the model. The 'uniform' kernel has no parameters but depends critically on the user-specified kernel radius.
+The extent of the kernel is controlled by the argument 'kernelradius' that gives the radius in terms of mask cells. The default radius (10) results in a discretized kernel of 349 cells (square of 441 cells minus corners). Cell-specific values are normalised so that they sum to 1.0 across the kernel. Dispersal probability effectively falls to zero at the boundary of the kernel, so the kernel radius is a critical part of the model. The 'uniform' kernel has no parameters but depends critically on the user-specified kernel radius, as does the 'annular' kernel.
 
-**Table 7**. Kernel probability density functions. From Nathan et al. (2012, Table 15.1) and Clark et al. (1999) with adjustment for parameterisation in **openCR**.
+**Table 8**. Kernel probability density functions. Based in part on Nathan et al. (2012, Table 15.1) and Clark et al. (1999) with adjustment for parameterisation in **openCR**.
 
 | Kernel | `move.a` | `move.b` | pdf | Expected movement* | Proportion* $r > R$ |
 |-----------|------|------|-----------------------|--------------------------|---------------------|
 | normal | $\alpha_g$ | | $\frac{1}{2 \pi \alpha_g^2} \exp\left( \frac{-r^2}{2\alpha_g^2} \right)$ | $\frac{\alpha_g \sqrt \pi}{\sqrt 2}$ | $\exp \left( - \frac{R^2}{2 \alpha_g^2}\right)$|
-| exponential | $\alpha_l$ | | $\frac{1}{2 \pi \alpha_l^2} \exp \left( \frac{-r}{\alpha_l} \right)$ | $2 \alpha_l$ | ** |
+| exponential | $\alpha_l$ | | $\frac{1}{2 \pi \alpha_l^2} \exp \left( \frac{-r}{\alpha_l} \right)$ | $2 \alpha_l$ | $\left(\frac{R}{\alpha_l} + 1\right) \exp\left(-\frac{R}{\alpha_l}\right)$ |
 | t2D | $\alpha_t$ | $\beta$ | $\frac{\beta}{\pi \alpha_t^2} \left( 1 + \frac{r^2}{\alpha_t^2} \right)^{-(\beta+1)}$ | $\alpha_t \frac{\sqrt \pi}{2} \frac{\Gamma \left( \beta-0.5 \right)}{\Gamma (\beta)}$, $\beta > 0.5$| $\left(\frac{\alpha_t^2}{\alpha_t^2 + R^2} \right)^\beta$|
+| annular | $p_0$ | | $p_0 \delta$, $r = 0$ | $(1-p_0) c$|---|
+|         |       | | $\frac{1-p_0}{\pi (c_2^2 - c_1^2)}$, $c_1 \le r < c_2$ |||
+|         |       | | 0 otherwise |||
 \* Continuous, untruncated, kernel. Expected values for the discretized and truncated kernel will be less (see `summary.kernel`). 
-
-\*\* use numerical integration
 
 \vspace{12pt}
 
-The 't2D' kernel is the same as '2Dt' of Clark et al. (1999) and Nathan et al. (2012), renamed to avoid initial digit. The parameter $\alpha_t$ (`move.a`) corresponds to $a$ in Nathan et al. (2012) and $\sqrt u$ in Clark et al. (1999); the parameter $\beta$ (`move.b`) corresponds to $b-1$ in Nathan et al. (2012) and $p$ in Clark et al. (1999). Defining `move.b` as $\beta \equiv b-1$ is handy because the default link for `move.b` (log) then ensures $b>1$.
+The 't2D' kernel is the same as '2Dt' of Clark et al. (1999) and Nathan et al. (2012), renamed to avoid initial digit. The parameter $\alpha_t$ (`move.a`) corresponds to $a$ in Nathan et al. (2012) and $\sqrt u$ in Clark et al. (1999); the parameter $\beta$ (`move.b`) corresponds to $b-1$ in Nathan et al. (2012) and $p$ in Clark et al. (1999). Defining `move.b` as $\beta \equiv b-1$ is handy because the default link for `move.b` (log) then ensures $b>1$. The degrees of freedom of the corresponding $t$-distribution are given by $\nu = 2\beta$.  
 
 The `t2D' kernel approaches bivariate normal as $\beta \to \infty$ and Cauchy as $\beta \to 0$ (e.g., Clark et al. 1999).
 Clark et al. (1999 p. 1485) found it hard to fit this kernel to seed dispersal data.
 
+The `annular' kernel introduced in **openCR** 2.0.0 places proportion $p_0$ of the mass at zero (no movement) and the rest in an annulus bounded by the radii $c_1$ and $c_2$. The discrete implementation in **openCR** places all probability mass either at the central point (zero movement) or in the edge cells; $c_2$ is defined by the kernel radius and $c_2 - c_1$ by the kernel spacing. Cells with zero mass are dropped from the kernel.
+
 ## User-defined kernel
 
 A kernel function may be specified by the user and passed in the argument `movementmodel`. The function should have argument $r$, and optionally $a$, or $a$ and $b$ (the last two correspond to **openCR** parameters `move.a` and `move.b`) It should return a vector of values one for each element of $r$, although length(r) = 1 when the likelihood is evaluated in C++ (`details$R = FALSE`, the default). The code should give a valid result when $r = 0$. With the default link ('log' for both `move.a` and `move.b`) there is no risk of $a \leq 0$ or $b \leq 0$.
+
+## Sparse kernels
+
+A big problem with standard kernels as defined in **openCR** <2.0.0 is that the number of cells increases with the square of the radius. Processing time is roughly proportional to the number of cells, and kernels with many cells fit slowly. **openCR** 2.0.0 introduces novel 'sparse' kernels that include only those grid cells that lie on 4 axes (N-S, E-W, NW-SE, NE-SW). The number of cells then increases only linearly with radius. Cell-wise movement probabilities are adjusted so that the distribution of dispersal distances is almost unchanged (essentially multiplying by $2\pi r$ at radius $r$, and adjusting cells on the oblique axes by $\sqrt 2$).
+
+Sparse kernels for normal, exponential and t2D distributions are obtained by setting `sparsekernel = TRUE` when fitting a model with `openCR.fit()`. Here is an example.
+
+```{r sparsekernel, fig.width=7, fig.height=4}
+par(mar=c(3,1,3,5))
+k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
+  sparse = TRUE, clip = TRUE)
+plot(k)
+symbols(0,0, add = TRUE, circles = 100, inches = FALSE)
+```
+
+Note that the maximum on each axis is no longer at the centre. In fact, the central cell is assigned zero weight because $r = 0$ (this is undesirable and may be corrected in future). Each oblique arm in the example has only 7 cells; these cells have higher weighting to avoid orientation bias.
+
+Somewhat surprisingly, sparse kernels appear to work about as well as full kernels, only faster.
 
 ## Edge effects
 
@@ -569,7 +622,7 @@ When a kernel is applied to cells near the edge of a habitat mask some projected
 
 2. For any mask, the cell probabilities of a truncated kernel may be scaled (normalized) so that they sum to 1.0. This requires substantial additional computation.
 
-The edge method is chosen by setting the argument 'edgemethod' in `openCR.fit`; the options are 'truncate' (default in 1.5.0), 'wrap', and 'none'. Wrapping is fast, but it will cause an error if the mask is not rectangular. If a rectangular mask does not make sense (e.g., because the habitat is patchy) then you must use `edgemethod = 'truncate'` for unbiased estimates. 
+The edge method is chosen by setting the argument 'edgemethod' in `openCR.fit`; the options are 'truncate' (default in 1.5.0 and later), 'wrap', and 'none'. Wrapping is fast, but it will cause an error if the mask is not rectangular. If a rectangular mask does not make sense (e.g., because the habitat is patchy) then you must use `edgemethod = 'truncate'` for unbiased estimates. 
 
 Prior to 1.5.0 there was no adjustment (movement truncated without normalization, equivalent to `edgemethod = 'none'` in later versions) and estimates from movement models could be biased because the probability of a null (all-zero) history was estimated incorrectly.
 
@@ -577,8 +630,8 @@ Prior to 1.5.0 there was no adjustment (movement truncated without normalization
 
 A kernel may be constructed with `make.kernel` and visualised with the `plot` method. Use the `summary` method to obtain a terse description. 
 
-```{r plotkernel, fig.width=5, fig.height=3.5}
-par (mar=c(2,2,3,6), cex=0.9)
+```{r plotkernel, fig.width = 5, fig.height = 3.5}
+par (mar = c(2,2,3,6), cex = 0.9)
 k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
 plot(k, contour = TRUE)
 summary(k)
@@ -599,7 +652,7 @@ Use the **secr** function `spotHeight(k)` to display cell values on the plot.
 Various derived parameters may be computed from a fitted model. Specifically,
 
 1. Abundance at each primary session (population size for non-spatial models or density for spatial models) may be computed from any JSSA model, including those fitted by maximizing the conditional likelihood. By default, the estimator is Horvitz-Thompson-like at the level of the superpopulation ($N$ or $D$). For non-spatial models $\hat N = \sum_{i=1}^n \hat p_{i}^{-1}$ where $\hat p_{i}$ is the estimated probability animal $i$ is seen in at least one session. For spatial models $\hat D = \sum_{i=1}^n \hat a_{i}^{-1}$, where $\hat a_{i}$ is the estimated effective sampling area of animal $i$ (Borchers and Efford 2008). The sums are over all individuals ever seen. Session-specific abundances are inferred by distributing $N$ or $D$ over sessions according to the entry probabilities $b$. Alternatively (`HTbysession = TRUE`) the H-T estimate may be based on the number detected in each session and the corresponding session-specific estimates of $p$ or $a$.
-2. Any of the recruitment parameters in Table 2 or Table 4 may be computed from any other model of the same class (non-spatial or spatial)[^footnote12].
+2. Any of the recruitment parameters in Table 3 or Table 5 may be computed from any other model of the same class (non-spatial or spatial)[^footnote12].
 
 [^footnote12]: However, the effect of a constraint (e.g., parameter constant over sessions) will vary depending on the parameter to which it is applied. 
 
@@ -701,7 +754,7 @@ Spatial models are slow to fit. Consider these options
 
 **openCR** $\ge$ 1.2 uses multiple threads to run some calculations in parallel. Multithreading uses [RcppParallel](https://rcppcore.github.io/RcppParallel/). A couple of tuning parameters are available. The number of threads is set with the 'ncores' argument of `openCR.fit`, or with the `setNumThreads` function of **secr** that sets the environment variable RCPP_PARALLEL_NUM_THREADS. By default **openCR** $\ge$ 1.5.0 uses only 2 cores, for compliance with CRAN rules. You can increase this up to the number of (virtual) cores available (i.e. 8 on a quad-core desktop with hyperthreading), or some lesser number if you want to multitask:
 
-```{r ncores}
+```{r ncores, eval = FALSE}
 # RCPP_PARALLEL_NUM_THREADS 
 # recommended for quad-core Windows PC
 setNumThreads(7)
@@ -719,7 +772,7 @@ Full models (not CL or Pradel) include superpopulation size $N$ as a variable. T
 
 Several examples of analyses with **openCR** are given in the associated vignette [openCR-examples.pdf][openCR-examples.pdf]. These use data already formatted as **secr** capthist objects in R; the objects are provided in one or other package. All are available immediately **openCR** is loaded with `library`. Each has its own help page.
 
-Table 6. Data objects in **openCR**. 'RD' indicates robust design with multiple secondary sessions. See [openCR-examples.pdf][openCR-examples.pdf] for references.
+Table 9. Data objects in **openCR**. 'RD' indicates robust design with multiple secondary sessions. See [openCR-examples.pdf][openCR-examples.pdf] for references.
 
 | Data object | Spatial | RD | Species etc. | Source |
 |:--------------|:-------|:----|:--------------------------------------|:----------------------------------|
@@ -729,7 +782,7 @@ Table 6. Data objects in **openCR**. 'RD' indicates robust design with multiple 
 | gonodontisCH | No | No | Moth *Gonodontis bidentata* England | Bishop et al. (1978), Crosbie (1979) |
 | fieldvoleCH | Yes  | Yes | Field vole *Microtus agrestis* Norway | Ergon and Lambin (2013) |
 
-Table 7. Multi-session data objects in **secr**. 
+Table 10. Multi-session data objects in **secr**. 
 
 | Data object | Spatial | RD | Species etc. | Source |
 |:--------------|:-------|:----|:--------------------------------------|:----------------------------------|
@@ -801,9 +854,9 @@ These features of **secr** are not available in **openCR**
 ## Relationship to other software
 
 The non-spatial capability of **openCR** largely duplicates MARK and RMark.
-Several of the nonspatial model types have exact matches in MARK (Table 8).
+Several of the nonspatial model types have exact matches in MARK (Table 11).
 
-Table 8. Relationship of non-spatial **openCR** models to MARK model types
+Table 11. Relationship of non-spatial **openCR** models to MARK model types
 
 | **openCR** type | MARK model | Reference |
 |:--------|------------|-------------------|
@@ -813,7 +866,7 @@ Table 8. Relationship of non-spatial **openCR** models to MARK model types
 | Pradel  | Pradlambda | Pradel (1996) |
 | Pradelg | Pradsen    | Pradel (1996) |
 
-The R package **marked** (Laake, Johnson and Conn 2013) also overlaps substantially with the non-spatial features of **openCR**. Its interface echoes **RMark** just as **openCR** echoes **secr**. **marked** has some fancy features for individual covariates and random effects, and promises fast processing of large datasets. **marked** 1.1.13 includes full-likelihood JSSA (POPAN) models parameterized in terms of entry probabilities (type JSSAb)[^footnote15], but not the other JSSA options in Table 2.
+The R package **marked** (Laake, Johnson and Conn 2013) also overlaps substantially with the non-spatial features of **openCR**. Its interface echoes **RMark** just as **openCR** echoes **secr**. **marked** has some fancy features for individual covariates and random effects, and promises fast processing of large datasets. **marked** 1.1.13 includes full-likelihood JSSA (POPAN) models parameterized in terms of entry probabilities (type JSSAb)[^footnote15], but not the other JSSA options in Table 3.
 
 [^footnote15]: dipper example in [openCR-examples.pdf][openCR-examples.pdf].
 
@@ -993,6 +1046,84 @@ Academic Press, San Diego.
 <!-- $$ -->
 
 \pagebreak
+
+# Appendix 1. Code for figures.
+
+Code used to generate schematic diagrams of data structure.
+
+```{r figurefunctions, eval = FALSE}
+onemulti <- function(st = c(0,6,11,15), le = c(5,4,3,5), yb = 7, col=col1, outer = TRUE) {
+    col <- rep(col, le)
+    xl <- unlist(mapply(":",st,le+st-1))
+    yb <- rep(yb,length(xl))
+    xr <- xl + width
+    yt <- yb + height
+    rect(xl,yb,xr,yt,col=col)
+    text(xl+width/2, yb+height/2, unlist(mapply(":", 1, le)))
+    
+    xl <- st - margin
+    yb <- rep(yb[1], length(xl)) - margin
+    xr <- st+le-1+width+margin
+    yt <- yb+height+2*margin
+    rect(xl,yb,xr,yt)
+    text(st+le/2, rep(yb[1]+2*margin,length(st))+height+0.5, paste('session',1:length(st)))
+    if (outer) {
+        rect(st[1]-3*margin, yb[1]-2*margin, tail(st+le-1,1)+width+3*margin, 
+          yb[1]+height+8*margin)
+    }
+}
+
+onejoined <- function(offset = 1.5, le = c(5,4,3,5), yb = 2.2, col=col1, intervals = TRUE,
+                      intlabel = 'intervals', leftlabel = '', outer = TRUE) {
+    col <- rep(col, le)
+    xl <- 0:(sum(le)-1)+offset
+    yb <- rep(yb,length(xl))
+    xr <- xl + width
+    yt <- yb + height
+    rect(xl,yb,xr,yt,col=col)
+    text(xl+width/2, yb+height/2, c(1:length(xl)))
+    if (intervals) {
+        xi <- offset + (1:(length(xl)-1)) - (1-width)/2
+        xip <- cumsum(le)[-length(le)]   # intermediate between primary sessions
+        intervals <- rep(0,length(xi))
+        intervals[xip] <- 1
+        text(xi, yb [-1]-0.8, intervals)
+        text(-0.2, yb[1]-0.8, intlabel)
+        segments(xi[xip], rep(yb[1]-0.4,length(xip)), xi[xip], rep(yb[1]+0.4,
+          length(xip))+height)
+    }
+    text (0.4, yb[1]+height/2, leftlabel, adj = c(1,0.5))
+    if (outer) {
+        rect(offset-2*margin, yb[1]-2*margin, sum(le)-1+offset+width+2*margin, 
+          yb[1]+height+2*margin)
+    }
+}
+```
+
+```{r fig1, eval = FALSE}
+# Fig. 1 Single-stratum data
+par(cex=1, xpd = TRUE, mfrow = c(1,1), mar=c(1,4,1,4))
+width <- 0.85
+height <- 1.1
+margin <- 0.15
+col1 <- c('salmon','pink','brown', 'red')
+col2 <- c('green','lightgreen','darkgreen', 'lightblue')
+MASS::eqscplot(0,0,xlim=c(0,20), ylim=c(0,8), type='n', axes=F,xlab='',ylab='')
+onemulti(col = col1)
+text(9, 5.2, 'join()', cex=1.1)
+arrows (10.7,6.2,10.7,4.2)
+onejoined(leftlabel='')
+```
+
+```{r fig2, fig.width=8, fig.height=4.5, eval = FALSE}
+# Fig. 2 Multi-stratum data
+par(cex = 0.9, xpd = TRUE, mfrow = c(1,1), mar = c(1,4,1,4))
+MASS::eqscplot(0,0,xlim=c(-3,20), ylim=c(-2,8), type='n', axes=FALSE, xlab = '',ylab='')
+onejoined(leftlabel='stratum 1', yb = 6.5, intlabel='')
+onejoined(leftlabel='stratum 2', yb = 3, intlabel='')
+onejoined(leftlabel='stratum 3', yb = -0.5, le = c(4,3,4,4), intlabel='', col = col2)
+rect(-3, -2, 19.3, 8.7)
+```
 
 [secr-manual.pdf]: https://www.otago.ac.nz/density/pdfs/secr-manual.pdf
 [secr-overview.pdf]: https://www.otago.ac.nz/density/pdfs/secr-overview.pdf
