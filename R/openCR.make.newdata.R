@@ -11,7 +11,8 @@
 ## 2020-10-19 agecov
 ## 2020-12-07 tt occasion-level time variation cf Kendall et al. 1997
 ## 2021-04-25 2.0.0 stratified
-## 2021-05-04 makeNewData method for openCR objects - deferred
+## 2021-05-11 makeNewData method for openCR objects (postponed)
+## 2021-05-12 fixed bug in stratified sessioncov
 ############################################################################################
 
 # makeNewData.openCR <- function (object, all.levels = FALSE, ...) {
@@ -30,7 +31,6 @@ openCR.make.newdata <- function (object, all.levels = FALSE, ...) {
     J <- sapply(primaryintervals(object), length)+1
     S <- if(ms(capthist)) sapply(capthist, ncol) else ncol(capthist)
     agerange <- object$details$minimumage:object$details$maximumage
-    
     sessioncov <- stdcovlist(object$sessioncov, 'scov', nstrata, J)
     timecov    <- stdcovlist(object$timecov, 'tcov', nstrata, S)
     agecov     <- stdcovlist(object$agecov, 'acov', nstrata, diff(agerange) + 1)
@@ -124,8 +124,10 @@ openCR.make.newdata <- function (object, all.levels = FALSE, ...) {
                 session = factor(primarysessions(interv)[as.numeric(out$tt)]),
                 out[,-1, drop = FALSE])
         }
-        
         if (!is.null(sessioncov)) {
+            if (nstrata>1) {
+                sessioncov <- sessioncov[[stratum]]   ## 2021-05-12
+            }
             for (i in names(sessioncov)) {
                 if ((i %in% vars) & !(i %in% names(out)))
                     out[,i] <- sessioncov[out$session,i]

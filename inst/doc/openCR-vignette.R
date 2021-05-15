@@ -1,5 +1,6 @@
 ## ----settings, echo = FALSE---------------------------------------------------
 mycache <- FALSE
+Sys.setenv(RCPP_PARALLEL_BACKEND = "tinythread")  ## to dodge CRAN ASAN issue
 
 ## ----setup, message = FALSE, eval = TRUE, warning = FALSE-------------------------------
 library(openCR)                   # also loads secr
@@ -61,7 +62,7 @@ onejoined <- function(offset = 1.5, le = c(5,4,3,5), yb = 2.2, col=col1, interva
     }
 }
 
-## ----fig1plot, ref.label = "fig1", fig.width=8, fig.height=3.5, echo = FALSE------------
+## ----fig1plot, ref.label = "fig1", fig.width=8, fig.height=3.8, echo = FALSE------------
 # Fig. 1 Single-stratum data
 par(cex=1, xpd = TRUE, mfrow = c(1,1), mar=c(1,4,1,4))
 width <- 0.85
@@ -196,15 +197,15 @@ coef(fitd)
 fit <- openCR.fit(dipperCH, model = phi~t, details = list(contrasts = list(t = contr.sum)))
 invlogit(coef(fit)['phi',c('beta','lcl','ucl')])
 
-## ----sparsekernel, fig.width=7, fig.height=4--------------------------------------------
-par(mar=c(3,1,3,5))
+## ----sparsekernel, fig.width=8, fig.height=3.5------------------------------------------
+par(mar=c(3,1,4,5))
 k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
   sparse = TRUE, clip = TRUE)
 plot(k)
 symbols(0,0, add = TRUE, circles = 100, inches = FALSE)
 
-## ----plotkernel, fig.width = 5, fig.height = 3.5----------------------------------------
-par (mar = c(2,2,3,6), cex = 0.9)
+## ----plotkernel, fig.width = 8, fig.height = 3.5----------------------------------------
+par (mar = c(3,3,4,6), cex = 0.9)
 k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
 plot(k, contour = TRUE)
 summary(k)

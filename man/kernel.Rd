@@ -13,8 +13,8 @@ Functions to create, plot and summarise a discrete representation of a movement 
 
 \usage{
 
-make.kernel(movementmodel = c("normal", "exponential", "t2D", "uniform", 
-    "annular"), kernelradius = 10, spacing, move.a, move.b, 
+make.kernel(movementmodel = c("normal", "exponential", "t2D", "uniform"), 
+    kernelradius = 10, spacing, move.a, move.b, 
     sparsekernel = FALSE, clip = FALSE, normalize = TRUE, ...)
 
 \method{plot}{kernel}(x, contour = FALSE, levels = NULL, text = FALSE, title = NULL, ...)

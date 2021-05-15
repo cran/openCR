@@ -65,8 +65,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     stratum$li[n],
                     if (detectr %in% c("poissoncount", "multi")) hk else gk, ## precomputed probability or hazard
                     realparval,
-                    PIA[stratum$i,n,,,,drop = FALSE],
-                    PIAJ[stratum$i,n,,,drop = FALSE],
+                    PIA[1,n,,,,drop = FALSE],
+                    PIAJ[1,n,,,drop = FALSE],
                     binomN,
                     stratum$usge,
                     stratum$primaryintervals,
@@ -151,10 +151,16 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             stop("open-population secr requires multi, proximity or count detector type")
         
         if (data$details$debug>1) browser()
-        PIA <- data$design$PIA[stratum$i,,,,, drop = FALSE]
-        PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
+        # PIA <- data$design$PIA[stratum$i,,,,, drop = FALSE]
+        # PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
+
+        nc1 <- max(stratum$nc,1)
+        S <- stratum$cumss[stratum$J+1]
+        PIA  <- data$design$PIA [stratum$i, 1:nc1, 1:S, 1:stratum$k, , drop = FALSE]
+        PIAJ <- data$design$PIAJ[stratum$i, 1:nc1, 1:stratum$J, , drop = FALSE]
+        
         if (data$learnedresponse)
-            PIA0 <- data$design0$PIA[stratum$i,,,,, drop = FALSE]
+            PIA0 <- data$design0$PIA[stratum$i, 1:nc1, 1:S, 1:stratum$k, , drop = FALSE]
         else
             PIA0 <- PIA
         #-----------------------------------------
@@ -179,9 +185,10 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         
         if (detectr == "multi") {
             ## R alternative
-            if (data$details$R)
+            if (data$details$R) {
                 haztemp <- gethR(stratum$m, PIA, stratum$usge, hk)
-            else
+            }
+            else {
                 haztemp <- gethcpp(
                     as.integer(stratum$nc),
                     as.integer(nrow(realparval)),
@@ -192,6 +199,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.integer(PIA),
                     as.matrix(stratum$usge),
                     as.double(hk))
+            }
             haztemp$h <- array(haztemp$h, dim = c(data$details$nmix, stratum$m, max(haztemp$hindex)+1))
         }
         else {
@@ -200,7 +208,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         
         #####################################################################
         ## Vector to store components of log likelihood
-        comp <- numeric(5)
+        comp <- numeric(4)
         
         #####################################################################
         # Component 1: Probability of observed histories
@@ -346,21 +354,34 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     
     #####################################################################
     ## call onestratumll
-    comp <- lapply(data$stratumdata, onestratumll)
-    comp <- matrix(unlist(comp), ncol = 5)
-    comp <- apply(comp,2,sum)
-    
+    compbystratum <- lapply(data$stratumdata, onestratumll)
+    compbystratum <- matrix(unlist(compbystratum), ncol = 4, byrow = TRUE)
     #####################################################################
     ## optional multinomial term (not if CJS)
     if (data$details$multinom & !(type %in% c(6))) {
-        comp[5] <- data$logmult   ## precalculated 2021-03-30
+        compbystratum[,4] <- data$logmult   ## precalculated 2021-03-30
     }
     #####################################################################
     ## log-likelihood as sum of components
-    loglik <- sum(comp)
+    loglik <- sum(compbystratum)
+    #####################################################################
+    compbystratum <- cbind(compbystratum, apply(compbystratum,1,sum))
+    colnames(compbystratum) <- c('Comp1', 'Comp2', 'Comp3', 'logmultinom', 'Total')
+    if (nrow(compbystratum)>1) {
+        compbystratum <- rbind(compbystratum, apply(compbystratum,2,sum))
+        rownames(compbystratum) <- c(paste0('Stratum', 1:(nrow(compbystratum)-1)), 'Total')
+    }
+    else {
+        rownames(compbystratum) <- ''
+    }
+    #####################################################################
+    
     ## debug
     if (data$details$debug>=1) {
-        message("Likelihood components (comp) ", paste(format(comp, digits=10), collapse = ' '))
+        for (r in 1:nrow(compbystratum)) {
+            message("Likelihood components, stratum ", r, " ", 
+                paste(format(compbystratum[r,], digits=10), collapse = ' '))
+        }
         message("Total ", format(loglik, digits = 10))
         if (data$details$debug>1) browser()
     }
@@ -380,7 +401,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
 
     if (oneeval) {
         out <- c(loglik, beta)
-        attr(out, 'components') <- comp
+        attr(out, 'components') <- compbystratum
         out
     }
     else {

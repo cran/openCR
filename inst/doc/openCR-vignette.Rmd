@@ -16,6 +16,7 @@ vignette: >
 
 ```{r settings, echo = FALSE}
 mycache <- FALSE
+Sys.setenv(RCPP_PARALLEL_BACKEND = "tinythread")  ## to dodge CRAN ASAN issue
 ```
 
 \vspace{12pt}
@@ -166,9 +167,10 @@ The optional `intervals` attribute of the capthist object defines the structure.
 ```{r figfunc, ref.label = "figurefunctions", echo = FALSE} 
 # load code from Appendix 1
 ```
-```{r fig1plot, ref.label = "fig1", fig.width=8, fig.height=3.5, echo = FALSE} 
+```{r fig1plot, ref.label = "fig1", fig.width=8, fig.height=3.8, echo = FALSE} 
 # run code from Appendix 1
 ```
+
 **Fig. 1.** Structure of data for open-population analysis in **openCR**. Primary sessions initially correspond to the sessions (components) of a multi-session **secr** capthist object; each primary session may have one or more secondary sessions as numbered (top). For model fitting in `openCR.fit` the multi-session capthist is 'joined' to form a single-session capthist with an 'intervals' attribute; non-zero intervals indicate breaks between primary sessions (bottom). The `join` step is automatic when a multi-session capthist is provided to `openCR.fit` if `stratified = FALSE`. (See [Appendix 1](#appendix1) for code to make this figure).
 
 To construct your own capthist objects --
@@ -196,6 +198,7 @@ From **openCR** 2.0 onwards any model may be stratified. For stratified models (
 ```{r fig2plot, ref.label = "fig2", fig.width=8, fig.height=4.5, echo = FALSE} 
 # run code from Appendix 1
 ```
+
 **Fig. 2.** Structure of data for stratified open-population analysis in **openCR**. Each stratum is a pre-joined (single-session) component of a multi-session capthist object. The internal structure and detector may differ between strata.
 
 Stratified models may use 'stratum' as a factor-valued predictor. Groups of strata may be contrasted using stratum-level covariates as described later.
@@ -600,8 +603,8 @@ A big problem with standard kernels as defined in **openCR** <2.0.0 is that the 
 
 Sparse kernels for normal, exponential and t2D distributions are obtained by setting `sparsekernel = TRUE` when fitting a model with `openCR.fit()`. Here is an example.
 
-```{r sparsekernel, fig.width=7, fig.height=4}
-par(mar=c(3,1,3,5))
+```{r sparsekernel, fig.width=8, fig.height=3.5}
+par(mar=c(3,1,4,5))
 k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
   sparse = TRUE, clip = TRUE)
 plot(k)
@@ -630,8 +633,8 @@ Prior to 1.5.0 there was no adjustment (movement truncated without normalization
 
 A kernel may be constructed with `make.kernel` and visualised with the `plot` method. Use the `summary` method to obtain a terse description. 
 
-```{r plotkernel, fig.width = 5, fig.height = 3.5}
-par (mar = c(2,2,3,6), cex = 0.9)
+```{r plotkernel, fig.width = 8, fig.height = 3.5}
+par (mar = c(3,3,4,6), cex = 0.9)
 k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
 plot(k, contour = TRUE)
 summary(k)
@@ -832,16 +835,18 @@ Defaults for some arguments differ between `openCR.fit` and `secr.fit`. For `ope
 
 When `details$LLonly = TRUE`,  `openCR.fit` returns a vector with the log likelihood in position 1, followed by the named starting values of the coefficients (beta parameters) (`secr.fit` returns only the log likelihood).
 
-In **secr** the argument `CL` is used in `secr.fit` to switch between full- and conditional-likelihood models. In **openCR** conditional-likelihood models are given a separate `type` with the suffix CL.
+In **secr** the argument `CL` is used in `secr.fit` to switch between full- and conditional-likelihood models. In **openCR** conditional-likelihood models are given a separate `type` with the suffix CL (or see PLB alias).
 
 The predictor 't' is used in **secr** models to indicate a factor with one level for each *secondary* session. In **openCR** it is a synonym for 'session', i.e. a factor with one level for each *primary* session. This is consistent with the use of 't' in Lebreton et al. (1992) and makes for more compact model specification. In the unlikely event that you want to code a model with one level for each secondary session in **openCR**, use the 'timecov' argument.
 
 Parts of **openCR** are coded in C++, via the R package **Rcpp**, whereas **secr** uses C. The **Rcpp** interface requires less copying of data, and enables the use of multiple threads via **RcppParallel**. **openCR** also duplicates some C++ functions in native R code, which is useful for debugging. Select the R version by setting `details = list(R = TRUE)` in `openCR.fit`. This currently works for most models except those with detector type 'multi'.
 
+Strata (**openCR** >=2.0) are analogous to sessions in **secr** in that they are treated as independent with no re-detections of animals between strata. The total log-likelihood in **openCR** is the sum of stratum log likelihoods, just as the total is the sum of session loglikelihoods in **secr**.
+
 These features of **secr** are not available in **openCR**
 
 1. Hybrid mixture models (hcov in **secr**)
-2. Groups (use CL and individual covariates, or see **marked**)
+2. Groups (use strata, or CL and individual covariates, or see **marked**)
 3. Regression splines from **mgcv**
 4. Model averaging
 5. Density surfaces and other spatial density models

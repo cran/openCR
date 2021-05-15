@@ -84,6 +84,7 @@ openCR fit was ignored in \pkg{openCR} < 1.5.0. Now it is allowed.
 }
 
 \examples{
+
 \dontrun{
 
 m1 <- list(capthist = ovenCH, model = list(p~1, phi~1)) 

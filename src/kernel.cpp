@@ -1,6 +1,7 @@
 // movement model functions
 // 2021-02-23 moved from utils.cpp
 // 2021-02-24 does not protect against extreme R in annularR
+// 2021-05-11 replaced sqrt with std::sqrt to remove ambiguity
 #include <Rcpp.h>
 #include <RcppParallel.h>
 
@@ -108,11 +109,11 @@ void addpoints (
     // if intersects, place coordinates of two intersection points in pts
     if (inc > 0 ) {
         ipoint vertex;
-        vertex.x = (D*dy + sgndy * dx * sqrt(inc)) / dr2;
-        vertex.y = (D*dx + fabs(dy) * sqrt(inc)) / dr2;
+        vertex.x = (D*dy + sgndy * dx * std::sqrt(inc)) / dr2;
+        vertex.y = (D*dx + fabs(dy) * std::sqrt(inc)) / dr2;
         pts.push_back(vertex);
-        vertex.x = (D*dy - sgndy * dx * sqrt(inc)) / dr2;
-        vertex.y = (D*dx - fabs(dy) * sqrt(inc)) / dr2;
+        vertex.x = (D*dy - sgndy * dx * std::sqrt(inc)) / dr2;
+        vertex.y = (D*dx - fabs(dy) * std::sqrt(inc)) / dr2;
         pts.push_back(vertex);
     }
 }
@@ -239,7 +240,7 @@ void fillkernelp (int kn,
             for (k = 0; k < kn; k++) {
                 x = kernel[k];
                 y = kernel[k+kn];
-                r = sqrt(x*x + y*y);
+                r = std::sqrt(x*x + y*y);
                 if (r > 1e-8) {
                     if (r < (K2-1)) n1++;
                     else n2++;
@@ -259,9 +260,9 @@ void fillkernelp (int kn,
         for (k = 0; k < kn; k++) {
             x = kernel[k];
             y = kernel[k+kn];
-            if (abs(x) == abs(y) && x!=0) diag = sqrt(2); else diag = 1;
+            if (abs(x) == abs(y) && x!=0) diag = std::sqrt(2); else diag = 1;
             r2 = (x*x + y*y) * cellsize * cellsize;
-            r = sqrt(r2);
+            r = std::sqrt(r2);
             if (kerneltype == 0) {        // BVN Gaussian kernel 
                 a2 = moveargs[j] * moveargs[j];
                 kernelp[j * kn + k] = exp(-r2 / 2 / a2);
@@ -358,7 +359,7 @@ void fillkernelparallel (int kn,
         for (k = 0; k < kn; k++) {
             x = kernel[k];
             y = kernel[k+kn];
-            r = sqrt(x*x + y*y);
+            r = std::sqrt(x*x + y*y);
             if (r > 1e-8) {
                 if (r < (K2-1)) n1++;
                 else n2++;
@@ -384,9 +385,9 @@ void fillkernelparallel (int kn,
         for (k = 0; k < kn; k++) {
             x = kernel[k];
             y = kernel[k+kn];
-            if (abs(x) == abs(y) && x!=0) diag = sqrt(2); else diag = 1;
+            if (abs(x) == abs(y) && x!=0) diag = std::sqrt(2); else diag = 1;
             r2 = (x*x + y*y) * cellsize * cellsize;
-            r = sqrt(r2);
+            r = std::sqrt(r2);
             if (kerneltype == 0) {        // BVN Gaussian kernel 
                 a2 = moveargs[j] * moveargs[j];
                 kernelp[j * kn + k] = exp(-r2 / 2 / a2);

@@ -11,7 +11,6 @@ predict.openCRlist <- function (object, newdata = NULL, se.fit = TRUE,
   alpha = 0.05, savenew = FALSE, ...) {
   lapply(object, predict, newdata, se.fit, alpha, savenew, ...)
 }
-
 predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
   savenew = FALSE, ...) {
   if (is.null(object$fit)) {
@@ -22,7 +21,6 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
     newdata <- openCR.make.newdata (object, ...)
     # newdata <- makeNewData (object, ...)
   }
-  
   nstrata <- length(strata(object$capthist))
   nsess <- sapply(primaryintervals(object), function(x) sum(x>0) + 1)
   
@@ -30,7 +28,8 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
     newdata <- data.frame(stratum = factor(rep(1,nrow(newdata)), 
       levels = 1:nstrata), newdata)
   }
-
+  newdata <- stringsAsFactors(newdata)   ## 2021-05-13
+  
   if (! 'session' %in% names(newdata)) {
     # not guaranteed to work for varying session number among strata
     newdata <- data.frame(session = factor(rep(1,nrow(newdata)),
@@ -174,12 +173,13 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
             FUN = '+', STATS = ncf)
       }
     }
-    # session labels by stratum
+    # primary session labels by stratum
+    # sessionlabels is always stored by openCR.fit as a list
     sessnames <- lapply(object$sessionlabels, unlist)
     if (!is.null(sessnames) && !is.null(predict[[i]]$session) ) {
       nsess <- max(sapply(sessnames, length))
       sessnames <- lapply(sessnames, function(x) c(x, rep('', nsess-length(x))))
-      namematrix <- t(matrix(unlist(sessnames), ncol = nstrata))
+      namematrix <- matrix(unlist(sessnames), nrow = nstrata, byrow = TRUE)
       rn <- namematrix[cbind(as.numeric(predict[[i]]$stratum),
         as.numeric(predict[[i]]$session))]
       predict[[i]]$session <- rn

@@ -14,6 +14,7 @@
 ## 2018-12-21 trap covariates
 ## 2020-10-19 agecov for recoding age effects
 ## 2021-04-18 stratified
+## 2021-05-12 test for time-varying trap covariates allows for stratification
 ################################################################################
 
 openCR.design <- function (capthist, models, type, naive = FALSE, 
@@ -88,12 +89,12 @@ openCR.design <- function (capthist, models, type, naive = FALSE,
         }
     }
 
-    # not tested for openCR 2.0.0
+    # not tested for openCR 2.0
     findvars.covtime <- function (covindices, vars) {
-        ## function to add time-specific individual covariates to a 
+        ## function to add time-specific trap covariates to a 
         ## design data frame 'dframe'
         ## covindices should be a list
-        if (R>1) stop ("time-varying covariates not implemented for stratified designs")
+        if (R>1) stop ("time-varying detector covariates not implemented for stratified designs")
         dimcov <- c(2,3)   ## animal, secondarysession
         ## covindices is list of numeric or character index vectors, one component per session
         if (length(covindices[[1]]) != J)
@@ -487,8 +488,9 @@ openCR.design <- function (capthist, models, type, naive = FALSE,
     findvars.MS (sessioncov, vars, 3, scov = TRUE)  ## expands correctly 2018-05-07
     findvars.MS (agecov, vars, 2, scov = TRUE)      ## new 2020-10-19
     
+    # time-varying trap covariates
     tvc <- timevaryingcov(capthist)
-    if (!is.null(tvc) & (length(vars)>0)) {
+    if (!is.null(unlist(tvc)) && (length(vars)>0)) {
         findvars.covtime (tvc, vars)
     }
 

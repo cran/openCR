@@ -153,7 +153,7 @@ fillkernelp <- function (
 }
 
 make.kernel <- function (
-    movementmodel = c('normal','exponential','t2D','uniform','annular'),
+    movementmodel = c('normal','exponential','t2D','uniform'),
     kernelradius = 10, spacing, move.a, move.b, 
     sparsekernel = FALSE, # zeroinflated = FALSE, 
     clip = FALSE,

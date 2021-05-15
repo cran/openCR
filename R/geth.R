@@ -14,8 +14,8 @@ gethR <- function (mm, PIA, Tsk, hk) {
     
     nk <- nrow(Tsk)
     ss <- ncol(Tsk)
-    nmix <- dim(PIA)[4]
-    nc1 <- dim(PIA)[1]
+    nmix <- dim(PIA)[5]
+    nc1 <- dim(PIA)[2]
     cc <- max(PIA)
     
     xmat <- matrix(0, nc1*ss, nk*(nmix+1))

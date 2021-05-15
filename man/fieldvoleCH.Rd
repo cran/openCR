@@ -69,13 +69,13 @@ summary(fieldvoleCH, terse = TRUE)
 m.array(fieldvoleCH)
 JS.counts(fieldvoleCH)
 
-maleCH <- subset(fieldvoleCH, function(x) covariates(x) == 'M')
-fit <- openCR.fit(maleCH)
-predict(fit)
-
 attr(fieldvoleCH, 'ampm')
 
 \dontrun{
+
+maleCH <- subset(fieldvoleCH, function(x) covariates(x) == 'M')
+fit <- openCR.fit(maleCH)
+predict(fit)
 
 # Read data object from DRYAD ASCII file
 

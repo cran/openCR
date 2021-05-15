@@ -1,3 +1,18 @@
+version 2.0.2 (2021-05-14)
+
+New features and changed behaviour
+    o make.table() acquires argument 'collapse' for stratified models
+
+Bugs fixed
+    o C++ sqrt() ambiguity on r-patched-solaris-x86 (use std::sqrt())
+    o clang-UBSAN overflow error in tests (read beyond array in C++ getmoveargs)
+    o erroneous likelihood when dimensions differed among strata
+    o openCR.make.newdata() omitted session covariates of stratified model
+    o sumsims() failed with 'non-numeric argument to binary operator'
+
+Other
+    o multithreaded Examples now in dontrun{} to avoid problematic TBB library
+    
 version 2.0.1 (2021-05-09)
 
 New features and changed behaviour

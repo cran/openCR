@@ -25,7 +25,7 @@ getD <- function ( type, J, nmix, pmix, openval, PIAJ, intervals) {
         for (x in 1:nmix) {
             phij <- openval[PIAJ[1,1,1:(J-1),x], 2]^intervals    ## per session
             if (type %in% 8) {
-                D <- openval[PIAJ[1,1, 1:J, x], 3]
+                D <- openval[PIAJ[1,1,1:J,x], 3]
                 B <- D
                 for (j in 1:(J-1)) {
                     B[j+1] = D[j+1] - D[j] * phij[j]

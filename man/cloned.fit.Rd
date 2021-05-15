@@ -63,8 +63,10 @@ linear mixed models using data cloning. \emph{Journal of the American Statistica
 
 \examples{
 
+\dontrun{
 fit <- openCR.fit(dipperCH)
 cloned.fit(fit)
+}
 
 }
 

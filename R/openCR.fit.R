@@ -25,10 +25,7 @@
 ## 2020-11-02 movemodel renamed movementcode
 ## 2020-12-07 CJSmte experimental - trial abandoned 2020-12-12
 ## 2021-02-24 movementmodel 'annular' implemented; 'annularR' pushed to back
-## 2021-03-05 1.6.0
-## 2021-03-05 groups tentatively started
 ## 2021-03-25 detectfn HPX
-## 2021-04-18 experimental stratification
 ## 2021-04-19 marray removed from data
 ## 2021-04-20 2.0.0 stratified
 ################################################################################
@@ -36,7 +33,7 @@
 openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
   distribution = c("poisson", "binomial"), mask = NULL, 
   detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP', 'HPX'), binomN = 0, 
-  movementmodel = c('static','uncorrelated','normal','exponential', 't2D', 'uniform', 'annular'),
+  movementmodel = c('static','uncorrelated','normal','exponential', 't2D', 'uniform'),
   edgemethod = c('truncate', 'wrap', 'none'), kernelradius = 10,
   sparsekernel = FALSE, start = NULL, link = list(), 
   fixed = list(), stratumcov = NULL, sessioncov = NULL, timecov = NULL, agecov = NULL, 
@@ -55,7 +52,6 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   #                'identity', 'sin', 'neglog', 'mlogit'
   #  fixed      -  list of fixed values for named parameters
   #  sessioncov -  dataframe of session-level covariates
-  #  groups     -  vector of names to group fields in attr(capthist,'covariates') dataframe
   #  mask
   #  detectfn
   #  dframe     -  optional data frame of design data for detection model (tricky & untested)

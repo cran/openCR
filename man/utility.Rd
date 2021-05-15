@@ -70,11 +70,15 @@ For \code{m.array}, a table object with rows corresponding to release cohorts an
 JS.counts(ovenCH)
 m.array(ovenCH)
 
+\dontrun{
+
 ## probabilities of b,d pairs
 fit <- openCR.fit(ovenCH, type = 'JSSAbCL')
 beta <- predict(fit)$b$estimate
 phi <- predict(fit)$phi$estimate
 bd.array(beta, phi)
+
+}
 
 }
 \keyword{ manip }

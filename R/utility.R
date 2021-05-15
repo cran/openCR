@@ -1037,7 +1037,7 @@ mqsetup <- function (
 ## local logmultinomial 2021-03-30, 2021-04-19
 logmultinom <- function (capthist, stratified = FALSE) {
   if (stratified) {
-    sum(sapply(capthist, logmultinom, stratified = FALSE))
+    sapply(capthist, logmultinom, stratified = FALSE)
   }
   else {
     nr <- nrow(capthist)

@@ -78,10 +78,14 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         if (length(freq) == 1) freq <- rep(freq, stratum$nc)
         ncf <- sum(freq)
         
-        PIA  <- data$design$PIA [stratum$i,,,,, drop = FALSE]
-        PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
+        # PIA  <- data$design$PIA [stratum$i,,,,, drop = FALSE]
+        # PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
+        nc1 <- max(stratum$nc,1)
+        S <- stratum$cumss[stratum$J+1]
+        PIA  <- data$design$PIA [stratum$i, 1:nc1, 1:S, , , drop = FALSE]
+        PIAJ <- data$design$PIAJ[stratum$i, 1:nc1, 1:stratum$J, , drop = FALSE]
         if (data$learnedresponse)
-            PIA0 <- data$design0$PIA[stratum$i,,,,, drop = FALSE]
+            PIA0 <- data$design0$PIA[stratum$i,1:nc1, 1:S, , , drop = FALSE]
         else
             PIA0 <- PIA
         
@@ -175,7 +179,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             }
             
             
-            comp <- numeric(5)
+            comp <- numeric(4)
             pmix <- fillpmix2(stratum$nc, data$details$nmix, PIA, realparval)
             
             #####################################################################
@@ -251,21 +255,35 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     
     if (data$details$debug>2) browser()
     
-    comp <- lapply(data$stratumdata, onestratumll)
-    comp <- matrix(unlist(comp), ncol = 5)
-    comp <- apply(comp,2,sum)
-    
+    #####################################################################
+    compbystratum <- lapply(data$stratumdata, onestratumll)
+    compbystratum <- matrix(unlist(compbystratum), ncol = 4, byrow = TRUE)
+    #####################################################################
     ## optional multinomial term
     if (data$details$multinom & (type %in% c(2,3,4,15,16,17,18,19,21,22,23,27))) {
-        comp[5] <- data$logmult    ## precalculated 2021-03-30
+        compbystratum[,4] <- data$logmult    ## precalculated 2021-03-30
     }
-    
-    ## log-likelihood as sum of components 1-3 and 5
-    loglik <- sum(comp)
+    #####################################################################
+    ## log-likelihood as sum of components
+    loglik <- sum(compbystratum)
+    #####################################################################
+    compbystratum <- cbind(compbystratum, apply(compbystratum,1,sum))
+    colnames(compbystratum) <- c('Comp1', 'Comp2', 'Comp3', 'logmultinom', 'Total')
+    if (nrow(compbystratum)>1) {
+        compbystratum <- rbind(compbystratum, apply(compbystratum,2,sum))
+        rownames(compbystratum) <- c(paste0('Stratum', 1:(nrow(compbystratum)-1)), 'Total')
+    }
+    else {
+        rownames(compbystratum) <- ''
+    }
+    #####################################################################
     
     ## debug
     if (data$details$debug>=1) {
-        message("Likelihood components (comp) ", format(comp, digits=10))
+        for (r in 1:nrow(compbystratum)) {
+            message("Likelihood components, stratum ", r, " ",
+                paste(format(compbystratum[r,], digits=10), collapse = ' '))
+        }
         message("Total ", format(loglik, digits = 10))
         if (data$details$debug>1) browser()
     }
@@ -282,7 +300,9 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     }
     
     if (oneeval) {
-        c(loglik, beta)
+        out <- c(loglik, beta)
+        attr(out, 'components') <- compbystratum
+        out
     }
     else {
         if (is.finite(loglik)) -loglik   # return the negative loglikelihood

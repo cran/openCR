@@ -107,12 +107,12 @@ Data.frame with rows `estimate', `SE.estimate', `lcl', `ucl', `RSE', `CI.length'
 
 \examples{
 
-ch <- sim.nonspatial(100, list(phi = 0.7, lambda = 1.1), p = 0.3, nsessions = 8, noccasions=2)
-
-openCR.fit(ch, type = 'CJS')
-
-
 \dontrun{
+
+cores <- 2   # for CRAN check; increase as available
+
+ch <- sim.nonspatial(100, list(phi = 0.7, lambda = 1.1), p = 0.3, nsessions = 8, noccasions=2)
+openCR.fit(ch, type = 'CJS')
 
 turnover <- list(phi = 0.85, lambda = 1.0, recrmodel = 'constantN')
 set.seed(123)
@@ -120,14 +120,14 @@ set.seed(123)
 ## using type = 'JSSAlCL' and extractfn = predict
 
 fitarg <- list(type = 'JSSAlCL', model = list(p~t, phi~t, lambda~t))
-out <- runsim.nonspatial(nrepl = 100, N = 100, ncores = 6, turnover = turnover, 
+out <- runsim.nonspatial(nrepl = 100, N = 100, ncores = cores, turnover = turnover, 
    p = 0.2, recapfactor = 4, nsessions = 10, noccasions = 1, fitargs = fitarg)
 sumsims(out, 'lambda', 1:10)
 
 ## using type = 'Pradelg' and extractfn = derived
 ## homogeneous p
 fitarg <- list(type = 'Pradelg', model = list(p~t, phi~t, gamma~t))
-outg <- runsim.nonspatial(nrepl = 100, N = 100, ncores = 6, turnover = turnover, 
+outg <- runsim.nonspatial(nrepl = 100, N = 100, ncores = cores, turnover = turnover, 
     p = 0.2, recapfactor = 4, nsessions = 10, noccasions = 1, 
     fitargs = fitarg, extractfn = derived)
 apply(sapply(outg, function(x) x$estimates$lambda),1,mean)
@@ -135,10 +135,10 @@ apply(sapply(outg, function(x) x$estimates$lambda),1,mean)
 turnover <- list(phi = 0.85, lambda = 1.0, recrmodel = 'discrete')
 
 ## 2-class mixture for p
-outg2 <- runsim.nonspatial(nrepl = 100, N = c(50,50), ncores = 6, turnover = turnover, 
+outg2 <- runsim.nonspatial(nrepl = 100, N = c(50,50), ncores = cores, turnover = turnover, 
     p = c(0.3,0.9), recapfactor = 1, nsessions = 10, noccasions = 1, 
     fitargs = fitarg, extractfn = derived)
-outg3 <- runsim.nonspatial(nrepl = 100, N = c(50,50), ncores = 6, turnover = turnover, 
+outg3 <- runsim.nonspatial(nrepl = 100, N = c(50,50), ncores = cores, turnover = turnover, 
     p = c(0.3,0.3), recapfactor = 1, nsessions = 10, noccasions = 1, 
     fitargs = fitarg, extractfn = derived)
 apply(sapply(outg2, function(x) x$estimates$lambda),1,mean)
@@ -166,7 +166,7 @@ poparg <- list(D = 10, core = grid, buffer = 100, Ndist = 'fixed', nsessions = 6
     details = turnover)
 detarg <- list(noccasions = 5, detectfn = 'HHN', detectpar = list(lambda0 = 0.5, sigma = 20))
 fitarg <- list(type = 'JSSAsecrfCL', mask = msk, model = list(phi~1, f~1))
-sims <- runsim.spatial (nrepl = 7, ncores = 7, pop = poparg, det = detarg, fit = fitarg)
+sims <- runsim.spatial (nrepl = 7, ncores = cores, pop = poparg, det = detarg, fit = fitarg)
 sumsims(sims)
 
 ## extract the convergence code from nlm for each replicate in preceding simulation

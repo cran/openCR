@@ -21,7 +21,7 @@ openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
     distribution = c("poisson", "binomial"), mask = NULL, 
     detectfn = c("HHN", "HHR", "HEX", "HAN", "HCG", "HVP", "HPX"), binomN = 0, 
     movementmodel = c("static", "uncorrelated", "normal", "exponential", "t2D", 
-    "uniform", "annular"), edgemethod = c("truncate","wrap","none"), 
+    "uniform"), edgemethod = c("truncate","wrap","none"), 
     kernelradius = 10, sparsekernel = FALSE, start = NULL, link = list(), 
     fixed = list(), stratumcov = NULL, sessioncov = NULL, timecov = NULL, 
     agecov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
@@ -382,6 +382,8 @@ in a session with \code{secr::setNumThreads}.
 
 \examples{
 
+\dontrun{
+
 ## CJS default
 openCR.fit(ovenCH)
 
@@ -389,7 +391,6 @@ openCR.fit(ovenCH)
 L1 <- openCR.fit(ovenCH, type = 'JSSAl')
 predict(L1)
 
-\dontrun{
 JSSA1 <- openCR.fit(ovenCH, type = 'JSSAf')
 JSSA2 <- openCR.fit(ovenCH, type = 'JSSAf', model = list(phi~t))
 JSSA3 <- openCR.fit(ovenCH, type = 'JSSAf', model = list(p~t,phi~t))

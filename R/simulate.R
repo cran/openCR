@@ -5,6 +5,7 @@
 ## 2018-11-02 revised sumsims
 ## 2018-11-27 revised sumsims to allow method = "none"
 ## 2019-04-07 runsim.nonspatial, runsim.spatial return NULL for failed replicates
+## 2021-05-13 sumsims failed with 'non-numeric argument to binary operator'
 ################################################################################
 sim.nonspatial <- function(N, turnover = list(), p, nsessions, noccasions = 1, 
                            intervals = NULL, recapfactor = 1, seed = NULL, 
@@ -179,7 +180,6 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE,
         results
     }
     else {
-
         if (is.null(sims)) {
             data.frame(cbind(median = NA, mean = NA, sd = NA, n = NA))
         }
@@ -193,6 +193,7 @@ sumsims <- function (sims, parm = 'phi', session = 1, dropifnoSE = TRUE,
                 stop ("Parameter ", parm, " not reported (try ", paste(names(predicted[[1]]), collapse=', '), ")")
             }
             mat <- t(sapply(predicted, function(x) unlist(x[[parm]][session,])))
+            class(mat) <- 'numeric'   ## 2021-05-13
             if (dropifnoSE)
                 OK <- !is.na(mat[,3]) & mat[,3]>0   ## 0 condition added 2019-06-15
             else

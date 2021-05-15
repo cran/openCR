@@ -82,8 +82,12 @@ Burnham, K. P. and Anderson, D. R. (2002) \emph{Model selection and multimodel i
 
 \examples{
 
+\dontrun{
+
 c1 <- openCR.fit(ovenCH, type='CJS', model=phi~session)
 c1
+
+}
 
 }
 

@@ -108,7 +108,7 @@ double pski ( int binomN,
 // distance between two points given by row k in traps and row m in mask
 double dkm (int k, int m, RMatrix<double> traps, RMatrix<double> mask)
 {
-    return(sqrt((traps(k,0) - mask(m,0)) * (traps(k,0) - mask(m,0)) +
+    return(std::sqrt((traps(k,0) - mask(m,0)) * (traps(k,0) - mask(m,0)) +
         (traps(k,1) - mask(m,1)) * (traps(k,1) - mask(m,1))));
 }
 //--------------------------------------------------------------------------
@@ -258,14 +258,24 @@ void getmoveargs (int n, int x, int nc, int jj,
     std::vector<double> &moveargs) {
     // column moveargsi (and maybe moveargsi + 1) 
     int j;
+    int moveaindex;
+    int movebindex;
+    // jj-1 because one fewer intervals than primary sessions  
     for (j = 0; j < (jj-1); j++) {
-        // jj-1 because one fewer intervals than primary sessions  
-        moveargs[j] = openval(PIAJ[i3(n, j, x, nc, jj)]-1, moveargsi[0]);  
-        if (moveargsi[1]>0)
-            moveargs[j+jj] = openval(PIAJ[i3(n, j, x, nc, jj)]-1, moveargsi[1]);  
+        // 2021-05-11 more explicit to avoid overflow bug
+        // PIAJ has dimension (n.j.x)
+        // openval has dimension (c, nrealpar)
+        moveaindex = moveargsi[0];
+        movebindex = moveargsi[1];
+        if (moveaindex>=0) {
+            moveargs[j] = openval(PIAJ[i3(n, j, x, nc, jj)]-1, moveaindex);  
+        }
+        if (movebindex>moveaindex) {
+            moveargs[j+jj] = openval(PIAJ[i3(n, j, x, nc, jj)]-1, movebindex);  
+        }
     }
-    moveargs[jj-1] = 0;
-    moveargs[2*jj-1] = 0;
+    moveargs[jj-1] = 0;    // no movement beyond final session (jj)
+    moveargs[2*jj-1] = 0;  // no movement beyond final session (jj)
 }
 //--------------------------------------------------------------------------
 

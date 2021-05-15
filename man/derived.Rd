@@ -33,6 +33,7 @@ openCR.pdot(object, bysession = FALSE, stratum = 1)
 \arguments{
   \item{object}{fitted openCR model}
   \item{newdata}{optional dataframe of values at which to evaluate model}
+% \item{all.levels}{logical; passed to \code{\link{makeNewData}} if newdata not specified}
   \item{all.levels}{logical; passed to \code{\link{openCR.make.newdata}} if newdata not specified}
   \item{Dscale}{numeric to scale density}
   \item{HTbysession}{logical; Horvitz-Thompson estimates by session (see Details)}
@@ -90,16 +91,18 @@ histories (freq>1) and did not return a list when bysession = TRUE.
 
 \examples{
 
+\dontrun{
+
 # override default method to get true ML for L1
 L1CL <- openCR.fit(ovenCH, type = 'JSSAlCL', method = 'Nelder-Mead')
 predict(L1CL)
 derived(L1CL)
 
-\dontrun{
 ## compare to above
 L1 <- openCR.fit(ovenCH, type = 'JSSAl', method = 'Nelder-Mead')
 predict(L1)
 derived(L1)
+
 }
 
 }

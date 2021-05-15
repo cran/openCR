@@ -24,11 +24,11 @@
 
 \details{
 
-  \tabular{ll}{
+\tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 2.0.1\cr
-Date: \tab 2021-05-09\cr
+Version: \tab 2.0.2\cr
+Date: \tab 2021-05-14\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 
@@ -93,7 +93,11 @@ See \href{../doc/openCR-vignette.pdf}{openCR-vignette.pdf} for more.
 }
 \examples{
 
+\dontrun{
+
 ## a CJS model is fitted by default
 openCR.fit(ovenCH)
+
+}
 
 }

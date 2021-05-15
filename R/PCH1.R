@@ -44,7 +44,7 @@ pr0njmx <- function (n, x, cumss, jj, mm, binomN, PIA0, gk0, Tsk) {
         # s is vector of indices to secondary sessions in this primary session
         s <- (cumss[j]+1) : cumss[j+1]
         S <- length(s)
-        csk <- PIA0[n,s, ,x, drop = FALSE]
+        csk <- PIA0[1,n,s, ,x, drop = FALSE]
         cski <- rep(as.numeric(csk),mm)
         i <- cbind(cski, rep(rep(1:kk, each = S), mm), rep(1:mm, each = S*kk))
         gsk <- array(0, dim=c(S, kk, mm))

@@ -95,6 +95,8 @@ Williams, B. K., Nichols, J. D. and Conroy, M. J. (2002) \emph{Analysis and mana
 m.array(microtusFCH)
 m.array(microtusMCH)
 
+\dontrun{
+
 # cf Williams, Nichols and Conroy Fig. 17.2
 fitfm <- openCR.fit(microtusFMCH, model = list(p~1, phi ~ session + sex))
 maledat <- expand.grid(sex = factor('M', levels = c('F','M')), session = factor(1:6))
@@ -105,7 +107,6 @@ plot(fitfm, newdata = maledat, add = TRUE, xoffset = 0.1, pch = 16, type = 'o')
 intervals(microtusCH) <-  c(35,28,35,28,34) / 30 
 intervals(microtusRDCH)[intervals(microtusRDCH)>0] <- c(35,28,35,28,34) / 30
 
-\dontrun{
 # The text file JLYEXMPL distributed with JOLLY is in the extdata folder of the R package
 # The microtusCH object may be rebuilt as follows
 datadir <- system.file('extdata', package = 'openCR')
