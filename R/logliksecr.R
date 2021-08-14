@@ -9,6 +9,7 @@
 # 2020-09-01 changed return; to return(1e10) in open.secr.loglikfn component 3
 # 2020-10-25 fixed bug in open.secr.loglikfn component 3
 # 2021-04-19 stratified
+# 2021-08-14 c and [ methods for openCRlist
 
 # types
 
@@ -105,6 +106,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.integer(binomN),
                     as.integer(data$details$CJSp1),
                     as.integer(data$details$grain),
+                    as.integer(data$ncores),
                     as.double (stratum$primaryintervals),
                     as.integer(stratum$cumss),
                     as.matrix (stratum$capthist),     
@@ -119,8 +121,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.matrix (hi),      
                     as.integer(data$movementcode),
                     as.logical(data$sparsekernel),
+                    as.logical(data$anchored),
                     as.integer(data$edgecode),
-                    as.character(data$usermodel),  ## 2019-05-07
+                    as.character(data$usermodel),  
                     as.integer(data$moveargsi),
                     as.matrix (data$kernel),
                     as.matrix (stratum$mqarray),
@@ -169,12 +172,13 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         temp <- makegkParalleldcpp (as.integer(data$detectfn),
             as.integer(.openCRstuff$sigmai[type]),
             as.integer(data$details$grain),
+            as.integer(data$ncores),
             as.matrix(realparval),
             as.matrix(stratum$distmat))
         gk <- array(temp[[1]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
         hk <- array(temp[[2]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
         if (sum(hk)==0) {
-            return(1e10)
+            return(NA)   # changed from 1e10 2021-06-01
         }
         
         if (data$details$debug>0) message ("sum(gk) = ", sum(gk))
@@ -205,6 +209,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         else {
             haztemp <- list(h = array(-1, dim=c(data$details$nmix,1,1)), hindex = matrix(-1))
         }
+        if (data$details$debug>0) message ("sum(haztemp$h) = ", sum(haztemp$h))
         
         #####################################################################
         ## Vector to store components of log likelihood
@@ -221,6 +226,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             prwi <- sapply(1:stratum$nc, onehistory, USE.NAMES = FALSE )
         }
         comp[1] <- sum(prwi)
+        if (data$details$debug>0) message ("comp[1] = ", comp[1])
         
         #####################################################################
         # Component 2: Probability of unobserved histories a^{-n} in likelihood for uniform-D
@@ -232,6 +238,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 temp <- makegkParalleldcpp (as.integer(data$detectfn),
                     as.integer(.openCRstuff$sigmai[type]),
                     as.integer(data$details$grain),
+                    as.integer(data$ncores),
                     as.matrix(realparval0),
                     as.matrix(stratum$distmat))
                 gk <- array(temp[[1]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
@@ -271,6 +278,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         as.integer(x-1),
                         as.integer(type),
                         as.integer(data$details$grain),
+                        as.integer(data$ncores),
                         as.logical(data$design0$individual),
                         as.integer(stratum$J),
                         as.integer(stratum$m),
@@ -286,6 +294,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         as.integer(data$moveargsi),
                         as.integer(data$movementcode),
                         as.logical(data$sparsekernel),
+                        as.logical(data$anchored),
                         as.integer(data$edgecode),
                         as.character(data$usermodel),
                         as.matrix(data$kernel),
@@ -385,18 +394,27 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         message("Total ", format(loglik, digits = 10))
         if (data$details$debug>1) browser()
     }
-    ## optionally display message on console for this iteration
+    ## optionally display message for this iteration on console or log file 
     .openCRstuff$iter <- .openCRstuff$iter + 1
+    fb <- data$details$fixedbeta  # afresh
+    if (!is.null(fb)) beta <- beta[is.na(fb)]
+    progressstring <- paste(
+        c(format(.openCRstuff$iter, width=4), " ",
+            formatC(round(loglik,dig), format='f', digits=dig, width=betaw+2), " ",
+            formatC(beta, format='f', digits=dig+1, width=betaw)), collapse = " ")
     if (data$details$trace) {
-        if ((.openCRstuff$iter %% data$details$trace) == 0) {
-            if (!is.null(data$details$fixedbeta))
-                beta <- beta[is.na(data$details$fixedbeta)]
-            message(format(.openCRstuff$iter, width=4), "   ",
-                    formatC(round(loglik,dig), format='f', digits=dig, width=betaw+2),
-                    formatC(beta, format='f', digits=dig+1, width=betaw+1),
-                    sep = " ")
+        if (((.openCRstuff$iter-1) %% data$details$trace) == 0) {
+            message(progressstring)
             flush.console()
         }
+    }
+    logfilename <- data$details$log
+    if (logfilename != "" && is.character(logfilename)) {
+        progressstring <- paste(
+            c(format(.openCRstuff$iter, width=4), "   ",
+                formatC(round(loglik,dig), format='f', digits=dig+2, width=betaw+3), " ",
+                formatC(beta, format='f', digits=dig+3, width=betaw+3)), collapse = " ")
+        cat(progressstring, file = logfilename, sep="\n", append=TRUE)
     }
 
     if (oneeval) {

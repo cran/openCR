@@ -10,13 +10,12 @@ importFrom (stringr, "str_trim", "str_split", "str_c", "str_pad")
 importFrom (plyr, "count", "rbind.fill")
 importFrom (abind, "abind")
 importFrom (stats, "AIC", "coef", "logLik", "as.formula", "model.matrix", "nlm", "optim", "vcov",
-             "predict", "qnorm", "dpois", "dbinom", "dnbinom", "dgamma", "runif", "sd", "median",
-             "uniroot")
+    "predict", "qnorm", "dpois", "dbinom", "dnbinom", "dgamma", "dlnorm", 
+    "pgamma", "pnorm", "qexp", "qgamma", "qlnorm", "runif", "sd", "median", 
+    "uniroot", "update", "contrasts")
 importFrom (methods, "formalArgs")
 importFrom (Rcpp, "evalCpp")
 importFrom (RcppParallel, "RcppParallelLibs", "setThreadOptions", "defaultNumThreads")
-# suggests, not imports from 1.3.1
-# importFrom (R2ucare, "test3sr", "test3sm", "test2ct", "test2cl", "overall_CJS")
 
 export (openCR.fit)
 export (par.openCR.fit)
@@ -45,10 +44,13 @@ export (openCR.esa)
 export (openCR.pdot)
 
 export (make.kernel)
+export (gkernel)
 export (dkernel)
 export (pkernel)
 export (qkernel)
 export (matchscale)
+export (cumMove)
+export (proportionInPolygon)
 export (ucare.cjs)
 export (moving.fit)
 export (extractFocal)
@@ -79,13 +81,15 @@ S3method (AIC, openCR)
 S3method (logLik, openCR)
 S3method (coef, openCR)
 S3method (classMembership, openCR)
-# S3method (makeNewData, openCR)
-export(openCR.make.newdata)
+S3method (makeNewData, openCR)
+## export(openCR.make.newdata)
 
 S3method (rev, capthist)
 
 S3method (AIC, openCRlist)
 S3method (predict, openCRlist)
+S3method('[', openCRlist)
+S3method(c, openCRlist)
 
 useDynLib (openCR, .registration = TRUE)
 

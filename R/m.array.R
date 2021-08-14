@@ -2,6 +2,7 @@
 # m.array.R
 ## 2018-04-20 openCR 1.2.0
 ## 2021-04-18 stratified
+## 2021-07-26 bug fix
 ###############################################################################
 
 m.array <- function (object, primary.only = TRUE, never.recaptured = TRUE, last.session = TRUE, stratified = FALSE) {
@@ -11,7 +12,6 @@ m.array <- function (object, primary.only = TRUE, never.recaptured = TRUE, last.
     else {
         if (ms(object)) {
             object <- join(reduce(object, by = 'all', outputdetector = 'nonspatial', verify = FALSE))
-            
         }
         else {
             if (primary.only) object <- primaryonly(object)
@@ -26,7 +26,10 @@ m.array <- function (object, primary.only = TRUE, never.recaptured = TRUE, last.
             cbind(x$Occasion[-nrow(x)], x$Occasion[-1])
         })
         df <- do.call(rbind, df)
-        tab <- table(df[,1], factor(df[,2], levels=1:(S+1)))
+        tab <- table(
+            factor(df[,1], levels = 1:S),       # levels applied to fix bug 2021-07-26
+            factor(df[,2], levels = 1:(S+1))
+            )
         tab[lower.tri(tab, diag=TRUE)] <- NA
         if (!last.session) {
             tab <- tab[-nrow(tab),,drop = FALSE]

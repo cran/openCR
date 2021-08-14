@@ -12,52 +12,9 @@
 ## 2020-12-12 mqsetup moved from prwisecr.R
 ## 2021-03-30 logmultinomial local version of function
 ## 2021-04-24 2.0.0 stratification
+## 2021-07-23 get.model.matrix wrapper for calls to model.matrix
+## 2021-07-31 new movement models, general tidy up
 ###############################################################################
-
-typecode <- function (type) {
-    type <- switch(type, 
-        CJS = 1, CJSmte = 5,
-        JSSAf = 4, JSSAl = 3, JSSAb = 2, JSSAg = 22, JSSAk = 28, 
-        JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAgCL = 23, JSSAkCL = 29,
-        JSSAB = 18, JSSAN = 19,
-        
-        CJSsecr = 6, 
-        JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11, JSSAsecrgCL = 25, 
-        JSSAsecrf = 7, JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrg = 24, 
-        JSSAsecrB = 14, JSSAsecrD = 8,
-        
-        Pradel = 20, JSSARET = 21, Pradelg = 26, JSSAfgCL = 27,
-        secrCL = 30, secrD = 31, 
-        
-        # added aliases 2020-11-01
-        PLBf = 15, PLBl = 16, PLBb = 17, PLBg = 23, PLBk = 29,
-        PLBsecrf = 9, PLBsecrl = 10, PLBsecrb = 11, PLBsecrg = 25, 
-        
-        -1)
-    type
-}
-
-movecode <- function (movementmodel) {
-    switch (movementmodel, static = 0, uncorrelated = 1, normal = 2, 
-        exponential = 3, user = 4, t2D = 5, uniform = 6, annular = 7, 
-        annular2 = 8, annularR = 9)
-}
-
-sparsebool <- function(sparsekernel, movementmodel) {
-  out <- sparsekernel
-  if (is.null(out)) {
-    out <- movementmodel %in% c('normalS', 'exponentialS', 't2DS')  # for short-term backward compatibility
-  }
-  out
-}
-  
-edgemethodcode <- function (edgemethod) {
-    if (is.null(edgemethod)) edgemethod <- 'none' 
-    if (!edgemethod %in% c('none','wrap','truncate')) {
-        stop ("unrecognised edge method - should be 'none','wrap' or 'truncate'")
-    }
-    switch (edgemethod, none = 0, wrap = 1, truncate = 2, 0)
-}
 
 .openCRstuff <- new.env()
 #.openCRstuff$packageType <- ' pre-release'
@@ -86,6 +43,48 @@ edgemethodcode <- function (edgemethod) {
 .openCRstuff$traplearnedresponses <- c('bk', 'Bk', 'k', 'ksession', 'Ksession',
     'bksession', 'Bksession')
 
+# recognised movement models, excluding static and uncorrelated
+.openCRstuff$movementmodels <- c(
+  'normal','BVN',
+  'exponential','BVE',
+  't2D','BVT',
+  'uniform',
+  'annular', 
+  'frE', 
+  'frG', 
+  'frL', 
+  'BVNzi',
+  'BVEzi',
+  'uniformzi',
+  'frEzi',
+  'uncorrelatedzi')
+
+################################################################################
+
+typecode <- function (type) {
+  type <- switch(type, 
+    CJS = 1, CJSmte = 5,
+    JSSAf = 4, JSSAl = 3, JSSAb = 2, JSSAg = 22, JSSAk = 28, 
+    JSSAfCL = 15, JSSAlCL = 16, JSSAbCL = 17, JSSAgCL = 23, JSSAkCL = 29,
+    JSSAB = 18, JSSAN = 19,
+    
+    CJSsecr = 6, 
+    JSSAsecrfCL = 9, JSSAsecrlCL = 10, JSSAsecrbCL = 11, JSSAsecrgCL = 25, 
+    JSSAsecrf = 7, JSSAsecrl = 12, JSSAsecrb = 13, JSSAsecrg = 24, 
+    JSSAsecrB = 14, JSSAsecrD = 8,
+    
+    Pradel = 20, JSSARET = 21, Pradelg = 26, JSSAfgCL = 27,
+    secrCL = 30, secrD = 31, 
+    
+    # added aliases 2020-11-01
+    PLBf = 15, PLBl = 16, PLBb = 17, PLBg = 23, PLBk = 29,
+    PLBsecrf = 9, PLBsecrl = 10, PLBsecrb = 11, PLBsecrg = 25, 
+    
+    -1)
+  type
+}
+################################################################################
+
 # detection function numbers 14-20 are subset of those used by 'secr'
 detectionfunctionnumber <- function (detname) {
     dfn <- match (toupper(detname), .openCRstuff$DFN)
@@ -95,8 +94,79 @@ detectionfunctionnumber <- function (detname) {
         stop ("detection function ", detname, " not recognised in openCR")
     dfn+13
 }
+################################################################################
 
-replacedefaults <- function (default, user) replace(default, names(user), user)
+movecode <- function (movementmodel) {
+  switch (movementmodel, 
+    static        = 0, 
+    uncorrelated  = 1, 
+    normal        = 2, 
+    BVN           = 2, 
+    exponential   = 3, 
+    BVE           = 3, 
+    user          = 4, 
+    t2D           = 5, 
+    BVT           = 5,
+    uniform       = 6, 
+    annular       = 7, 
+    annular2      = 8, 
+    annularR      = 9, 
+    frE           = 10, 
+    frG           = 11, 
+    frL           = 12, 
+    BVNzi          = 13,
+    BVEzi          = 14,
+    uniformzi      = 15,
+    frEzi          = 16,
+    uncorrelatedzi = 17
+  )
+}
+################################################################################
+
+nparmove <- function (movementmodel) {
+  switch(movementmodel, 
+    static        = 0, 
+    uncorrelated  = 0, 
+    normal        = 1, 
+    BVN           = 1, 
+    exponential   = 1, 
+    BVE           = 1, 
+    t2D           = 2, 
+    BVT           = 2, 
+    uniform       = 0, 
+    annular       = 1, 
+    annular2      = 2, 
+    annularR      = 2, 
+    frE           = 1, 
+    frG           = 2, 
+    frL           = 2,
+    BVNzi          = 2,
+    BVEzi          = 2,
+    uniformzi      = 1,
+    frEzi          = 2,
+    uncorrelatedzi = 1,  
+    0)
+}
+################################################################################
+
+edgemethodcode <- function (edgemethod) {
+  if (is.null(edgemethod)) edgemethod <- 'none' 
+  if (!edgemethod %in% c('none','wrap','truncate')) {
+    stop ("unrecognised edge method - should be 'none','wrap' or 'truncate'")
+  }
+  switch (edgemethod, 
+    none     = 0, 
+    wrap     = 1,
+    truncate = 2, 
+    0)
+}
+################################################################################
+
+replacedefaults <- function (default, user) {
+  replace(default, names(user), user)
+}
+
+################################################################################
 
 discreteN <- function (n, N) {
     tN <- trunc(N)
@@ -104,12 +174,14 @@ discreteN <- function (n, N) {
         replace = T, size = n)
     else rep(tN,n)
 }
+################################################################################
 
 memo <- function (text, trace) {
     ## could use message(text), but does not immediately flush console
     if (trace) { cat (text, '\n')
     flush.console() }
 }
+################################################################################
 
 pad1 <- function (x, n) {
 ## pad x to length n with dummy (first value)
@@ -121,6 +193,7 @@ pad1 <- function (x, n) {
     else out <- c(x, rep(x[1], n-length(x)))
     out
 }
+################################################################################
 
 padarray <- function (x, dims) {
     temp <- array(dim=dims)
@@ -201,13 +274,13 @@ add.cl <- function (df, alpha, loginterval, lowerbound = 0) {
     }
     df
 }
-
 ###############################################################################
 
 model.string <- function (model, userDfn) {
     temp <- paste (names(model), as.character(model), collapse=' ', sep='')
     temp
 }
+###############################################################################
 
 fixed.string <- function (fixed) {
     # copied from 'secr'
@@ -215,7 +288,6 @@ fixed.string <- function (fixed) {
     else paste (names(fixed), as.character(fixed), collapse=', ', sep=' = ')
 }
 ############################################################################################
-
 
 ## lifted from secr score.test
 
@@ -279,11 +351,13 @@ primarysessions <- function(intervals) {
     primarysession <- cumsum(c(0,intervals))
     match(primarysession, unique(primarysession))
 }
+###############################################################################
 
 secondarysessions <- function(intervals) {
     primary <- primarysessions(intervals)
     unname(unlist(sapply(table(primary), seq_len)))  
 }
+###############################################################################
 
 primaryonly <- function(object) {
     intervals <- intervals(object)
@@ -311,12 +385,19 @@ primaryonly <- function(object) {
     }
     object
 }
+###############################################################################
 
-# expandfreq <- function (CH, freq) {
-#     f <- rep(1:nrow(CH), freq)    
-#     out <- CH[f,,]
-#     out
-# }
+primaryintervals <- function (object, ...) {
+  ## 2021-04-26 list, one vector per stratum
+  ## for backward compatibility -
+  out <- list(object$intervals)
+  if (is.null(out[[1]])) {
+    out <- object$primaryintervals 
+  }
+  if (!is.list(out)) stop ("primarysessions should be stratum list")
+  out
+}
+###############################################################################
 
 ##### constrain to 0 < sum(p) <= 1.0
 invmlogit <- function (x, fillin = TRUE) {
@@ -331,41 +412,44 @@ invmlogit <- function (x, fillin = TRUE) {
 
 transform <- function (x, link) {
     switch (link,
-            identity = x,
-            log = log(x),
-            neglog = log(-x),
-            logit = logit(x),
-            loglog = -log(-log(x)),
-            # mlogit = x,
-            mlogit = logit(x),   ## 2019-04-20
-            odds = odds(x),
-            sin = sine(x)
+        identity = x,
+        log = log(x),
+        log1 = log(x-1),
+        neglog = log(-x),
+        logit = logit(x),
+        loglog = -log(-log(x)),
+        # mlogit = x,
+        mlogit = logit(x),   ## 2019-04-20
+        odds = odds(x),
+        sin = sine(x)
     )
 }
 ############################################################################################
 
 untransform <- function (beta, link) {
     switch (link,
-            identity = beta,
-            log = exp(beta),
-            neglog = -exp(beta),
-            logit = invlogit(beta),
-            loglog = exp(-exp(-beta)),
-            mlogit = beta,   ## delay
-            odds = invodds(beta),
-            sin = invsine(beta))
+        identity = beta,
+        log = exp(beta),
+        log1 = exp(beta) + 1,
+        neglog = -exp(beta),
+        logit = invlogit(beta),
+        loglog = exp(-exp(-beta)),
+        mlogit = beta,   ## delay
+        odds = invodds(beta),
+        sin = invsine(beta))
 }
 ############################################################################################
 
 se.untransform <- function (beta, sebeta, link) {
     switch (link,
-            identity = sebeta,
-            log = exp(beta) * sqrt(exp(sebeta^2)-1),
-            neglog = exp(beta) * sqrt(exp(sebeta^2)-1),
-            logit = invlogit(beta) * (1-invlogit(beta)) * sebeta,
-            loglog = -exp(-exp(-beta)) * sebeta * -exp(-beta),
-            mlogit = NA,      ## don't know how
-            sin = NA)         ####!!!!
+        identity = sebeta,
+        log = exp(beta) * sqrt(exp(sebeta^2)-1),
+        log1 =  exp(beta) * sqrt(exp(sebeta^2)-1),
+        neglog = exp(beta) * sqrt(exp(sebeta^2)-1),
+        logit = invlogit(beta) * (1-invlogit(beta)) * sebeta,
+        loglog = -exp(-exp(-beta)) * sebeta * -exp(-beta),
+        mlogit = NA,      ## don't know how
+        sin = NA)         ####!!!!
 }
 ############################################################################################
 
@@ -375,14 +459,15 @@ Xtransform <- function (real, linkfn, varnames) {
     for (i in 1:length(real)) {
         vn <- varnames[i]
         out[i] <- switch (linkfn[[vn]],
-                          identity = real[i],
-                          log = log(real[i]),
-                          neglog = log(-real[i]),
-                          logit = logit(real[i]),
-                          loglog = -log(-log(real[i])),
-                          mlogit = real[i],      ## delay
-                          odds = odds(real[i]),
-                          sin = sine(real[i]))
+            identity = real[i],
+            log = log(real[i]),
+            log1 = log(real[i]-1),
+            neglog = log(-real[i]),
+            logit = logit(real[i]),
+            loglog = -log(-log(real[i])),
+            mlogit = real[i],      ## delay
+            odds = odds(real[i]),
+            sin = sine(real[i]))
     }
     out
 }
@@ -393,13 +478,14 @@ se.Xtransform <- function (real, sereal, linkfn, varnames) {
     for (i in 1:length(real)) {
         vn <- varnames[i]
         out[i] <- switch (linkfn[[vn]],
-                          identity = sereal[i],
-                          log = log((sereal[i]/real[i])^2 + 1)^0.5,
-                          neglog = log((sereal[i]/-real[i])^2 + 1)^0.5,
-                          logit = sereal[i] / real[i] / (1 - real[i]),
-                          loglog = -real[i] * sereal[i] * log(real[i]),
-                          mlogit = NA,      ## don't know how
-                          sin = NA)
+            identity = sereal[i],
+            log = log((sereal[i]/real[i])^2 + 1)^0.5,
+            log1 = log((sereal[i]/real[i])^2 + 1)^0.5,
+            neglog = log((sereal[i]/-real[i])^2 + 1)^0.5,
+            logit = sereal[i] / real[i] / (1 - real[i]),
+            loglog = -real[i] * sereal[i] * log(real[i]),
+            mlogit = NA,      ## don't know how
+            sin = NA)
     }
     out
 }
@@ -411,14 +497,15 @@ Xuntransform <- function (beta, linkfn, varnames) {
     for (i in 1:length(beta)) {
         vn <- varnames[i]
         out[i] <- switch (linkfn[[vn]],
-                          identity = beta[i],
-                          log = exp(beta[i]),
-                          neglog = -exp(beta[i]),
-                          logit = invlogit(beta[i]),
-                          loglog = exp(-exp(-beta[i])),
-                          mlogit = beta[i],   # delay
-                          odds = invodds(beta[i]),
-                          sin = invsine(beta[i]))
+            identity = beta[i],
+            log = exp(beta[i]),
+            log1 = exp(beta[i]) + 1,
+            neglog = -exp(beta[i]),
+            logit = invlogit(beta[i]),
+            loglog = exp(-exp(-beta[i])),
+            mlogit = beta[i],   # delay
+            odds = invodds(beta[i]),
+            sin = invsine(beta[i]))
     }
     out
 }
@@ -436,13 +523,14 @@ se.Xuntransform <- function (beta, sebeta, linkfn, varnames)
     for (i in 1:length(beta)) {
         vn <- varnames[i]
         out[i] <- switch (linkfn[[vn]],
-                          identity = sebeta[i],
-                          log = exp(beta[i]) * sqrt(exp(sebeta[i]^2)-1),
-                          neglog = exp(beta[i]) * sqrt(exp(sebeta[i]^2)-1),
-                          logit = invlogit(beta[i]) * (1-invlogit(beta[i])) * sebeta[i],
-                          loglog = NA, 
-                          mlogit = NA,    ## don't know how
-                          sin = NA)         ####!!!!
+            identity = sebeta[i],
+            log    = exp(beta[i]) * sqrt(exp(sebeta[i]^2)-1),
+            log1   = exp(beta[i]) * sqrt(exp(sebeta[i]^2)-1),
+            neglog = exp(beta[i]) * sqrt(exp(sebeta[i]^2)-1),
+            logit = invlogit(beta[i]) * (1-invlogit(beta[i])) * sebeta[i],
+            loglog = NA, 
+            mlogit = NA,    ## don't know how
+            sin = NA)         ####!!!!
     }
     out
 }
@@ -544,6 +632,23 @@ getvalidlevels <- function (type, parnames, J, CJSp1) {
     validlevels
 }
 ############################################################################################
+
+# 2021-07-23
+# wrapper for call to model.matrix that is used in openCR.design, lpredictor etc.
+
+get.model.matrix <- function(formula, field, dframe, validlevels, contrasts, ...) {
+  # adjust for unidentifiable parameters
+  dframe <- adjustlevels(field, dframe, validlevels)
+  # avoid contrasts error 2021-04-26
+  if (length(levels(dframe$stratum))==1) {
+    dframe$stratum <- rep(1, nrow(dframe))
+  }
+  # drop contrasts not relevant to this formula
+  localcontrasts <- contrasts[names(contrasts) %in% all.vars(formula)]
+  if (length(localcontrasts)==0) localcontrasts <- NULL
+  model.matrix(formula, data = dframe, contrasts.arg = localcontrasts, ...)
+}
+
 lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL, 
   validlevels, contrasts = NULL) {
     vars <- all.vars(model)
@@ -576,13 +681,16 @@ lpredictor <- function (model, newdata, indx, beta, field, beta.vcv=NULL,
         notOK <- !validlevels[field,newdata$t]   ## BEFORE adjust levels
     }
     
-    newdata1 <- adjustlevels(field, newdata, validlevels)
+    # newdata1 <- adjustlevels(field, newdata, validlevels)
     # avoid contrasts error 2021-04-26
-    if (length(levels(newdata1$stratum))==1) {
-      newdata1$stratum <- rep(1, nrow(newdata1))
-    }
-    mat <- model.matrix(model, data=newdata1, contrasts.arg = contrasts)
+    # if (length(levels(newdata1$stratum))==1) {
+    #   newdata1$stratum <- rep(1, nrow(newdata1))
+    # }
+    # mat <- model.matrix(model, data=newdata1, contrasts.arg = contrasts)
 
+    # new wrapper function 2021-07-23
+    mat <- get.model.matrix (model, field, newdata, validlevels, contrasts)
+      
     ## drop pmix beta0 column from design matrix (always zero)
     if (field=='pmix') {
         mat <- mat[,-1,drop=FALSE]
@@ -728,7 +836,6 @@ getcumss <- function(capthist) {
 }
 ############################################################################################
 
-############################################################################################
 fillpmix2 <- function (nc, nmix, PIA, realparval) {
     pmix <- matrix(1, nrow = nc, ncol = nmix) 
     if (nmix>1) {        
@@ -739,7 +846,7 @@ fillpmix2 <- function (nc, nmix, PIA, realparval) {
 }
 ############################################################################################
 
-age.matrix <- function (capthist, initialage = 0, minimumage = 0, maximumage = 1, collapse = FALSE) #, bysession = FALSE) 
+age.matrix <- function (capthist, initialage = 0, minimumage = 0, maximumage = 1, collapse = FALSE) 
 {    
     makeage <- function (n) {
         ch <- capthist[n,,,drop=FALSE]
@@ -851,7 +958,6 @@ unsqueeze <- function(x) {
 }
 ############################################################################################
 
-
 ## code used in openCR.fit to put capthist object in a standard form
 ## 2018-02-11
 ## modified 2021-04-18 for stratified input
@@ -940,9 +1046,12 @@ complete.beta.vcv <- function (object) {
     if (!is.null(fb)) {
         names(fb) <- unlist(sapply(object$design$designMatrices, colnames))
         nbeta <- length(fb)
-        beta.vcv <- matrix(0, nrow = nbeta, ncol = nbeta, dimnames=list(names(fb), names(fb)))
-        if (!is.null(object$beta.vcv))
-            beta.vcv[is.na(fb[row(beta.vcv)]) & is.na(fb[col(beta.vcv)])] <- object$beta.vcv
+        beta.vcv <- matrix(0, nrow = nbeta, ncol = nbeta, 
+          dimnames = list(names(fb), names(fb)))
+        if (!is.null(object$beta.vcv)) {
+          beta.vcv[is.na(fb[row(beta.vcv)]) & is.na(fb[col(beta.vcv)])] <- 
+            object$beta.vcv
+        }
     }
     else {
         beta.vcv <- object$beta.vcv
@@ -999,6 +1108,7 @@ rectwrap <- function(oldx, oldy, newx, newy, concat = TRUE) {
   else 
     list(newx=newx, newy=newy)
 }
+###############################################################################
 
 mqsetup <- function (
   mask,      ## x,y points on mask (first x, then y)
@@ -1031,7 +1141,6 @@ mqsetup <- function (
     matrix(i, nrow = nrow(mask), ncol = nrow(kernel))
   }
 }
-
 ###############################################################################
 
 ## local logmultinomial 2021-03-30, 2021-04-19
@@ -1049,7 +1158,7 @@ logmultinom <- function (capthist, stratified = FALSE) {
   }
 }
 
-##############################################
+###############################################################################
 xydist <- function (xy1, xy2) {
     nr <- nrow(xy1)
     nc <- nrow(xy2)
@@ -1059,8 +1168,8 @@ xydist <- function (xy1, xy2) {
     y2 <- matrix(xy2[,2], nr, nc, byrow=T)
     max(abs(x1-x2), abs(y1-y2))
 }
+###############################################################################
 
-##############################################
 getdistmat <- function (traps, mask, HPX = FALSE) {
   ## Static distance matrix
   if (HPX) {
@@ -1088,20 +1197,7 @@ getdistmat <- function (traps, mask, HPX = FALSE) {
     }
   }
 }
-
-###################################################
-
-primaryintervals <- function (object, ...) {
-  ## 2021-04-26 list, one vector per stratum
-  ## for backward compatibility -
-  out <- list(object$intervals)
-  if (is.null(out[[1]])) {
-    out <- object$primaryintervals 
-  }
-  if (!is.list(out)) stop ("primarysessions should be stratum list")
-  out
-}
-#--------------------------------------------------------------------------
+###############################################################################
 
 # function to ensure covariates are in standard form (stratum list of dataframes)
 stdcovlist <- function (cov, covname, nstrata, expected = NULL) {
@@ -1151,7 +1247,7 @@ stdcovlist <- function (cov, covname, nstrata, expected = NULL) {
       dflist
   }
 }
-#--------------------------------------------------------------------------
+###############################################################################
 
 get.nmix <- function (model) {
     # simplified local version of 'secr' function get.nmix
@@ -1168,5 +1264,5 @@ get.nmix <- function (model) {
     }
     nmix
 }
-############################################################################################
+###############################################################################
 

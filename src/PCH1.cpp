@@ -165,11 +165,13 @@ struct pch1struct : public Worker {
     const RVector<int> moveargsi;
     int   movementcode;
     bool  sparsekernel;
+    bool  anchored;
     int   edgecode;
-    String usermodel;
+    std::string usermodel;
     const RMatrix<int> kernel;
     const RMatrix<int> mqarray;
     double cellsize;
+    int   fillcode;
     
     // output likelihoods, one per animal
     RVector<double> output;
@@ -189,8 +191,9 @@ struct pch1struct : public Worker {
         const IntegerVector moveargsi,
         int   movementcode,
         bool  sparsekernel,
+        bool  anchored,
         int   edgecode,
-        String usermodel,
+        std::string usermodel,
         const IntegerMatrix kernel,
         const IntegerMatrix mqarray,
         double cellsize,        
@@ -200,21 +203,26 @@ struct pch1struct : public Worker {
             cumss(cumss), openval0(openval0), PIA0(PIA0), PIAJ(PIAJ), 
             gk0(gk0), binomN(binomN), Tsk(Tsk), intervals(intervals), 
             moveargsi(moveargsi), movementcode(movementcode), 
-            sparsekernel(sparsekernel), edgecode(edgecode), 
+            sparsekernel(sparsekernel), anchored(anchored), edgecode(edgecode), 
             usermodel(usermodel), kernel(kernel), mqarray(mqarray), 
             cellsize(cellsize), output(output) 
     {
         kn = kernel.nrow();
         cc0 = openval0.nrow();
         kk = Tsk.nrow();
+        fillcode = movementcode-2;
     }
     
     double onepch1cpp (int n) {
         double pdt = 0.0;
         double pbd;
-        int j,m;
+        int j,m, m2, q;
         int b,d;
         double prw0, sumpj;
+        int kernelreturncode = 1;
+        double bz;
+        double sumalpha;
+        double prwm;
         
         // work vectors for session-specific real parameter values
         std::vector<double> phij(jj);      // each primary session
@@ -223,6 +231,8 @@ struct pch1struct : public Worker {
         std::vector<double> pjmat(jj * mm);
         std::vector<double> moveargs(jj*2);
         std::vector<double> kernelp(kn * (jj-1));
+        std::vector<int>    mj(kn);
+        std::vector<double> pj(kn);
         
         getphij (n, x, nc, jj, openval0, PIAJ,  intervals, phij);
         getbeta (type, n, x, nc, jj, openval0, PIAJ, intervals, phij, beta);
@@ -230,12 +240,13 @@ struct pch1struct : public Worker {
         pr0njmx(n, x, cumss, nc, jj, kk, mm, cc0, binomN, PIA0, gk0, Tsk, pjmat);
         if (movementcode>1) {
             getmoveargs (n, x, nc, jj, openval0, PIAJ, moveargsi, moveargs);
-            if (grain > 0)   // usermodel not allowed with multiple threads 
-                fillkernelparallel (kn, jj, movementcode-2, sparsekernel, cellsize, 
-                    kernel, moveargsi, moveargs, kernelp);
-            else
-                fillkernelp (kn, jj, movementcode-2, sparsekernel, cellsize, 
-                    kernel, moveargsi, usermodel, moveargs, kernelp);
+            // if (grain<0) for (j=0;j<(jj-1); j++) Rprintf("j %d moveargs[j] %8.6g \n", j, moveargs[j]);
+            if (movementcode != 17) {
+                fillkernelp (jj, fillcode, sparsekernel, cellsize,
+                    kernel, moveargsi, usermodel, moveargs, kernelp, true, grain,
+                    kernelreturncode);
+            }
+            if (kernelreturncode<0) return NAN;
         }
         
         for (b = 1; b <= jj; b++) {
@@ -269,12 +280,40 @@ struct pch1struct : public Worker {
                         prw0 *= sumpj / mm;   
                     }
                 }
+                else if (anchored) {
+                        std::fill(alpha.begin(), alpha.end(), 1.0/mm);
+                        for (m=0; m<mm; m++) {
+                            convolvemq1(m, 1, edgecode, mqarray, kernelp, mj, pj); 
+                            for (j = b; j <= d; j++) {
+                                prwm = 0;
+                                for (q=0; q<kn; q++) {
+                                    m2 = mj[q];
+                                    if (m2>=0) {
+                                        prwm += pj[q] * pjmat[m2*jj + j - 1];                           
+                                    }
+                                }
+                                alpha[m] *= prwm;
+                            }
+                        }
+                        prw0 = std::accumulate(alpha.begin(), alpha.end(), 0.0);
+                    }
                 else {  // movementcode>1
                     //-------------------------------------------------------------
                     // moving home ranges
                     for (m=0; m<mm; m++) alpha[m] = pjmat[m*jj + b - 1] / mm;
                     for (j = b+1; j <= d; j++) {
-                        convolvemq(mm, kn, j-1, edgecode, mqarray, kernelp, alpha);
+                        if (movementcode == 17) {  // uncorrelated zero-inflated
+                            // bz static, 1-bz uncorrelated
+                            // update alpha
+                            bz = moveargs[j-2]; 
+                            sumalpha = std::accumulate(alpha.begin(), alpha.end(), 0.0);
+                            for (m=0; m<mm; m++) {
+                                alpha[m] = bz * alpha[m] + (1-bz) * 1/mm * sumalpha;
+                            }
+                        } 
+                        else {
+                            convolvemq(mm, kn, j-1, edgecode, mqarray, kernelp, alpha);
+                        }
                         for (m=0; m<mm; m++) alpha[m] *= pjmat[m*jj + j - 1];
                     }
                     prw0 = std::accumulate(alpha.begin(), alpha.end(), 0.0);
@@ -295,38 +334,47 @@ struct pch1struct : public Worker {
 };
 
 // [[Rcpp::export]]
-NumericVector PCH1secrparallelcpp (int x, int type, int grain,
-    bool individual,
-    int jj,  int mm, int nc,
-    const IntegerVector cumss, 
-    const NumericMatrix openval0, 
-    const IntegerVector PIA0, 
-    const IntegerVector PIAJ, 
-    const NumericVector gk0, 
-    int   binomN, 
-    const NumericMatrix Tsk, 
-    const NumericVector intervals,
-    const IntegerVector moveargsi,
-    int   movementcode,
-    bool  sparsekernel,
-    int   edgecode,
-    const String usermodel,
-    const IntegerMatrix kernel,
-    const IntegerMatrix mqarray,
-    double cellsize) {
+NumericVector PCH1secrparallelcpp (
+        int   x, 
+        int   type, 
+        int   grain, 
+        int   ncores,
+        bool  individual,
+        int   jj,  
+        int   mm, 
+        int   nc,
+        const IntegerVector cumss, 
+        const NumericMatrix openval0, 
+        const IntegerVector PIA0, 
+        const IntegerVector PIAJ, 
+        const NumericVector gk0, 
+        int   binomN, 
+        const NumericMatrix Tsk, 
+        const NumericVector intervals,
+        const IntegerVector moveargsi,
+        int   movementcode,
+        bool  sparsekernel,
+        bool  anchored,
+        int   edgecode,
+        const std::string usermodel,
+        const IntegerMatrix kernel,
+        const IntegerMatrix mqarray,
+        double cellsize) {
     
     NumericVector output(nc); 
-    
+
     // Construct and initialise
     pch1struct pch1 (x, type, grain, jj, mm, nc, 
         cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals,
-        moveargsi, movementcode, sparsekernel, edgecode, usermodel, kernel, 
-        mqarray, cellsize, output);
+        moveargsi, movementcode, sparsekernel, anchored, edgecode, 
+        usermodel, kernel, mqarray, cellsize, output);
+    
+    Rcpp::checkUserInterrupt();
     
     if (individual) {
-        if (grain>0) {
+        if (ncores>1) {
             // Run operator() on multiple threads
-            parallelFor(0, nc, pch1, grain);
+            parallelFor(0, nc, pch1, grain, ncores);
         }
         else {
             pch1.operator()(0,nc);    // for debugging avoid multithreading to allow R calls

@@ -5,6 +5,7 @@
 ## 2019-04-11 ignores contrasts arg of lpredictor?
 ## 2019-04-13 failed with single parameter when others fixed
 ## 2021-04-21 stratified
+## 2021-07-30 makeNewData() renamed from openCR.make.newdata
 ###############################################################################
 
 predict.openCRlist <- function (object, newdata = NULL, se.fit = TRUE,
@@ -18,8 +19,8 @@ predict.openCR <- function (object, newdata = NULL, se.fit = TRUE, alpha = 0.05,
     return(NULL)
   }
   if (is.null(newdata)) {
-    newdata <- openCR.make.newdata (object, ...)
-    # newdata <- makeNewData (object, ...)
+    # newdata <- openCR.make.newdata (object, ...)
+    newdata <- makeNewData (object, ...)
   }
   nstrata <- length(strata(object$capthist))
   nsess <- sapply(primaryintervals(object), function(x) sum(x>0) + 1)

@@ -23,21 +23,21 @@ Evaluate an openCR capture--recapture model. That is, compute the `real' paramet
   \item{se.fit}{ logical for whether output should include SE and confidence intervals }
   \item{alpha}{ alpha level }
   \item{savenew}{ logical; if TRUE then newdata is saved as an attribute }
-  % \item{\dots}{ other arguments passed to \code{\link{makeNewData}} }
-  \item{\dots}{ other arguments passed to \code{\link{openCR.make.newdata}} }
+  \item{\dots}{ other arguments passed to \code{\link{makeNewData}} }
+  %\item{\dots}{ other arguments passed to \code{\link{openCR.make.newdata}} }
  }
 
 \details{
 
-%Predictions are provided for each row in `newdata'. The default (constructed by 
-%\code{\link{makeNewData}}) is to limit those rows to the first-used level of 
-%factor predictors; to include all levels pass \code{all.levels = TRUE} to 
-%\code{makeNewData} in the \dots argument.
-
 Predictions are provided for each row in `newdata'. The default (constructed by 
-\code{\link{openCR.make.newdata}}) is to limit those rows to the first-used level of 
+\code{\link{makeNewData}}) is to limit those rows to the first-used level of 
 factor predictors; to include all levels pass \code{all.levels = TRUE} to 
-\code{openCR.make.newdata} in the \dots argument.
+\code{makeNewData} in the \dots argument.
+
+%Predictions are provided for each row in `newdata'. The default (constructed by 
+%\code{\link{openCR.make.newdata}}) is to limit those rows to the first-used level of 
+%factor predictors; to include all levels pass \code{all.levels = TRUE} to 
+%\code{openCR.make.newdata} in the \dots argument.
 
 }
 

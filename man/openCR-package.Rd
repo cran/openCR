@@ -27,8 +27,8 @@
 \tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 2.0.2\cr
-Date: \tab 2021-05-14\cr
+Version: \tab 2.1.0\cr
+Date: \tab 2021-08-14\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 
@@ -44,7 +44,7 @@ A few test datasets are provided (\code{microtusCH}, \code{FebpossumCH}, \code{d
 e.g. \code{ovenCH} and \code{OVpossumCH}.
 
 Models are defined using symbolic formula notation. Possible predictors
-for include both pre-defined variables (b, session etc.)  corresponding to
+include both pre-defined variables (b, session etc.), corresponding to
 `behaviour' and other effects), and user-provided covariates.
 
 Models are fitted by numerically maximizing the likelihood. The function

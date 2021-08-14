@@ -7,6 +7,9 @@
 ## 2021-02-25 functions not exported: empirical
 ## 2021-03-01 functions exported pkernel, matchscale
 ## 2021-03-16 annular2
+## 2021-07-18 many changes - gkernel(), frE, frG, frL
+## 2021-07-29 BVNzi, BVEzi, uniformzi, frEzi  (11,12,13,14)
+
 ################################################################################
 
 ## fillkernelp is used in prwisecr.R
@@ -42,134 +45,58 @@ circleintersectsline <- function (x1, x2, y1, y2, R) {
 #-----------------------------------------------------------------------
 ## fill cells of kernel with probability of movement from central point
 
-fillkernelp <- function (
-    J,              ## number of sessions
-    kerneltype,     ## 0 normal, 1 exponential, 2 usermodel, 3 2Dt, 4 uniform, 
-                    ## 5 annular, 6 annular2, 7 annularR
+fillkernelC <- function (
+    J,              ## number of sessions (J-1 potential movements)
+    kerneltype,     ## 0 BVN, 1 BVE, 2 usermodel, 3 BVT, etc.
     sparsekernel,   ## TRUE iff sparse
-    # zeroinflated, 
     kernel,
-    usermodel,
+    usermodel = "",
     cellsize,
     moveargsi,
-    moveargs,
-    normalize = TRUE)
+    moveargs,       ## J x npar matrix
+    normalize)
 {
-    kn <- nrow(kernel)
-    kernelp <- matrix(0, nrow = kn, ncol = J)
-    r2 <- (kernel$x^2 + kernel$y^2) * cellsize^2
-    r <- sqrt(r2)
-    ## diag is sqrt(2) adjustment for diagonal spokes of sparse kernels
-    diag <- ifelse(abs(kernel$x) == abs(kernel$y) & (r>0), sqrt(2), 1)
-    zero <- kernel$x == 0 & kernel$y == 0
-    for (j in 1:J) {
-        if (kerneltype == 0) {        ## normal (Gaussian) kernel
-            sigma <- moveargs[j]
-            kernelp[,j] <- exp(-r2 / 2 / sigma^2) / 2 / pi / sigma^2
-        }
-        else if (kerneltype == 1) {  ## negative exponential kernel
-            sigma <- moveargs[j]
-            kernelp[,j] <- exp(-r / sigma) / 2 / pi / sigma^2
-        }
-        else if (kerneltype == 2) {
-            if (!is.function(usermodel))
-                stop ("fillkernelp requires valid user model for movement")
-            if (moveargsi[2]>0)
-                kernelp[,j] <- usermodel(r, moveargs[j,1], moveargs[j,2])  ##  2 parameters
-            else if (moveargsi[1]>0)
-                kernelp[,j] <- usermodel(r, moveargs[j,1])
-            else
-                kernelp[,j] <- usermodel(r)   ## no parameters!
-        }
-        else if (kerneltype == 3) {   ## 2-D t
-            a2 <- moveargs[j,1]^2
-            b <- moveargs[j,2] + 1
-            kernelp[,j] <-  (b-1) / pi / a2 / (1 + r^2/a2)^b
-        }
-        else if (kerneltype == 4) {   ## uniform
-            kernelp[,j] <-  1 / nrow(kernelp)
-        }
-        else if (kerneltype == 5) {   ## annular
-            p0 <- moveargs[j,1]
-            kernelp[,j] <-  (1-p0)/(kn-1)  # assume intermediate r already removed
-            kernelp[r==0,j] <-  p0
-        }
-        else if (kerneltype == 6) {   ## double annular
-            p0 <- moveargs[j,1]
-            p1 <- moveargs[j,2]
-            ri <- round(r/spacing(kernel))
-            origin <- ri==0
-            K2 <- max(ri)
-            ring1 <- ri>0 & (ri<(K2-0.5))
-            ring2 <- ri > (K2-0.5)
-            kernelp[origin,j] <-  p0
-            kernelp[ring1,j] <-  p1/sum(ring1)
-            kernelp[ring2,j] <-  (1-(p0+p1))/sum(ring2)
-        }
-        else if (kerneltype == 7) {   ## annularR
-            # annular with variable radius (move.b) as fraction of kernel radius
-            # and cells weighted according to relative length of intersecting arc (dtheta)
-            move.a <- moveargs[j,1]
-            move.b <- moveargs[j,2]
-            rge <- range(kernel$x) + spacing(kernel) * c(-0.5,0.5)
-            x <- y <- seq(rge[1], rge[2], spacing(kernel))
-            minxy <- min(x)*1.1
-            maxxy <- max(x)*1.1
-            rad <- move.b * max(kernel$x)
-            vx <- function(x) circleintersectsline(x,x, minxy, maxxy, rad)
-            hy <- function(y) circleintersectsline(minxy, maxxy, y, y, rad)
-            xi <- do.call(rbind, lapply(x, vx))
-            yi <- do.call(rbind, lapply(y, hy))
-            pts <- rbind(xi,yi)
-            df <- data.frame(pts, theta = atan2(pts$y, pts$x))
-            df <- df[order(df$theta),]
-            df <- rbind(df, df[1,])
-            dtheta <- diff(df$theta)
-            dtheta[dtheta<0] <- dtheta[dtheta<0] + 2*pi
-            df$dtheta <- c(dtheta,NA)
-            df$cx <- df$x + c(diff(df$x)/2, NA)
-            df$cy <- df$y + c(diff(df$y)/2, NA)
-            # associate each arc with cell in which it falls
-            incell <- nearesttrap(df[,c('cx','cy')], kernel)
-            incell <- incell[incell>0]
-            kernelp[,j] <- rep(0, nrow(kernel))
-            kernelp[trunc(nrow(kernel)/2)+1,j] <- move.a   ## centre
-            kernelp[incell,j] <- (1-move.a) * df$dtheta[-nrow(df)] / sum(df$dtheta[-nrow(df)])
-        }
-        else stop("unrecognised kerneltype")
-        if (sparsekernel) kernelp[,j] <- 2 * pi * r * diag * kernelp[,j]
-        # if (zeroinflated) {
-        #     if (!(kerneltype %in% c (0,1))) stop ("Zero inflation only an option for normal, exponential")
-        #     pzero <- moveargs[j,2]
-        #     kernelp[,j] <- kernelp[,j] * (1-pzero) * spacing(kernel)^2 + zero * pzero
-        # }
-    }
-    ## normalise
-    if (normalize) {
-        sumj <- apply(kernelp,2,sum, na.rm = TRUE)
-        kernelp <- sweep(kernelp, MARGIN=2, STATS=sumj, FUN="/")
-    }
-    kernelp
+    kernel <- as.matrix(kernel)   # convert from mask dataframe to matrix
+    kernel <- sweep(kernel, FUN="-", STATS=apply(kernel,2,mean), MARGIN=2)
+    kernel[,] <- as.integer(round(kernel / cellsize))
+    kernelp <- fillkernelcpp (
+       as.matrix   (kernel), 
+       as.integer  (kerneltype), 
+       as.logical  (sparsekernel),
+       as.double   (cellsize),
+       as.integer  (J),
+       as.character(usermodel),
+       as.integer  (moveargsi), 
+       as.double   (moveargs),
+       as.logical  (normalize)    
+    )   
+    matrix(kernelp, ncol = J-1)
 }
 
 make.kernel <- function (
-    movementmodel = c('normal','exponential','t2D','uniform'),
-    kernelradius = 10, spacing, move.a, move.b, 
-    sparsekernel = FALSE, # zeroinflated = FALSE, 
+    movementmodel = c('BVN', 'BVE', 'BVT','frE', 'frG', 'frL', 'uniform'),
+    kernelradius = 10, 
+    spacing, 
+    move.a, 
+    move.b, 
+    sparsekernel = FALSE, 
     clip = FALSE,
     normalize = TRUE,
+    stat = c('estimate','lcl', 'ucl'),
     ...) 
 {
     if (inherits(movementmodel, 'openCR')) {
         fit <- movementmodel
-        if (fit$movementmodel %in% c('normal','exponential','t2D','uniform','annular')) {
+        if (fit$version < '2.0.0') stop ("model fitted with openCR < 2.0.0")
+        if (fit$movementmodel %in% .openCRstuff$movementmodels) {
+            stat <- match.arg(stat)
             pred <- predict(fit, ...)
             kernel <- make.kernel(
                 movementmodel = fit$movementmodel, 
                 kernelradius  = fit$kernelradius, 
                 spacing       = secr::spacing(fit$mask), 
-                move.a        = round(pred$move.a[1,'estimate'], 3),
-                move.b        = pred$move.b[1,'estimate'], 
+                move.a        = pred$move.a[1, stat],   # gather lcl, ucl as well 2021-08-08
+                move.b        = pred$move.b[1, 'estimate'],   # gather lcl, ucl as well 2021-08-08
                 sparsekernel  = fit$sparsekernel, 
                 clip          = TRUE,
                 normalize     = TRUE)
@@ -184,40 +111,36 @@ make.kernel <- function (
     else {
         if (is.function (movementmodel)) {
             moveargs <- formalArgs(movementmodel)
-            usermodel <- movementmodel
+            usermodel <- as.character(substitute(movementmodel))
             movementmodel <- "user"
         }
         else {
-            usermodel <- NULL
+            usermodel <- ""   ## changed from NULL 2021-07-27
             movementmodel <- match.arg(movementmodel[1],
-                choices = c('normal','exponential','t2D','uniform','annular',
-                    'annular2','annularR')) 
+                choices = .openCRstuff$movementmodels) 
         }
-        if (missing(move.a) && movementmodel %in% c('normal','exponential','t2D','annular',
-            'annular2', 'annularR')) { 
+
+        if (missing(move.a) && movementmodel != "uniform" && movementmodel %in% .openCRstuff$movementmodels) { 
             stop ("move.a required for movementmodel ", movementmodel)
         }
-        if (missing(move.b) && movementmodel %in% c('t2D','annular2','annularR')) {
+        if (missing(move.b) && movementmodel %in% c('t2D','annular2','annularR', 
+            'BVT','frL','frG', 'BVNzi', 'BVEzi','frEzi')) {
             stop ("move.b required for movementmodel ", movementmodel)
         }
-        # if (missing(move.b) && zeroinflated) {
-        #     stop ("move.b required for zero inflation")
-        # }
-        
         movementcode <- movecode(movementmodel)
         moveargsi <- c(0,0)
         if (missing(move.a) | (movementmodel == 'uniform')) {
             pars <- move.a <- move.b <- NULL
         }
         else {
-            pars <- move.a
+            pars <- move.a[1]
             moveargsi[1] <- 1
         }
         if (missing(move.b)) {
             move.b <- NULL
         }
         else {
-            pars <- c(pars, move.b)
+            pars <- c(pars, move.b[1])
             moveargsi[2] <- 2
         }
         if (is.null(pars)) pars <- c(0,0)
@@ -247,20 +170,30 @@ make.kernel <- function (
             ok <- kernel$x==0 | kernel$y == 0 | kernel$x == kernel$y | kernel$x == -kernel$y
             kernel <- kernel[ok,]
         }
-        # cellsize = 1 because already inflated
-        kernelp <- fillkernelp (1, movementcode-2, sparsekernel, # zeroinflated, 
-            kernel, usermodel, cellsize = 1, moveargsi, moveargs, FALSE)[,1]
+        
         ## optional clipping 
         if (clip) {
             outside <- (kernel$x^2 + kernel$y^2) > ((k2+0.5)*spacing)^2
             kernel <- subset(kernel, !outside)
-            kernelp[outside] <- NA
         }
         
-        if (normalize) {
-            kernelp <- kernelp/ sum(kernelp[!is.na(kernelp)])
-        }
-        covariates(kernel) <- data.frame(kernelp = kernelp[!is.na(kernelp)])
+        # call wrapper for C++ function fillkernelcpp 
+        kernelp <- fillkernelC (
+            2,              ## number of sessions+1
+            movementcode-2, ## kerneltype 0 BVN, 1 BVE, 2 usermodel, 3 BVT, 4 uniform, 
+                            ## 5 annular, 6 annular2, 7 annularR,
+                            ## 8 frE, 9 frG, 10 frL,
+                            ## 11 BVNzi, 12 BVEzi, 13 uniformzi, 14 frEzi 
+            sparsekernel,   ## TRUE iff sparse
+            kernel,         ## coordinates  
+            usermodel,      ## name of user function (grain = 0 only) 
+            cellsize = spacing,      
+            moveargsi,      ## which column has move.a, move.b
+            t(matrix(moveargs,2,2)),
+            normalize = normalize   ## delay normalization?
+        )[,1]
+
+        covariates(kernel) <- data.frame(kernelp = kernelp)
         
         ## 2021-03-01 cumulative distribution function
         r <- apply(kernel^2,1,sum)^0.5
@@ -278,25 +211,21 @@ make.kernel <- function (
 }
 
 getpstring <- function (movementmodel, move.a, move.b, sep = ' ') {
-    npar <- switch(movementmodel, static = 0, uncorrelated = 0, 
-        normal = 1, exponential = 1, t2D = 2, 
-        uniform = 0, annular = 1, annular2 = 2, annularR = 2, 
-        0)
+    npar <- nparmove(movementmodel)
     pstring <- ''
     if (npar>0) pstring <- paste0('move.a = ', move.a)
     if (npar>1) pstring <- paste(c(pstring, paste0(' move.b = ', move.b)), collapse = sep)
     pstring
 }
 
-plot.kernel <- function (x, contour = FALSE, levels = NULL, text = FALSE, title = NULL, ...) {
+plot.kernel <- function (x, contour = FALSE, levels = NULL, text = FALSE, 
+    title = NULL, ...) {
     spacing <- spacing(x)
     k2 <- attr(x, 'k2')
     move.a <- attr(x, 'move.a')
     move.b <- attr(x, 'move.b')
     movementmodel <- attr(x, 'movementmodel')
-    npar <- switch(movementmodel, static = 0, uncorrelated = 0, normal = 1, 
-        exponential = 1, t2D = 2, uniform = 0, annular = 1, annular2 = 2, 
-        annularR = 2)
+    npar <- nparmove(movementmodel)
     pstring <- getpstring(movementmodel, round(move.a,3), round(move.b,3))
     kernelp <- covariates(x)$kernelp
     dots <- list(...)
@@ -307,8 +236,15 @@ plot.kernel <- function (x, contour = FALSE, levels = NULL, text = FALSE, title 
     else border <- 1
     msk <- x
     class(msk) <- c('mask','data.frame')
-    plot(msk, dots = FALSE, meshcol = 'white', covariate = 'kernelp', border = border, ...)
-    
+
+    if (sum(!is.na(kernelp))==0) {
+        warning ("no non-missing kernel probabilities")
+        plot(msk, dots = FALSE, meshcol = 'white', border = border, ...)
+    }
+    else {
+        plot(msk, dots = FALSE, meshcol = 'white', covariate = 'kernelp', border = border, ...)
+    }
+        
     centrecell <- subset(msk, (x$x^2 + x$y^2)<1e-6)
     # 2021-03-17 modify plot call to allow add in ...
     dots$x <- centrecell
@@ -317,7 +253,6 @@ plot.kernel <- function (x, contour = FALSE, levels = NULL, text = FALSE, title 
     dots$col <- NA
     dots$add = TRUE
     do.call(plot, dots)
-    #plot(centrecell, dots = FALSE, meshcol = 'black', col = NA, add = T, ...)
 
     if (movementmodel %in% c('annular','annular2')) {
         rad <- k2 * spacing
@@ -347,21 +282,21 @@ plot.kernel <- function (x, contour = FALSE, levels = NULL, text = FALSE, title 
         title <-  paste0('kernel = ', movementmodel, ', spacing = ', spacing, 
             ', kernelradius = ', k2, ', ', pstring, ', ncells = ', nrow(x))
     }
-    mtext (side=3, line = 1, title, cex=0.9)
+    mtext (side=3, line = 1, title, cex = par()$cex.main)
 
-    invisible(data.frame(x, kernelp=kernelp[!is.na(kernelp)]))
+    # invisible(data.frame(x, kernelp=kernelp[!is.na(kernelp)]))  suppress 2021-07-28
+    invisible(data.frame(x, kernelp=kernelp))
 }
 
-ed <- function(movementmodel = c('normal', 'exponential', 't2D', 'uniform', 
-    'annular', 'annular2', 'annularR'), move.a, move.b, radius) {
+ed <- function(movementmodel, move.a, move.b, radius) {
     if (movementmodel=='user') return (NA)  # 2020-10-06
-    movementmodel <- match.arg(movementmodel[1], choices = c('normal',
-        'exponential', 't2D', 'uniform', 'annular', 'annular2', 'annularR'))
-    if (movementmodel %in% c('normal'))
+    movementmodel <- match.arg(movementmodel[1], choices = 
+            .openCRstuff$movementmodels)
+    if (movementmodel %in% c('normal', 'BVN'))
         move.a * (pi/2)^0.5         ## Nathan et al 2012 Table 15.1
-    else if (movementmodel %in% c('exponential'))
+    else if (movementmodel %in% c('exponential', 'BVE'))
         move.a * 2              ## Nathan et al 2012 Table 15.1
-    else if (movementmodel %in% c('t2D')) {
+    else if (movementmodel %in% c('t2D', 'BVT')) {
         if (missing(move.b)) stop ("t2D model has two parameters")
         a <- move.a
         b <- move.b + 1
@@ -379,53 +314,61 @@ ed <- function(movementmodel = c('normal', 'exponential', 't2D', 'uniform',
     else if (movementmodel == 'annularR') {
         (1-move.a) * move.b
     }
+    else if (movementmodel == 'frE') {
+        move.a
+    }
+    else if (movementmodel == 'frG') {
+        move.a * move.b
+    }
+    else if (movementmodel == 'frL') {
+        mu <- log(move.a)
+        s <- sqrt(log(1 + 1/move.b))
+        exp(mu + s^2/2)         ## Cousens et al 2008 Table 5.1; 
+                                ## cf Nathan et al 2012 Table 15.1 use a = exp(mu)
+    }
+    else if (movementmodel == 'BVNzi') {
+        move.a * (pi/2)^0.5 * (1-move.b)
+    }
+    else if (movementmodel == 'BVEzi') {
+        move.a * 2 * (1-move.b)
+    }
+    else if (movementmodel == 'uniformzi') {
+        NA * (1-move.b)
+    }
+    else if (movementmodel == 'frEzi') {
+        move.a * (1-move.b)
+    }
     else NA
 }
 
-bR <- function(R, movementmodel = c('normal', 'exponential', 't2D', 'uniform',
-    'annular', 'annular2', 'annularR'), move.a, move.b) {
+bR <- function(R, movementmodel, move.a, move.b) {
     if (movementmodel=='user') return (NA)  # 2020-10-06
-    movementmodel <- match.arg(movementmodel[1], choices = c('normal',
-        'exponential','t2D','uniform','annular', 'annular2', 'annularR')) 
-    if (movementmodel %in% c('normal')) {
-        alpha <- move.a
-        exp(-R^2/alpha^2/2)
-    }
-    else if (movementmodel %in% c('exponential')) {
-        (R/move.a + 1) * exp(-R/move.a)   # fixed 2021-02-22
-    }
-    else if (movementmodel %in% c('t2D')) {
-        if (missing(move.b)) stop ("t2D model has two parameters")
-        a <- move.a
-        b <- move.b + 1
-        (a^2 / (a^2 + R^2)) ^b
-    }
-    else if (movementmodel %in% c('uniform', 'annular', 'annular2', 'annularR')) {
-        NA
-    }
-    else NA
+    1 - pkernel(R, movementmodel, move.a, move.b)
 }
 
 summary.kernel <- function (object, ...) {
     spacing <- spacing(object)
     k2 <- attr(object, 'k2')
+    r <- sqrt(apply(object^2,1,sum))
     movementmodel <- attr(object, 'movementmodel')
     move.a <- attr(object, 'move.a')
     move.b <- attr(object, 'move.b')
     kernelp <- covariates(object)$kernelp
     kernelp <- kernelp / sum(kernelp)   # force normalization for E(r)
-    r <- sqrt(apply(object^2,1,sum))
+    
     result <- list(k2 = k2,
         spacing = spacing,
         ncells = nrow(object),
         movementmodel = movementmodel,
-        move.a = move.a,
-        move.b = move.b,
-        expectedmove = ed(movementmodel, move.a, move.b, k2 * spacing),
+        move.a = move.a[1],
+        move.b = move.b[1],
+        expectedmove = ed(movementmodel, move.a, move.b, k2*spacing),
         expectedmovetr = sum(r * kernelp),
         ptruncated = bR((k2+0.5)*spacing, movementmodel, move.a, move.b),
         expectedq50 = qkernel(0.5, movementmodel, move.a, move.b),
-        expectedq90 = qkernel(0.9, movementmodel, move.a, move.b)
+        expectedq90 = qkernel(0.9, movementmodel, move.a, move.b),
+        expectedq50tr = qkernel(0.5, movementmodel, move.a, move.b, truncate = k2*spacing),
+        expectedq90tr = qkernel(0.9, movementmodel, move.a, move.b, truncate = k2*spacing)
     )
     class(result) <- 'summary.kernel'
     result
@@ -441,43 +384,18 @@ print.summary.kernel <- function(x,...) {
         cat('Movement model            : ', x$movementmodel, '\n')
     cat('Parameter(s)              : ', getpstring(x$movementmodel, x$move.a, x$move.b, sep=','), '\n')
     cat('Proportion truncated      : ', x$ptruncated, '\n')
-    cat('Expected movement (trunc) : ', x$expectedmovetr, ' (m)\n')
-    cat('Expected movement (full)  : ', x$expectedmove, ' (m)\n')
-    cat('Median movement (full)    : ', x$expectedq50, ' (m)\n')
-    cat('90th percentile (full)    : ', x$expectedq90, ' (m)\n')
+    cat('Movement as truncated at edge of kernel\n')
+    cat('Expected distance         : ', x$expectedmovetr, ' (m)\n')
+    cat('50th percentile (median)  : ', x$expectedq50tr, ' (m)\n')
+    cat('90th percentile           : ', x$expectedq90tr, ' (m)\n')
+    cat('Movement, untruncated kernel\n')
+    cat('Expected distance         : ', x$expectedmove, ' (m)\n')
+    cat('50th percentile (median)  : ', x$expectedq50, ' (m)\n')
+    cat('90th percentile           : ', x$expectedq90, ' (m)\n')
 }
 
 # useful functions not exported 2021-02-25
 # see kerneltest.R
-
-quantile.kernel <- function (x, probs = seq(0, 1, 0.25), na.rm = FALSE,
-    names = TRUE, type = 7, truncate = Inf, ...) 
-{
-    movementmodel <- attr(x, 'movementmodel')
-    move.a <- attr(x, 'move.a')
-    move.b <- attr(x, 'move.b')
-    if (movementmodel == 'normal') {
-        pfn <- function(R, q) (1-exp(-R^2/2/move.a^2))-q
-    }    
-    else if (movementmodel == 'exponential') {
-        pfn <- function(R, q) (1-(R/move.a+1) * exp(-R/move.a))-q
-    }
-    else if (movementmodel == 't2D') {
-        pfn <- function(R, q) (1-(move.a^2/(move.a^2+R^2))^move.b)-q
-    }
-    upper <- 1e5*move.a
-    qfn <- function(q) {
-        out <- try(uniroot(pfn, c(0,upper), q=q)$root, silent = TRUE)
-        if (inherits(out, 'try-error')) NA else out
-    }
-    
-    # optionally adjust for truncation at edge
-    if (truncate != Inf) probs <- probs * pfn(truncate,0)
-    
-    q <- sapply(probs, qfn)
-    q[q==upper] <- Inf
-    q
-}
 
 empirical <- function (kernel) {
     r <- apply(kernel^2,1,sum)^0.5
@@ -487,24 +405,96 @@ empirical <- function (kernel) {
     out <- cbind(r, cumsum(p))
 }
 
-# Distribution function for distance moved
-dkernel <- function (r, movementmodel = c('normal','exponential','t2D'),
+gkernel <- function (r, movementmodel = c('BVN', 'BVE', 'BVT','frE', 'frG', 'frL'),
     move.a, move.b, truncate = Inf) {
-    movementmodel <- match.arg(movementmodel)
-    movementmodel <- try(match.arg(movementmodel), silent = TRUE)
+    movementmodel <- try(match.arg(movementmodel, choices = 
+            .openCRstuff$movementmodels), silent = TRUE)
     if (inherits(movementmodel, 'try-error')) {
-        warning("dkernel defined only for movement models normal, exponential, t2D")
+        warning("gkernel defined only for movement models BVN, BVE, BVT, frE, frG, frL")
+        rep(NA, length(r))
+    }
+    else if (movementmodel %in% c('BVNzi', 'BVEzi','uniformzi','frEzi')) {
+        warning("gkernel not defined for zero-inflated models BVNzi, BVEzi, uniformzi, frEzi")
         rep(NA, length(r))
     }
     else {
-        if (movementmodel == 'normal') {
+        if (movementmodel %in% c('normal', 'BVN')) {
+            g <- 1/move.a^2/2/pi * exp(-r^2/2/move.a^2)
+        }    
+        else if (movementmodel %in% c('exponential', 'BVE')) {
+            g <- 1/move.a^2/2/pi * exp(-r/move.a)
+        }
+        else if (movementmodel %in% c('t2D', 'BVT')) {
+            g <- move.b / pi/ move.a^2 * (1 + r^2/move.a^2)^-(move.b+1)
+        }
+        else if (movementmodel %in% c('frE')) {
+            g <- exp(-r/move.a) / move.a / pi / 2 / r
+        }
+        else if (movementmodel %in% c('frG')) {
+            g <- exp(-r/move.a) / gamma(move.b) / move.a^move.b / pi / 2 * r^(move.b-2)
+        }
+        else if (movementmodel %in% c('frL')) {
+            mu <- log(move.a)
+            s <- sqrt(log(1 + 1/move.b))
+            g <- dlnorm(r, mu, s) / 2 / pi / r 
+        }
+        else if (movementmodel %in% c('uniform')) {
+            g <- rep(1,length(r)) / truncate^2 /pi
+        }
+        else {
+            g <- rep(NA, length(r))
+            warning('pdf not available for movement kernel "', 
+                movementmodel, '"')
+        }
+        if (truncate != Inf) {
+            if (movementmodel == 'uniform')
+                ptrunc <- 1
+            else
+                ptrunc <- pkernel(truncate, movementmodel, move.a, move.b, Inf, TRUE)
+            g <- g / ptrunc
+            g[r>truncate] <- 0
+        }
+        g
+    }
+}
+
+# Distribution function for distance moved
+dkernel <- function (r, movementmodel = c('BVN', 'BVE', 'BVT','frE', 'frG', 'frL'),
+    move.a, move.b, truncate = Inf) {
+    movementmodel <- try(match.arg(movementmodel, choices = 
+            .openCRstuff$movementmodels), silent = TRUE)
+    if (inherits(movementmodel, 'try-error')) {
+        warning("dkernel defined only for movement models BVN, BVE, BVT, frE, frG, frL, frZ, uniform")
+        rep(NA, length(r))
+    }
+    else if (movementmodel %in% c('BVNzi', 'BVEzi','uniformzi','frEzi')) {
+        warning("dkernel not defined for zero-inflated models BVNzi, BVEzi, uniformzi, frEzi")
+        rep(NA, length(r))
+    }
+    else {
+        if (movementmodel %in% c('normal', 'BVN')) {
             d <- r/move.a^2 * exp(-r^2/2/move.a^2)
         }    
-        else if (movementmodel == 'exponential') {
+        else if (movementmodel %in% c('exponential', 'BVE')) {
             d <- r/move.a^2 * exp(-r/move.a)
         }
-        else if (movementmodel == 't2D') {
+        else if (movementmodel %in% c('t2D', 'BVT')) {
             d <- 2 * move.b * r / move.a^2 * (1 + r^2/move.a^2)^-(move.b+1)
+        }
+        else if (movementmodel %in% c('frE')) {
+            d <- exp(-r/move.a) / move.a 
+        }
+        else if (movementmodel %in% c('frG')) {
+            d <- exp(-r/move.a) / gamma(move.b) / move.a^move.b * r^(move.b-1)
+        }
+        else if (movementmodel %in% c('frL')) {
+            mu <- log(move.a)
+            s <- sqrt(log(1 + 1/move.b))
+            d <- dlnorm(r, mu, s) 
+        }
+        else if (movementmodel %in% c('uniform')) {
+            A <- pi * truncate^2
+            d <- 2 * pi * r / A
         }
         else {
             d <- rep(NA, length(r))
@@ -512,7 +502,10 @@ dkernel <- function (r, movementmodel = c('normal','exponential','t2D'),
                 movementmodel, '"')
         }
         if (truncate != Inf) {
-            ptrunc <- pkernel(truncate, movementmodel, move.a, move.b, Inf, TRUE)
+            if (movementmodel == 'uniform')
+                ptrunc <- 1
+            else
+                ptrunc <- pkernel(truncate, movementmodel, move.a, move.b, Inf, TRUE)
             d <- d / ptrunc
             d[r>truncate] <- 0
         }
@@ -521,22 +514,39 @@ dkernel <- function (r, movementmodel = c('normal','exponential','t2D'),
 }
 
 # Distribution function for distance moved
-pkernel <- function (q, movementmodel = c('normal','exponential','t2D'),
+pkernel <- function (q, movementmodel = c('BVN', 'BVE', 'BVT','frE', 'frG', 'frL'),
     move.a, move.b, truncate = Inf, lower.tail = TRUE) {
-    movementmodel <- try(match.arg(movementmodel), silent = TRUE)
+    movementmodel <- try(match.arg(movementmodel, choices = 
+            .openCRstuff$movementmodels), silent = TRUE)
+    zeroinflated <- grepl('zi', movementmodel)
+    if (zeroinflated) movementmodel <- gsub("zi","",movementmodel)
     if (inherits(movementmodel, 'try-error')) {
-        warning("pkernel defined only for movement models normal, exponential, t2D")
+        warning("pkernel defined only for movement models BVN, BVE, BVT, frE, frG, frL, uniform")
         rep(NA, length(q))
     }
     else {
-        if (movementmodel == 'normal') {
-            p <- exp(-q^2/2/move.a^2)
+        if (movementmodel %in% c('normal', 'BVN')) {
+            p <- exp(-q^2/2/move.a^2) 
         }    
-        else if (movementmodel == 'exponential') {
+        else if (movementmodel %in% c('exponential', 'BVE')) {
             p <- (q/move.a+1) * exp(-q/move.a)
         }
-        else if (movementmodel == 't2D') {
+        else if (movementmodel %in% c('t2D', 'BVT')) {
             p <- (move.a^2/(move.a^2+q^2))^move.b
+        }
+        else if (movementmodel %in% c('frE')) {
+            p <- exp(-q/move.a)
+        }
+        else if (movementmodel %in% c('frG')) {
+            p <- 1 - pgamma(q, move.b, scale = move.a)
+        }
+        else if (movementmodel %in% c('frL')) {
+            mu <- log(move.a)
+            s <- sqrt(log(1 + 1/move.b))
+            p <- 1 - pnorm((log(q) - mu) / s)
+        }
+        else if (movementmodel %in% c('uniform')) {
+            p <- ifelse (q>truncate, 0, 1 - (q/truncate)^2)
         }
         else {
             p <- rep(NA, length(q))
@@ -547,20 +557,46 @@ pkernel <- function (q, movementmodel = c('normal','exponential','t2D'),
         if (truncate != Inf) {
             if (!lower.tail) stop ("truncation incompatible with !lower.tail")
             p[q>truncate] <- 1.0
-            p <- p / pkernel(truncate, movementmodel, move.a, move.b, Inf, TRUE)
+            if (movementmodel != 'uniform') {
+                p <- p / pkernel(truncate, movementmodel, move.a, move.b, Inf, TRUE)
+            }
+        }
+        if (zeroinflated) {
+            bz <- if (movementmodel %in% c('uniform')) move.a else move.b
+            if (bz>1) stop ("requested zero-inflation outside range 0-1")
+            if (lower.tail)
+                p <- bz + (1-bz) * p
+            else
+                p <- 1 - (bz + (1-bz)*(1-p))
         }
         p
     }
 }
 
-qkernel <- function(p, movementmodel = c('normal','exponential','t2D'),
+qkernel <- function(p, movementmodel = c('BVN', 'BVE', 'BVT','frE', 'frG', 'frL'),
     move.a, move.b, truncate = Inf, lower.tail = TRUE) {
-    movementmodel <- try(match.arg(movementmodel), silent = TRUE)
+    movementmodel <- try(match.arg(movementmodel, choices = 
+            .openCRstuff$movementmodels), silent = TRUE)
+    zeroinflated <- grepl('zi', movementmodel)
+    if (zeroinflated) movementmodel <- gsub("zi","",movementmodel)
     if (inherits(movementmodel, 'try-error')) {
-        warning("qkernel defined only for movement models normal, exponential, t2D")
+        warning("qkernel defined only for movement models BVN, BVE, BVT, frE, frG, frL, uniform")
         rep(NA, length(p))
     }
     else {
+        if (zeroinflated) {
+            bz <- if (movementmodel %in% c('uniform')) move.a else move.b
+            p0 <- p
+            if (lower.tail)
+                p <- (p-bz)/(1-bz)
+            else
+                p <- 1 - ((1-p)-bz)/(1-bz)
+        }
+        else {
+            bz <- 0
+            p0 <- 1
+        }
+        
         if (truncate != Inf) {
             if (!lower.tail) stop ("cannot combine truncation and upper tail")
             ptrunc <- pkernel(truncate, movementmodel, move.a, move.b, Inf, TRUE)
@@ -569,25 +605,40 @@ qkernel <- function(p, movementmodel = c('normal','exponential','t2D'),
         if (lower.tail) {
             p <- 1-p
         }
-        if (movementmodel == 'normal') {
+        if (movementmodel %in% c('normal','BVN')) {
             q <- sqrt(-log(p)*2*move.a^2)
         }    
-        else if (movementmodel == 'exponential') {
+        else if (movementmodel %in% c('exponential', 'BVE')) {
             # p <- (q/move.a+1) * exp(-q/move.a)
             # Doesn't work W <- VGAM::lambertW(-p/exp(1))
             # q <- (-W - 1) * move.a
             onep <- function(p) {
                 onem <- function(m) {
-                    fn <- function (q, p) (q/m+1) * exp(-q/m) - p
+                    # fn <- function (q, p) (q/m+1) * exp(-q/m) - p
+                    fn <- function (q, p) 1 - (q/m+1) * exp(-q/m) - p
                     out <- try(uniroot(f = fn, interval = c(m*1e-3, m*1e3), p = p)$root, silent = TRUE)
                     if (inherits(out, 'try-error')) NA else out
                 }
                 sapply(move.a, onem)
             }
-            q <- sapply(p, onep)
+            q <- sapply(1-p, onep)   # adjusted for tail 2021-07-13
         }
-        else if (movementmodel == 't2D') {
+        else if (movementmodel %in% c('t2D', 'BVT')) {
             q <- move.a * sqrt(p^(-1/move.b) - 1)
+        }
+        else if (movementmodel %in% c('frE')) {
+            q <- qexp(p, 1/move.a, lower.tail = FALSE)
+        }
+        else if (movementmodel %in% c('frG')) {
+            q <- qgamma (p, shape = move.b, scale = move.a, lower.tail = FALSE)
+        }
+        else if (movementmodel %in% c('frL')) {
+            mu <- log(move.a)
+            s <- sqrt(log(1 + 1/move.b))
+            q <- qlnorm(p, meanlog = mu, sdlog = s, lower.tail = FALSE)
+        }
+        else if (movementmodel %in% c('uniform')) {
+            q <- truncate * sqrt(p)
         }
         else {
             q <- rep(NA, length(p))
@@ -595,28 +646,48 @@ qkernel <- function(p, movementmodel = c('normal','exponential','t2D'),
                 movementmodel, '"')
         }
         q[q>truncate] <- NA
+        q[bz>p0] <- 1-lower.tail
         q    
     }
 }
 
-# t2Dratio <- function (b) sqrt((0.9^(-1/b) - 1) / (0.5^(-1/b) - 1))
-
-## test
-# matchscale('normal', q=100, p = pkernel(100, 'normal', 33.97))
-# [1] 33.97
-# pkernel(100, 'uniform', 33.97, 1)
-
-matchscale <- function(movementmodel, q = 40, p = 0.5, lower = 1e-5, upper = 1e5, move.b = 1) {
-    if (movementmodel == 'normal') {
-        mfn <- function(move.a) (1-exp(-q^2/2/move.a^2))-p
+matchscale <- function(movementmodel, q = 40, p = 0.5, lower = 1e-5, upper = 1e5, 
+    move.b = 1, truncate = Inf) {
+    mfn <- function(move.a) pkernel (q, movementmodel, move.a, move.b, truncate)-p
+    if (movementmodel %in% c(
+        'normal', 'BVN', 'BVNzi', 
+        'exponential','BVE','BVEzi',
+        't2D','BVT',
+        'frE','frEzi',
+        'frG',
+        'frL')) {
+        out <- try(uniroot(mfn, c(lower,upper))$root, silent = TRUE)
     }    
-    else if (movementmodel == 'exponential') {
-        mfn <- function(move.a) (1-(q/move.a+1) * exp(-q/move.a))-p
+    else if (movementmodel %in% c('uniformzi')) {
+        upper <- min(upper, 1.0)  # do not exceed feasible limit
+        if (is.finite(truncate))
+        out <- try(uniroot(mfn, c(lower,upper))$root, silent = TRUE)
+        else
+            stop("uniformzi kernel must be truncated at finite radius")
     }
-    else if (movementmodel == 't2D') {
-        mfn <- function(move.a) (1-(move.a^2/(move.a^2+q^2))^move.b)-p
+    else if (movementmodel %in% c('uniform')) {
+        mfnt <- function(truncate) pkernel (q, 'uniform', truncate = truncate)-p
+        if (is.finite(truncate))
+            out <- try(uniroot(mfnt, c(lower,upper))$root, silent = TRUE)
+        else
+            stop("uniform kernel must be truncated at finite radius")
     }
-    out <- try(uniroot(mfn, c(lower,upper))$root, silent = TRUE)
+    else {
+        stop(movementmodel, " not available in matchscale()")
+    }
     if (inherits(out, 'try-error')) out <- NA
     out
 }
+
+# dkernelMasked <- function (..., mask) {
+#     dk <- dkernel(...)  ## unconstrained
+#     realize <- function (xy) {
+#         sweep(mask, MARGIN = 2, STATS = xy, FUN="+")
+#     }
+#     apply(mask,1,realize)
+# }

@@ -57,7 +57,7 @@ openCR.design <- function (capthist, models, type, naive = FALSE,
                             stop("covariate factor levels differ between strata")
                         }
                     }
-                    ## pad on first dimension... Is this sufficient for e.g. b?
+                    ## Pad on first dimension. Is this sufficient for e.g. b?
                     onestratum <- function(x,i) {
                         xv <- x[,variable]
                         if (scov) xv <- rep(xv, secondarysessions[[i]])
@@ -509,9 +509,14 @@ openCR.design <- function (capthist, models, type, naive = FALSE,
             list (model = NULL, index = rep(1,dframenrow))
         }
         else {
-            # adjust for unidentifiable parameters
-            dframe <- adjustlevels(prefix, dframe, validlevels)
-            tempmat <- model.matrix(formula, data = dframe, contrasts.arg = contrasts, ...)
+            # # adjust for unidentifiable parameters
+            # dframe <- adjustlevels(prefix, dframe, validlevels)
+            # localcontrasts <- contrasts[names(contrasts) %in% all.vars(formula)]
+            # if (length(localcontrasts)==0) localcontrasts <- NULL
+            # tempmat <- model.matrix(formula, data = dframe, contrasts.arg = localcontrasts, ...)
+            
+            tempmat <- get.model.matrix(formula, prefix, dframe, validlevels, contrasts, ...)
+            
             ## drop pmix beta0 column from design matrix
             if (prefix=='pmix') tempmat <- tempmat[,-1,drop=FALSE]
             ## temp <- secr::make.lookup (tempmat)   # retain unique rows

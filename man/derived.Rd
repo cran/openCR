@@ -33,8 +33,8 @@ openCR.pdot(object, bysession = FALSE, stratum = 1)
 \arguments{
   \item{object}{fitted openCR model}
   \item{newdata}{optional dataframe of values at which to evaluate model}
-% \item{all.levels}{logical; passed to \code{\link{makeNewData}} if newdata not specified}
-  \item{all.levels}{logical; passed to \code{\link{openCR.make.newdata}} if newdata not specified}
+  \item{all.levels}{logical; passed to \code{\link{makeNewData}} if newdata not specified}
+ % \item{all.levels}{logical; passed to \code{\link{openCR.make.newdata}} if newdata not specified}
   \item{Dscale}{numeric to scale density}
   \item{HTbysession}{logical; Horvitz-Thompson estimates by session (see Details)}
   \item{...}{other arguments (not used)}

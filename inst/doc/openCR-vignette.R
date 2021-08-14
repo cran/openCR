@@ -62,7 +62,7 @@ onejoined <- function(offset = 1.5, le = c(5,4,3,5), yb = 2.2, col=col1, interva
     }
 }
 
-## ----fig1plot, ref.label = "fig1", fig.width=8, fig.height=3.8, echo = FALSE------------
+## ----fig1plot, ref.label = "fig1", fig.width=8, fig.height=4, echo = FALSE--------------
 # Fig. 1 Single-stratum data
 par(cex=1, xpd = TRUE, mfrow = c(1,1), mar=c(1,4,1,4))
 width <- 0.85
@@ -192,6 +192,10 @@ fitd <- openCR.fit(ovenCH, model = p ~ -1+t,
                    details = list(contrasts = list(t = contr.none)))
 coef(fit0)
 coef(fitd)
+
+## ----dummy2, eval = TRUE, cache = mycache-----------------------------------------------
+fitd2 <- openCR.fit(ovenCH, model = p~t, details = list(dummyvariablecoding = 't'))
+coef(fitd2)
 
 ## ----contrsum, eval = TRUE, cache = mycache---------------------------------------------
 fit <- openCR.fit(dipperCH, model = phi~t, details = list(contrasts = list(t = contr.sum)))

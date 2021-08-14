@@ -2,6 +2,7 @@
 ## package 'openCR'
 ## openCR.esa.R
 ## 2019-05-17
+## 2021-06-11 fixed bugs mqarray <- 0; makegkParalleld
 ################################################################################
 
 
@@ -54,14 +55,14 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
     if (is.null(individual)) individual <- individualcovariates(PIA0)
 
     ###### movement kernel and related
-    cellsize <- 0
-    kernel <- data.frame(rownames = NULL)
+    cellsize <- mqarray <- kernel <- 0    # until set for movement model
     movementcode <- movecode(object$movementmodel)
-    sparsekernel <- sparsebool(object$sparsekernel, object$movementmodel)
+    sparsekernel <- object$sparsekernel
+    anchored <- object$details$anchored
+    if (is.null(anchored)) anchored <- FALSE
     edgecode <- edgemethodcode(object$edgemethod)
     # 2021-02-21 modified for annular
-    if (object$movementmodel %in% c('normal','exponential','user','t2D', 
-        'annular', 'annular2', 'annularR')) {
+    if (object$movementmodel %in% .openCRstuff$movementmodels) {
         k2 <- object$kernelradius
         cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
         kernel <- expand.grid(x = -k2:k2, y = -k2:k2)
@@ -109,13 +110,13 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
 
     usge <- usage(trps)
     if (is.null(usge)) usge <- matrix(1, nrow = k, ncol = ncol(capthist))
-
     distmat <- getdistmat(trps, mask, object$detectfn == 20)
-    temp <- makegkParallelcpp (as.integer(object$detectfn), 
-                               as.integer(.openCRstuff$sigmai[type]),
-                               as.integer(details$grain),
-                               as.matrix(realparval0),
-                               as.matrix(distmat))
+    temp <- makegkParalleldcpp (as.integer(object$detectfn), 
+        as.integer(.openCRstuff$sigmai[type]),
+        as.integer(details$grain),
+        as.integer(setNumThreads()),
+        as.matrix(realparval0),
+        as.matrix(distmat))
     gk0 <- array(temp[[1]], dim=c(nrow(realparval0), k, m)) # 2020-10-28 as array
     hk0 <- array(temp[[2]], dim=c(nrow(realparval0), k, m)) # 2020-10-28 as array
 
@@ -158,6 +159,7 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
                 as.integer(x-1),
                 as.integer(type),
                 as.integer(object$details$grain),
+                as.integer(setNumThreads()),
                 as.logical(individual),
                 as.integer(J),
                 as.integer(m),
@@ -173,6 +175,7 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
                 as.integer(object$moveargsi),
                 as.integer(movementcode),
                 as.logical(sparsekernel),
+                as.logical(anchored),
                 as.integer(edgecode),
                 as.character(object$usermodel),
                 as.matrix(kernel),

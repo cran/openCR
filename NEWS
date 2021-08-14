@@ -1,3 +1,36 @@
+version 2.1.0 (2021-08-14)
+
+New features and changed behaviour
+    o new movement kernels based on polar distance 
+    o zero-inflated option for some movement kernels and 'uncorrelated' movement
+    o cumMove() compounds movement kernel and applies edge effect
+    o proportionInPolygon() sums probability within arbitrary polygon(s)
+    o optional link 'log1' defined as log(x-1) (constrains x>1)
+    o plot.kernel() uses par()$cex.main for title font
+    o openCR.fit() optional dummy variable coding of factor predictors
+    
+Bugs fixed
+    o openCR.esa() failed and hence derived() failed for spatial models 
+    o openCR.make.newdata() failed if model from version <2.0.0 (details$minimumage not specified)
+    o m.array() mis-tabulated counts when none caught on some occasions (no flow-on)
+    o openCR.fit() version 2.0 halved variance for types 'Pradel' and 'Pradelg' 
+    
+Other
+    o 'BVN','BVE','BVT' aliases for movementmodels 'normal','exponential','t2D'
+    o openCR.fit() default move.b for BVT changed to 1.5 (from 0.6)
+    o openCR.fit() details argument 'control' passes arguments to nlm()
+    o openCR.fit() default iterlim for nlm() raised to 300 
+    o makeNewData() S3 method replaces openCR.make.newdata()
+    o C++ code uses Boost library for statistical distributions, avoiding R API
+    o kernel code simplified (one C++ routine) and tested
+    o long operations more responsive to interruption
+    o plot.openCR() definition of 'turnover parameters' for intermediate.x
+      extended to include move.a and move.b
+    o number of threads explicit in calls to RcppParallel parallelFor
+    o minor changes to make.kernel() and summary.kernel()
+    o c and '[' methods for openCRlist class; separate documentation of openCRlist()
+    o "anchored" movement (experimental)
+
 version 2.0.2 (2021-05-14)
 
 New features and changed behaviour

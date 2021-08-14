@@ -2,17 +2,21 @@
 #include "utils.h"
 #include <RcppParallel.h>
 
-using namespace std;
 using namespace Rcpp;
 using namespace RcppParallel;
 
 //==============================================================================
 
 // [[Rcpp::export]]
-List makegkcpp (int cc, int kk, int mm, int detectfn, int sigmai, 
-                const NumericMatrix openval, 
-                const NumericMatrix traps,
-                const NumericMatrix mask
+List makegkcpp (
+        int cc, 
+        int kk, 
+        int mm, 
+        int detectfn, 
+        int sigmai, 
+        const NumericMatrix openval, 
+        const NumericMatrix traps,
+        const NumericMatrix mask
 ) 
 {
     const RMatrix<double> openvalR(openval); 
@@ -76,7 +80,7 @@ struct Hckm : public Worker {
 };
 
 // [[Rcpp::export]]
-List makegkParallelcpp (int detectfn, int sigmai, int grain,
+List makegkParallelcpp (int detectfn, int sigmai, int grain, int ncores,
                         const NumericMatrix& openval, 
                         const NumericMatrix& traps,
                         const NumericMatrix& mask
@@ -87,9 +91,8 @@ List makegkParallelcpp (int detectfn, int sigmai, int grain,
     
     Hckm hckm (sigmai, detectfn, openval, traps, mask, hk, gk);
     
-    if (grain>0) {
-        // call it with parallelFor
-        parallelFor(0, mask.nrow(), hckm, grain);
+    if (ncores>1) {
+        parallelFor(0, mask.nrow(), hckm, grain, ncores);
     }
     else {
         hckm.operator()(0,mask.nrow());    // for debugging avoid multithreading to allow R calls
@@ -112,7 +115,9 @@ struct Hckmd : public Worker {
     
     // initialize from Rcpp input and output matrixes (the RMatrix class
     // can be automatically converted to from the Rcpp matrix type)
-    Hckmd(int sigmai, int detectfn,
+    Hckmd(
+        int sigmai, 
+        int detectfn,
         const NumericMatrix openval, 
         const NumericMatrix distmat, 
         NumericVector hk,
@@ -138,9 +143,13 @@ struct Hckmd : public Worker {
 };
 
 // [[Rcpp::export]]
-List makegkParalleldcpp (int detectfn, int sigmai, int grain,
-    const NumericMatrix& openval, 
-    const NumericMatrix& distmat
+List makegkParalleldcpp (
+        int detectfn, 
+        int sigmai, 
+        int grain, 
+        int ncores,
+        const NumericMatrix& openval, 
+        const NumericMatrix& distmat
 ) 
 {
     NumericVector hk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
@@ -148,9 +157,8 @@ List makegkParalleldcpp (int detectfn, int sigmai, int grain,
     
     Hckmd hckmd (sigmai, detectfn, openval, distmat, hk, gk);
     
-    if (grain>0) {
-        // call it with parallelFor
-        parallelFor(0, distmat.ncol(), hckmd, grain);
+    if (ncores>1) {
+        parallelFor(0, distmat.ncol(), hckmd, grain, ncores);
     }
     else {
         hckmd.operator()(0,distmat.ncol());    // for debugging avoid multithreading to allow R calls

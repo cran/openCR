@@ -1,7 +1,6 @@
 #include <Rcpp.h>
-#include "utils.h"
+//#include "utils.h"
 
-using namespace std;
 using namespace Rcpp;
 
 //==============================================================================
@@ -52,18 +51,18 @@ List makelookupcpp (const NumericMatrix x)
 	    unique ++;
 	    k = unique;
 	    for (j=0; j<ncol; j++)
-		y(unique,j) = x(i,j);
+	        y(unique,j) = x(i,j);
 	}
 	index[i] = k+1;
     }
-  
-  y = y(Range(0,unique), Range(0,ncol-1));
+    
+    y = y(Range(0,unique), Range(0,ncol-1));
     colnames(y) = colnames(x);
     
     return List::create(
-	Named("resultcode") = resultcode,
-	Named("lookup") = y,
-	Named("index") = index);
+        Named("resultcode") = resultcode,
+        Named("lookup") = y,
+        Named("index") = index);
         
 }
 //==============================================================================

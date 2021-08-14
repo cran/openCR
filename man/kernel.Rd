@@ -13,11 +13,13 @@ Functions to create, plot and summarise a discrete representation of a movement 
 
 \usage{
 
-make.kernel(movementmodel = c("normal", "exponential", "t2D", "uniform"), 
-    kernelradius = 10, spacing, move.a, move.b, 
-    sparsekernel = FALSE, clip = FALSE, normalize = TRUE, ...)
+make.kernel(movementmodel = c("BVN", "BVE", "BVT","frE", "frG", "frL", 
+    "uniform"), kernelradius = 10, spacing, move.a, move.b, 
+    sparsekernel = FALSE, clip = FALSE, normalize = TRUE,     
+    stat = c('estimate','lcl', 'ucl'), ...)
 
-\method{plot}{kernel}(x, contour = FALSE, levels = NULL, text = FALSE, title = NULL, ...)
+\method{plot}{kernel}(x, contour = FALSE, levels = NULL, text = FALSE, 
+title = NULL, ...)
 
 \method{summary}{kernel}(object, ...)
 
@@ -33,6 +35,7 @@ make.kernel(movementmodel = c("normal", "exponential", "t2D", "uniform"),
   \item{sparsekernel}{logical; if TRUE then only cardinal and intercardinal axes are included}
   \item{clip}{logical; if TRUE then corner cells are removed}
   \item{normalize}{logical; if TRUE then cell values are divided by their sum}
+  \item{stat}{character; predicted statistic to use for move.a (openCR object only) }
   
   \item{x}{kernel object from \code{make.kernel}}
   \item{contour}{logical; if TRUE then contour lines are overlaid on any plot}
@@ -68,6 +71,8 @@ The parameter `move.a' is a scale parameter in metres, except for the `annular' 
 'Sparse' kernels include only those grid cells that lie on 4 axes (N-S, E-W, NW-SE, NE-SW); cell probabilities are adjusted to maintain nearly the same distance distribution as the non-sparse equivalents.
 
 Movement models are further described in the \href{../doc/openCR-vignette.pdf}{vignette}.
+
+\code{plot.kernel()} adds an informative title with font size from the graphical parameter `cex.main'. Set \code{title = ""} to suppress the title.
 
 Useful properties of theoretical (not discretized) kernels may be recovered with \code{\link{matchscale}}, \code{\link{pkernel}}, \code{\link{dkernel}} and \code{\link{qkernel}}.
 

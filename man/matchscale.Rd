@@ -11,7 +11,8 @@ Finds scale parameter (move.a) of a movement model that corresponds to desired q
 
 \usage{
 
-matchscale(movementmodel, q = 40, p = 0.5, lower = 1e-05, upper = 1e+05, move.b = 1)
+matchscale(movementmodel, q = 40, p = 0.5, lower = 1e-05, upper = 1e+05, 
+   move.b = 1, truncate = Inf)
 
 }
 
@@ -22,17 +23,18 @@ matchscale(movementmodel, q = 40, p = 0.5, lower = 1e-05, upper = 1e+05, move.b 
   \item{move.b}{shape parameter of movement kernel}
   \item{lower}{lower bound interval to search }
   \item{upper}{upper bound interval to search }
+  \item{truncate}{numeric q value at which distribution truncated}
 }
 
 \details{
 
-Truncation of the kernel is not supported.
+The \code{truncate} argument must be specified for movementmodel `uniformzi`. For movementmodel `uniform' there is no parameter and the radius of truncation is varied to achieve the requested quantile q corresponding to cumulative probability p.
 
 }
 
 \value{
 
-Numeric value for move.a.
+Numeric value for move.a (scale parameter or zero-inflation in the case of `uniformzi') or truncation radius (`uniform').
 
 }
 

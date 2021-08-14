@@ -34,8 +34,9 @@ struct Somesecrhistories : public Worker {
     const RMatrix<int>    hindex;
     int                   movementcode;
     bool                  sparsekernel;
+    bool                  anchored;
     int                   edgecode;
-    const String          usermodel;
+    const std::string     usermodel;
     const RVector<int>    moveargsi;
     const RMatrix<int>    kernel;
     const RMatrix<int>    mqarray;
@@ -45,6 +46,7 @@ struct Somesecrhistories : public Worker {
     bool indiv;
     
     int cjs;
+    int fillcode;
     std::vector<double> pdotbd;
     
     // output likelihoods
@@ -68,8 +70,9 @@ struct Somesecrhistories : public Worker {
         const IntegerMatrix hindex, 
         int   movementcode,
         bool  sparsekernel,
+        bool  anchored,
         int   edgecode,
-        String usermodel,
+        std::string usermodel,
         const IntegerVector moveargsi,
         const IntegerMatrix kernel,
         const IntegerMatrix mqarray,
@@ -80,8 +83,8 @@ struct Somesecrhistories : public Worker {
             grain(grain),
             intervals(intervals), cumss(cumss), w(w), fi(fi), li(li), gk(gk), 
             openval(openval), PIA(PIA), PIAJ(PIAJ), Tsk(Tsk), h(h), hindex(hindex), 
-            movementcode(movementcode), sparsekernel(sparsekernel), edgecode(edgecode), 
-            usermodel(usermodel), moveargsi(moveargsi), kernel(kernel), 
+            movementcode(movementcode), sparsekernel(sparsekernel), anchored(anchored), 
+            edgecode(edgecode), usermodel(usermodel), moveargsi(moveargsi), kernel(kernel), 
             mqarray(mqarray), cellsize(cellsize), output(output) {
         
         // now can initialise these derived counts
@@ -100,7 +103,7 @@ struct Somesecrhistories : public Worker {
             cjs = 0;
             // default initialisation - works when all n individuals the same
         }
-        
+        fillcode = movementcode-2;
         indiv = individual();
     }
     //==============================================================================
@@ -142,85 +145,97 @@ struct Somesecrhistories : public Worker {
     }
     //==============================================================================
     
-    void getpdotbd (int n, std::vector<double> &pdotbd) {
-        
-        // precompute pdotbd 2019-05-24
-        std::vector<double> pjmat(jj * mm);
-        std::vector<double> alpha(mm);    
-        std::vector<double> moveargs(jj*2);
-        std::vector<double> kernelp(kn*(jj-1));
-        
-        int j,b,d,m;
-        double prodp;
-        //--------------------------------------------------------------------
-        // Fill kernel if movement model required
-        if (movementcode > 1) {
-            getmoveargs (n, x, nc, jj, openval, PIAJ, moveargsi, moveargs);
-            if (grain<1) { 
-                // single thread allows usermodel
-                fillkernelp (kn, jj, movementcode-2, sparsekernel, cellsize, 
-                    kernel, moveargsi, usermodel, moveargs, kernelp);
-            }
-            else {
-                // cannot call R function from RcppParallel worker ncores > 1, 
-                // so use this function with no usermodel option:
-                fillkernelparallel (kn, jj, movementcode-2, sparsekernel, cellsize, 
-                    kernel, moveargsi, moveargs, kernelp);
-            }
-        }        
-        //--------------------------------------------------------------------
-        pr0njmx(n, x, cumss, nc, jj, kk, mm, cc, binomN, PIA, gk, Tsk, pjmat);
-        std::fill(pdotbd.begin(), pdotbd.end(), 0.0);
-        //--------------------------------------------------------------------
-        for (b = 1; b <= jj; b++) {
-            if (grain<1) {
-                Rprintf("\n");
-            }
-            for (d = b; d <= jj; d++) {
-                
-                //------------------------------------------------------------
-                //  No movement
-                if (movementcode == 0) {
-                    if ((b+cjs) <= jj) { 
-                        for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
-                        for (j = b + cjs + 1; j <= d; j++) {
-                            for (m=0; m<mm; m++) alpha[m] *= pjmat[m * jj + j - 1];
-                        }
-                        pdotbd[(d-1)*jj + b - 1] = 1 - std::accumulate(alpha.begin(),
-                            alpha.end(), 0.0);
-                    }
-                }
-                else if (movementcode == 1) {
-                    //------------------------------------------------------------
-                    //  Uncorrelated centres
-                    prodp = 1.0;
-                    for (j = b + cjs; j <= d; j++) {
-                        for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + j - 1] / mm;
-                        // product over primary sessions 
-                        prodp *= std::accumulate(alpha.begin(), alpha.end(), 0.0);
-                    }
-                    pdotbd[(d-1)*jj + b - 1] = 1 - prodp;
-                }
-                else {
-                    //------------------------------------------------------------
-                    //  Modelled movement > 1
-                    if ((b+cjs) <= jj) { 
-                        for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
-                        for (j = b + cjs + 1; j <= d; j++) {
-                            convolvemq(mm, kn, j-1, edgecode, mqarray, kernelp, alpha);     
-                            for (m = 0; m < mm; m++) alpha[m] *= pjmat[m * jj + j - 1];
-                        }
-                        pdotbd[(d-1)*jj + b - 1] = 1 - std::accumulate(alpha.begin(),
-                            alpha.end(), 0.0);
-                    }
-                }
-                //------------------------------------------------------------
-                if (grain<1) {
-                    Rprintf("n %d b %d d %d pdotbd %10.8E", n, b, d, pdotbd[(d-1)*jj + b - 1]); 
-                }
-            }
-        }
-    }
+    // 2021-07-28 this function is not used at present 
+    // void getpdotbd (int n, std::vector<double> &pdotbd) {
+    //     
+    //     // precompute pdotbd 2019-05-24
+    //     std::vector<double> pjmat(jj * mm);
+    //     std::vector<double> alpha(mm);    
+    //     std::vector<double> moveargs(jj*2);
+    //     std::vector<double> kernelp(kn*(jj-1));
+    //     
+    //     int j,b,d,m;
+    //     int kernelreturncode = 1;  // -1 if fails
+    //     double prodp;
+    //     double bz;
+    //     //--------------------------------------------------------------------
+    //     // Fill kernel if movement model required
+    //     if (movementcode > 1) {
+    //         getmoveargs (n, x, nc, jj, openval, PIAJ, moveargsi, moveargs);
+    //         if (movementcode != 17) {   // kernel not needed for uncorrelatedz
+    //             fillkernelp (jj, fillcode, sparsekernel, cellsize, 
+    //                 kernel, moveargsi, usermodel, moveargs, kernelp, true, grain,
+    //                 kernelreturncode);
+    //         }
+    //     }        
+    //     //--------------------------------------------------------------------
+    //     pr0njmx(n, x, cumss, nc, jj, kk, mm, cc, binomN, PIA, gk, Tsk, pjmat);
+    //     std::fill(pdotbd.begin(), pdotbd.end(), 0.0);
+    //     //--------------------------------------------------------------------
+    //     if (kernelreturncode<0) {
+    //         pdotbd[0] = NAN;
+    //         return;   
+    //     }
+    //     
+    //     for (b = 1; b <= jj; b++) {
+    //         if (grain<0) {
+    //             Rprintf("\n");
+    //         }
+    //         for (d = b; d <= jj; d++) {
+    //             
+    //             //------------------------------------------------------------
+    //             //  No movement
+    //             if (movementcode == 0) {
+    //                 if ((b+cjs) <= jj) { 
+    //                     for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
+    //                     for (j = b + cjs + 1; j <= d; j++) {
+    //                         for (m=0; m<mm; m++) alpha[m] *= pjmat[m * jj + j - 1];
+    //                     }
+    //                     pdotbd[(d-1)*jj + b - 1] = 1 - std::accumulate(alpha.begin(),
+    //                         alpha.end(), 0.0);
+    //                 }
+    //             }
+    //             else if (movementcode == 1) {
+    //                 //------------------------------------------------------------
+    //                 //  Uncorrelated centres
+    //                 prodp = 1.0;
+    //                 for (j = b + cjs; j <= d; j++) {
+    //                     for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + j - 1] / mm;
+    //                     // product over primary sessions 
+    //                     prodp *= std::accumulate(alpha.begin(), alpha.end(), 0.0);
+    //                 }
+    //                 pdotbd[(d-1)*jj + b - 1] = 1 - prodp;
+    //             }
+    //             else {
+    //                 //------------------------------------------------------------
+    //                 //  Modelled movement > 1
+    //                 if ((b+cjs) <= jj) { 
+    //                     for (m=0; m<mm; m++) alpha[m] = pjmat[m * jj + (b+cjs) - 1] / mm;
+    //                     for (j = b + cjs + 1; j <= d; j++) {
+    //                         if (movementcode == 17) {  // uncorrelated zero-inflated
+    //                             // bz static, 1-bz uncorrelated
+    //                             // update alpha
+    //                             bz = moveargs[j-1];   
+    //                             for (m=0; m<mm; m++) {
+    //                                 alpha[m] = bz * alpha[m] + (1-bz) * 1/mm;
+    //                             }
+    //                         } 
+    //                         else {
+    //                             convolvemq(mm, kn, j-1, edgecode, mqarray, kernelp, alpha);     
+    //                         }
+    //                         for (m = 0; m < mm; m++) alpha[m] *= pjmat[m * jj + j - 1];
+    //                     }
+    //                     pdotbd[(d-1)*jj + b - 1] = 1 - std::accumulate(alpha.begin(),
+    //                         alpha.end(), 0.0);
+    //                 }
+    //             }
+    //             //------------------------------------------------------------
+    //             if (grain<0) {
+    //                 Rprintf("n %d b %d d %d pdotbd %10.8E", n, b, d, pdotbd[(d-1)*jj + b - 1]); 
+    //             }
+    //         }
+    //     }
+    // }
     //==============================================================================
     
     void prw (int j, int n, std::vector<double> &pjm) {
@@ -287,6 +302,85 @@ struct Somesecrhistories : public Worker {
     }
     //==============================================================================
     
+    double prwsum (int j, int n, const std::vector<int> mj, const std::vector<double> pj) {
+        int c, gi, k, m, q, s, wi, wxi, count;
+        double Tski, H;
+        bool dead = false;
+        //std::vector<double> pw(pj);  // initialise to pj(q)
+        
+        std::vector<double> pw(kn);  // initialise to pj(q)
+        for (q=0;q<kn;q++) pw[q]=pj[q];
+        
+        // multi-catch traps
+        if (binomN == -2) {
+            // over secondary sessions (occasions) in this primary session 
+            for (s = cumss[j-1]; s < cumss[j]; s++) {
+                wi = w[s * nc + n]; 
+                if (wi < 0) dead = true;  
+                k = abs(wi)-1;         // trap number 0..kk-1; k = -1 if not caught 
+                
+                // Not captured in any trap on occasion s 
+                if (k < 0) {
+                    for (q=0; q<kn; q++) {
+                        m = mj[q];
+                        if (m>=0) {
+                            H = h(m, hindex(n,s));
+                            if (H > fuzz)
+                                pw[q] *= exp(-H);
+                        }
+                    }
+                }
+                // Captured in trap k on occasion s
+                else {
+                    wxi = i4(n, s, k, x, nc, cumss[jj], kk);   
+                    c = PIA[wxi] - 1;
+                    if (c >= 0) {    // ignore unset traps 
+                        Tski = Tsk(k,s);
+                        for (q=0; q<kn; q++) {
+                            m = mj[q];
+                            if (m>=0) {
+                                H = h(m, hindex(n,s));
+                                gi  = i3(c, k, m, cc, kk);
+                                // in this context gk is understood to be hazard hk
+                                pw[q] *=  Tski * (1-exp(-H)) *  gk[gi] / H;
+                            }
+                        }
+                    }
+                }
+                if (dead) break;   // out of s loop
+            }
+            
+            // Rprintf("n %4d j %3d pjmsum %10.8E \n", n,j, 
+            // std::accumulate(pjm.begin(), pjm.end(), 0.0));   
+            
+        }
+        // all other detectors
+        else {
+            for (s = cumss[j-1]; s < cumss[j]; s++) {
+                for (k=0; k<kk; k++) {
+                    wxi =  i4(n, s, k, x, nc, cumss[jj], kk);
+                    c = PIA[wxi] - 1;
+                    if (c >= 0) {    // ignore unset traps 
+                        Tski = Tsk(k,s);
+                        wi = i3(n, s, k, nc, cumss[jj]);
+                        count = w[wi];
+                        if (count<0) {count = -count; dead = true; }
+                        for (q=0; q<kn; q++) {
+                            m = mj[q];
+                            if (m>=0) {
+                                gi  = i3(c, k, m, cc, kk);
+                                pw[q] *= pski(binomN, count, Tski, gk[gi]);
+                            }
+                        }
+                    }
+                }
+                if (dead) break;   // after processing all detectors on this occasion
+            }
+        }
+        return  std::accumulate(pw.begin(), pw.end(), 0.0);  // sum over kernel
+    }
+    //==============================================================================
+    
     double oneprwisecrcpp (int n) {
         double pdt;
         double pbd;
@@ -294,29 +388,29 @@ struct Somesecrhistories : public Worker {
         int b, minb, maxb;
         int d, mind, maxd;
         double prwi = 1.0;
+        int kernelreturncode = 1;
+        double bz;
+        double sumalpha;
+        double prwm;
         
         // work vectors for session-specific real parameter values etc.
         std::vector<double> phij(jj);       // each primary session
         std::vector<double> beta(jj);       // not used if type==1
-        std::vector<double> alpha(mm);      // trial 2019-05-05
         std::vector<double> moveargs(jj*2);
         std::vector<double> kernelp(kn*(jj-1));
+        std::vector<double> alpha(mm);     
+        std::vector<int>    mj(kn);        // only used for anchored movement 2021-08-09
+        std::vector<double> pj(kn);        // only used for anchored movement 2021-08-09
         
         getphij (n, x, nc, jj, openval, PIAJ, intervals, phij);
         
         if (movementcode > 1) {
             getmoveargs (n, x, nc, jj, openval, PIAJ, moveargsi, moveargs);
-            if (grain<1) { 
-                // single thread allows usermodel
-                fillkernelp (kn, jj, movementcode-2, sparsekernel, cellsize, kernel, moveargsi, 
-                    usermodel, moveargs, kernelp);
+            if (movementcode != 17) {   // kernel not needed for uncorrelatedz
+                fillkernelp (jj, fillcode, sparsekernel, cellsize, kernel, moveargsi, 
+                    usermodel, moveargs, kernelp, true, grain, kernelreturncode);
             }
-            else {
-                // cannot call R function from RcppParallel worker ncores > 1, 
-                // so use this function with no usermodel option:
-                fillkernelparallel (kn, jj, movementcode-2, sparsekernel, cellsize, 
-                    kernel, moveargsi, moveargs, kernelp);
-            }
+            if (kernelreturncode<0) return NAN;
         }        
         if (type == 6) {     // CJSsecr
             minb = fi[n];
@@ -372,11 +466,39 @@ struct Somesecrhistories : public Worker {
                             prwi *= std::accumulate(alpha.begin(), alpha.end(), 0.0);
                         }
                     }
-                    else {  // movementcode > 1
+                    else if (anchored) {
+                        // anchored BVNac, BVEac
+                        std::fill(alpha.begin(), alpha.end(), 1.0/mm);
+                        for (m=0; m<mm; m++) {
+                            // for now treat distribution p(x_j|x) as constant over sessions
+                            convolvemq1(m, 1, edgecode, mqarray, kernelp, mj, pj);  
+                            for (j = b + cjs; j <= d; j++) {
+                                // relocate at each session
+                                // sum over possibilities for this session
+                                prwm = prwsum (j, n, mj, pj);                        
+                                if (grain<0) Rprintf("n %d m %d j %d prwm %8.6g \n", n, m, j, prwm);
+                                // product over independent primary sessions
+                                alpha[m] *= prwm;
+                            }
+                        }
+                        prwi = std::accumulate(alpha.begin(), alpha.end(), 0.0);
+                    }
+                    else {  // other movementcode > 1
                         for (m=0; m<mm; m++) alpha[m] = 1.0/mm;
                         prw (b+cjs, n, alpha);                        
                         for (j = b + cjs + 1; j <= d; j++) {
-                            convolvemq(mm, kn, j-1, edgecode, mqarray, kernelp, alpha);  
+                            if (movementcode == 17) {  // uncorrelated zero-inflated
+                                // bz static, 1-bz uncorrelated
+                                // update alpha
+                                bz = moveargs[j-2];   
+                                sumalpha = std::accumulate(alpha.begin(), alpha.end(), 0.0);
+                                for (m=0; m<mm; m++) {
+                                    alpha[m] = bz * alpha[m] + (1-bz) * 1/mm * sumalpha;
+                                }
+                            } 
+                            else {
+                                convolvemq(mm, kn, j-1, edgecode, mqarray, kernelp, alpha);  
+                            }
                             prw (j, n, alpha);                        
                         }		    
                         prwi = std::accumulate(alpha.begin(), alpha.end(), 0.0);
@@ -401,7 +523,7 @@ struct Somesecrhistories : public Worker {
 
 // [[Rcpp::export]]
 NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
-    int binomN, int CJSp1, int grain,
+    int binomN, int CJSp1, int grain, int ncores,
     const NumericVector intervals, 
     const IntegerVector cumss, 
     const IntegerVector w,
@@ -416,29 +538,32 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
     const IntegerMatrix hindex, 
     int   movementcode,
     bool  sparsekernel,
+    bool  anchored,
     int   edgecode,
-    const String usermodel,
+    const std::string usermodel,
     const IntegerVector moveargsi, 
     const IntegerMatrix kernel,
     const IntegerMatrix mqarray,
     double cellsize) {
     
     NumericVector output(nc); 
-    
+
     // Construct and initialise
     Somesecrhistories somehist (
             x, type, mm, nc, binomN, CJSp1, 
             grain, intervals, cumss, 
             w, fi, li, gk, openval, PIA, PIAJ, Tsk, 
             h, hindex,
-            movementcode, sparsekernel, edgecode,
+            movementcode, sparsekernel, anchored, edgecode,
             usermodel,
             moveargsi, kernel, mqarray, 
             cellsize, output);
     
-    if (grain>0) {
+    Rcpp::checkUserInterrupt();
+    
+    if (ncores>1) {
         // Run operator() on multiple threads
-        parallelFor(0, nc, somehist, grain);
+        parallelFor(0, nc, somehist, grain, ncores);
     }
     else {
         // for debugging avoid multithreading and allow R calls e.g. Rprintf

@@ -1,6 +1,5 @@
 \name{par.openCR.fit}
 \alias{par.openCR.fit}
-\alias{openCRlist}
 
 \title{Fit Multiple openCR Models}
 
@@ -14,8 +13,6 @@
 
 par.openCR.fit (arglist, ncores = 1, seed = 123, trace = FALSE, logfile = NULL, 
     prefix = "")
-
-openCRlist (...)
 
 }
 
@@ -34,7 +31,6 @@ openCRlist (...)
   
   \item{prefix}{character prefix for names of output}
   
-  \item{\dots}{ openCR objects}
 }
 
 \details{
@@ -56,15 +52,12 @@ It is usually slower than \code{ncores} = 1. If used it has these effects:
 
 -- if no logfile name is provided then a temporary file name will be generated in tempdir().
 
-\code{openCRlist} forms a special list (class openCRlist) of fitted model (openCR) objects.
-This may be used with AIC(), predict() etc.
-
 }
 
 \value{
 
 For \code{par.openCR.fit} - openCRlist of model fits (see
-\code{\link{openCR.fit}}). Names are created by prefixing \code{prefix} to the
+\code{\link{openCR.fit}} and \code{\link{openCRlist}}). Names are created by prefixing \code{prefix} to the
 names of \code{argslist}. If \code{trace} is TRUE then the total
 execution time and finish time are displayed.
 
@@ -73,7 +66,8 @@ execution time and finish time are displayed.
 \seealso{
   \code{\link{openCR.fit}},
   \link{Parallel},
-  \code{\link{make.table}}
+  \code{\link{make.table}},
+  \code{\link{openCRlist}}
 }
 
 \note{

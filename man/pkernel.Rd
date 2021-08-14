@@ -1,4 +1,5 @@
 \name{pkernel}
+\alias{gkernel}
 \alias{pkernel}
 \alias{dkernel}
 \alias{qkernel}
@@ -7,21 +8,24 @@
 
 \description{
 
-Distribution of distance moved for each of the main movement kernels. Theoretical probability density, cumulative distribution function, and quantile function (inverse of the cumulative distribution function).
+Distribution of distance moved for each of the main movement kernels. Theoretical probability density, cumulative distribution function, and quantile function (inverse of the cumulative distribution function). 
 
 }
 
 \usage{
 
-pkernel(q, movementmodel = c("normal", "exponential", "t2D"), move.a, move.b, 
+pkernel(q, movementmodel = c("BVN", "BVE", "BVT","frE", "frG", "frL"), move.a, move.b, 
     truncate = Inf, lower.tail = TRUE)
 
-dkernel(r, movementmodel = c("normal", "exponential", "t2D"), move.a, move.b, 
+dkernel(r, movementmodel = c("BVN", "BVE", "BVT","frE", "frG", "frL"), move.a, move.b, 
     truncate = Inf)
 
-qkernel(p, movementmodel = c("normal", "exponential", "t2D"), move.a, move.b, 
+qkernel(p, movementmodel = c("BVN", "BVE", "BVT","frE", "frG", "frL"), move.a, move.b, 
     truncate = Inf, lower.tail = TRUE)
 
+gkernel(r, movementmodel = c("BVN", "BVE", "BVT","frE", "frG", "frL"), move.a, move.b, 
+    truncate = Inf)
+    
 }
 
 \arguments{
@@ -37,7 +41,7 @@ qkernel(p, movementmodel = c("normal", "exponential", "t2D"), move.a, move.b,
 
 \details{
 
-Formulae are given in openCR-vignette.pdf.
+Formulae are given in openCR-vignette.pdf. \code{gkernel} gives the 2-D probability density of the bivariate kernel \emph{g(r)}; the remaining functions describe the distribution of distance moved \emph{f(r)}.
 
 Computation of \code{qkernel} for \code{movementmodel = 'exponential'} uses 
 numerical root finding (function \code{\link{uniroot}}).
@@ -62,6 +66,10 @@ Vector of probability density at radial distance r (zero for r > truncate).
 For \code{qkernel} --
 
 Vector of quantiles (distances moved) corresponding to cumulative probabilities p.
+
+For \code{gkernel} --
+
+Vector of 2-D probability density at radial distance r (zero for r > truncate).
 
 }
 

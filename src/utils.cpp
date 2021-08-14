@@ -2,7 +2,6 @@
 #include <RcppParallel.h>
 
 using namespace Rcpp;
-using namespace RcppParallel;
 #define fuzz 1e-200
 #define huge 1e10
 
@@ -99,14 +98,19 @@ double pski ( int binomN,
         }
         result = gbinom (count, binomN, g, 0);
     }
-    else stop("binomN < -1 not allowed");  // code multi -2 separately
+    else Rcpp::stop("binomN < -1 not allowed");  // code multi -2 separately
     
     return (result);
 }
 //--------------------------------------------------------------------------
 
 // distance between two points given by row k in traps and row m in mask
-double dkm (int k, int m, RMatrix<double> traps, RMatrix<double> mask)
+double dkm (
+        int k, 
+        int m, 
+        RcppParallel::RMatrix<double> traps, 
+        RcppParallel::RMatrix<double> mask
+)
 {
     return(std::sqrt((traps(k,0) - mask(m,0)) * (traps(k,0) - mask(m,0)) +
         (traps(k,1) - mask(m,1)) * (traps(k,1) - mask(m,1))));
@@ -114,7 +118,12 @@ double dkm (int k, int m, RMatrix<double> traps, RMatrix<double> mask)
 //--------------------------------------------------------------------------
 
 // rectangular distance between two points given by row k in traps and row m in mask
-double dkmrect (int k, int m, RMatrix<double> traps, RMatrix<double> mask)
+double dkmrect (
+        int k, 
+        int m, 
+        RcppParallel::RMatrix<double> traps, 
+        RcppParallel::RMatrix<double> mask
+    )
 {
     return(std::max(fabs(traps(k,0) - mask(m,0)), fabs(traps(k,1) - mask(m,1))));
 }
@@ -123,11 +132,13 @@ double dkmrect (int k, int m, RMatrix<double> traps, RMatrix<double> mask)
 // parameters in openval ordered g0, phi, f, N, sigma, pmix 
 
 // hazard detection functions 14-20
-double hfn
-    (int k, int m, int c, 
-        const RMatrix<double> openval,  
-        const RMatrix<double> traps,
-        const RMatrix<double> mask, 
+double hfn (
+        int k, 
+        int m, 
+        int c, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RMatrix<double> traps,
+        const RcppParallel::RMatrix<double> mask, 
         int sigmai, 
         int detectfn)
 {
@@ -169,18 +180,21 @@ double hfn
         else if (detectfn == 19) {
             return (openval(c,0) * exp(- pow(d /sigma , z)));              // HVP
         }
-        else stop("detectfn not allowed in openCR");
+        else Rcpp::stop("detectfn not allowed in openCR");
     }
 }
 //--------------------------------------------------------------------------
 
 // hazard detection functions 14-20
-double hfnd
-    (int k, int m, int c, 
-        const RMatrix<double> openval,  
-        const RMatrix<double> distmat,
+double hfnd (
+        int k, 
+        int m, 
+        int c, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RMatrix<double> distmat,
         int sigmai, 
-        int detectfn)
+        int detectfn
+    )
 {
     double d;
     double sigma;
@@ -214,17 +228,22 @@ double hfnd
         else if (detectfn == 19) {
             return (openval(c,0) * exp(- pow(d /sigma , z)));              // HVP
         }
-        else stop("detectfn not allowed in openCR");
+        else Rcpp::stop("detectfn not allowed in openCR");
     }
 }
 //--------------------------------------------------------------------------
 
 
 
-void getp (int n, int x, int nc, int ss, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIA, 
-    std::vector<double> &p) {
+void getp (
+        int n, 
+        int x, 
+        int nc, 
+        int ss, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIA, 
+        std::vector<double> &p
+) {
     // column 1 
     int s;
     for (s = 0; s < ss; s++) {
@@ -234,9 +253,9 @@ void getp (int n, int x, int nc, int ss,
 //--------------------------------------------------------------------------
 
 void getphij (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
-    const RVector<double> intervals, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &phij) {
     // column 2 
     int j;
@@ -252,9 +271,9 @@ void getphij (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getmoveargs (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
-    const RVector<int> moveargsi,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
+    const RcppParallel::RVector<int> moveargsi,
     std::vector<double> &moveargs) {
     // column moveargsi (and maybe moveargsi + 1) 
     int j;
@@ -280,8 +299,8 @@ void getmoveargs (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getpj (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &pj) {
     // column 2 
     int j;
@@ -292,8 +311,8 @@ void getpj (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getg (int type, int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &g) {
     // column 4 
     int j;
@@ -307,9 +326,9 @@ void getg (int type, int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getfj (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
-    const RVector<double> intervals, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &phij,
     std::vector<double> &fj) {
     // column 3 
@@ -327,9 +346,9 @@ void getfj (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getlj (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
-    const RVector<double> intervals, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &lj) {
     // column 3 
     int j;
@@ -345,9 +364,9 @@ void getlj (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getgaml (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
-    const RVector<double> intervals, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &gam) {
     // column 3 
     int j;
@@ -365,9 +384,9 @@ void getgaml (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getgamj (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
-    const RVector<double> intervals, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &gamj) {
     // column 3 
     int j;
@@ -381,8 +400,8 @@ void getgamj (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getkapj (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &kapj) {
     // column 3 
     int j;
@@ -399,8 +418,8 @@ void getkapj (int n, int x, int nc, int jj,
 // }
 
 void getbeta0 (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &beta) {
     // column 3 
     int j;
@@ -418,8 +437,8 @@ void getbeta0 (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void gettau (int n, int x, int nc, int jj,
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &tau,
     int M) {
     // column 5 
@@ -440,8 +459,8 @@ void gettau (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getDj (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &Dj) {
     // column 3 
     int j;
@@ -453,10 +472,10 @@ void getDj (int n, int x, int nc, int jj,
 
 // per capita recruitment cf Link & Barker 2005, Schwarz 'Gentle Intro'
 void getbetaf (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &phij,
-    const RVector<double> intervals, 
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &beta) {
     int j;
     double sumbeta = 1;
@@ -480,10 +499,10 @@ void getbetaf (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getbetal (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ,
     std::vector<double> &phij,
-    const RVector<double> intervals, 
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &beta) {
     int j;
     double sumbeta = 1;
@@ -515,10 +534,10 @@ void getbetal (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getbetag (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ, 
     std::vector<double> &phij,
-    const RVector<double> intervals, 
+    const RcppParallel::RVector<double> intervals, 
     std::vector<double> &beta) {
     int j;
     double sumbeta = 1;
@@ -552,8 +571,8 @@ void getbetag (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getbetak (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ, 
     std::vector<double> &phij,
     std::vector<double> &beta) {
     int i,j;
@@ -600,8 +619,8 @@ void getbetak (int n, int x, int nc, int jj,
 
 // return parameterisation cf Pledger et al. 2010 p 885 
 void getbetaB (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ, 
     std::vector<double> &beta) {
     int j;
     double sumB = 0;
@@ -617,8 +636,8 @@ void getbetaB (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getbetaD (int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ, 
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ, 
     std::vector<double> &phij,
     std::vector<double> &beta) {
     int j;
@@ -640,9 +659,9 @@ void getbetaD (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 void getbeta (int type, int n, int x, int nc, int jj, 
-    const RMatrix<double> openval,  
-    const RVector<int> PIAJ, 
-    const RVector<double> intervals,
+    const RcppParallel::RMatrix<double> openval,  
+    const RcppParallel::RVector<int> PIAJ, 
+    const RcppParallel::RVector<double> intervals,
     std::vector<double> &phij,
     std::vector<double> &beta) {
     if ((type == 2) || (type == 17) || (type == 11) || (type == 13) || 
@@ -663,6 +682,6 @@ void getbeta (int type, int n, int x, int nc, int jj,
         getbetag (n, x, nc, jj, openval, PIAJ, phij, intervals, beta);
     else if ((type == 28) || (type == 29))
         getbetak (n, x, nc, jj, openval, PIAJ, phij, beta);
-    else stop("no beta for this type");
+    else Rcpp::stop("no beta for this type");
 }
 //--------------------------------------------------------------------------

@@ -1,10 +1,7 @@
 #include <Rcpp.h>
-#include <RcppParallel.h>
-#include "utils.h"
+#include "utils.h"   // i3, i4
 
-using namespace std;
 using namespace Rcpp;
-using namespace RcppParallel;
 
 // [[Rcpp::export]]
 List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm, 

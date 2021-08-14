@@ -20,7 +20,7 @@ JSSA models that are conditional on the number observed. Cormack-Jolly-Seber
 openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1), 
     distribution = c("poisson", "binomial"), mask = NULL, 
     detectfn = c("HHN", "HHR", "HEX", "HAN", "HCG", "HVP", "HPX"), binomN = 0, 
-    movementmodel = c("static", "uncorrelated", "normal", "exponential", "t2D", 
+    movementmodel = c("static","uncorrelated","BVN","BVE","BVT","frE","frG","frL",
     "uniform"), edgemethod = c("truncate","wrap","none"), 
     kernelradius = 10, sparsekernel = FALSE, start = NULL, link = list(), 
     fixed = list(), stratumcov = NULL, sessioncov = NULL, timecov = NULL, 
@@ -197,8 +197,7 @@ initial values of D, lambda0 and sigma (secr types only) \cr
 \code{contrasts} \tab NULL \tab Value suitable for the `contrasts.arg' argument 
 of \code{\link{model.matrix}} used to specify the coding of factor predictors \cr
 
-\code{control} \tab list() \tab Passed to \code{optim} - useful for increasing
-maxit for \code{method = Nelder-Mead} (see vignette) \cr
+\code{control} \tab list() \tab Components may be named arguments of \code{nlm}, or passed intact as argument `control' of \code{optim} - useful for increasing maxit for \code{method = Nelder-Mead} (see vignette) \cr
 
 \code{debug} \tab 0 \tab debug=1 prints various intermediate values; debug>=2 interrupts execution by calling browser() (position variable) \cr
 

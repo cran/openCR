@@ -2,7 +2,6 @@
 #include <RcppParallel.h>
 #include "utils.h"
 
-using namespace std;
 using namespace Rcpp;
 using namespace RcppParallel;
 
@@ -135,7 +134,7 @@ struct Somehistories : public Worker {
 
 // [[Rcpp::export]]
 NumericVector allhistparallelcpp (int x, int type, int nc,
-                                  int CJSp1, int grain,
+                                  int CJSp1, int grain, int ncores,
                                   const NumericVector intervals, 
                                   const IntegerVector cumss, 
                                   const IntegerVector w,
@@ -152,9 +151,12 @@ NumericVector allhistparallelcpp (int x, int type, int nc,
                             intervals.size()+1, openval.nrow(),
                             intervals,
                             cumss, w, fi, li, openval, PIA, PIAJ, output);
-    if (grain>0) {    
+    
+    Rcpp::checkUserInterrupt();
+    
+    if (ncores>1) {    
         // Run operator() on multiple threads
-        parallelFor(0, nc, somehist, grain);
+        parallelFor(0, nc, somehist, grain, ncores);
     }
     else {
         // for debugging avoid multithreading and allow R calls e.g. Rprintf

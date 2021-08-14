@@ -1,4 +1,3 @@
-################################################################################
 ## package 'openCR'
 ## openCR.fit.R
 ## 2011-12-30, 2013-01-21
@@ -28,17 +27,36 @@
 ## 2021-03-25 detectfn HPX
 ## 2021-04-19 marray removed from data
 ## 2021-04-20 2.0.0 stratified
+## 2021-07-22 dummyvariablecoding
+## 2021-08-09 iterlim 300 default for nlm (less frequent code 4)
 ################################################################################
 
-openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1),
-  distribution = c("poisson", "binomial"), mask = NULL, 
-  detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP', 'HPX'), binomN = 0, 
-  movementmodel = c('static','uncorrelated','normal','exponential', 't2D', 'uniform'),
-  edgemethod = c('truncate', 'wrap', 'none'), kernelradius = 10,
-  sparsekernel = FALSE, start = NULL, link = list(), 
-  fixed = list(), stratumcov = NULL, sessioncov = NULL, timecov = NULL, agecov = NULL, 
-  dframe = NULL, dframe0 = NULL, details = list(), 
-  method = 'Newton-Raphson', trace = NULL, ncores = NULL, stratified = FALSE, ...)
+openCR.fit <- function (
+  capthist, 
+  type = "CJS", 
+  model = list(p~1, phi~1, sigma~1),
+  distribution = c("poisson", "binomial"), 
+  mask = NULL, 
+  detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP', 'HPX'), 
+  binomN = 0, 
+  movementmodel = c('static','uncorrelated','BVN','BVE','BVT','frE','frG','frL', 'uniform'),
+  edgemethod = c('truncate', 'wrap', 'none'), 
+  kernelradius = 10,
+  sparsekernel = FALSE, 
+  start = NULL, 
+  link = list(), 
+  fixed = list(), 
+  stratumcov = NULL, 
+  sessioncov = NULL, 
+  timecov = NULL, 
+  agecov = NULL, 
+  dframe = NULL, 
+  dframe0 = NULL, 
+  details = list(), 
+  method = 'Newton-Raphson', 
+  trace = NULL, 
+  ncores = NULL, 
+  stratified = FALSE, ...)
   
 {
   # Fit open population capture recapture model
@@ -49,7 +67,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   #  model      -  formulae for real parameters in terms of effects and covariates
   #  start      -  start values for maximization (numeric vector link scale);
   #  link       -  list of parameter-specific link function names 'log', 'logit', 'loglog',
-  #                'identity', 'sin', 'neglog', 'mlogit'
+  #                'identity', 'sin', 'neglog', 'mlogit', 'log1'
   #  fixed      -  list of fixed values for named parameters
   #  sessioncov -  dataframe of session-level covariates
   #  mask
@@ -62,36 +80,66 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   
   #########################################################################
   ## Use input 'details' to override various defaults
-  defaultdetails <- list(
-    autoini = NULL, 
-    CJSp1 = FALSE, 
-    contrasts = NULL, 
-    control = list(),
-    debug = 0, 
-    grain = 1,
-    hessian = 'auto', 
-    ignoreusage = FALSE, 
-    initialage = 0, 
-    LLonly = FALSE,
-    kernelradius = 10,
-    sparsekernel = FALSE,
-    minimumage = 0, 
-    maximumage = 1,
-    multinom = FALSE,
-    R = FALSE, 
-    squeeze = TRUE, 
-    trace = FALSE,
-    initialstratum = 1
-  )
+    defaultdetails <- list(
+        autoini = NULL, 
+        CJSp1 = FALSE, 
+        contrasts = NULL, 
+        control = if (method=='Newton-Raphson') list(iterlim=300) else list(),
+        debug = 0, 
+        grain = 1,
+        hessian = 'auto', 
+        ignoreusage = FALSE, 
+        initialage = 0, 
+        LLonly = FALSE,
+        minimumage = 0, 
+        maximumage = 1,
+        multinom = FALSE,
+        R = FALSE, 
+        squeeze = TRUE, 
+        trace = FALSE,
+        initialstratum = 1,
+        log = '',
+        dummyvariablecoding = NULL,
+        anchored = FALSE
+    )
   
-  if (is.logical(details$hessian))
+  if (is.logical(details$hessian)) {
     details$hessian <- ifelse(details$hessian, 'auto', 'none')
+  }
+  if (!is.null(details$kernelradius)) {
+      ## 2021-05-30
+      warning ("kernelradius is now full argument of openCR.fit; value in details ignored")
+  }
+  
+  ##
   details <- replace (defaultdetails, names(details), details)
   if (!is.null(trace)) details$trace <- trace
   if (details$LLonly)  details$trace <- FALSE
   if (details$R) ncores <- 1    ## force 2018-11-12
   if (!is.null(ncores) && (ncores == 1)) details$grain <- -1
-  #########################################################################
+  anchored <- details$anchored
+  
+  ##############################################
+  # Dummy variable coding 2021-07-22
+  ##############################################
+
+  # allow TRUE to mean 't' or 'session' predictors
+  if (is.logical(details$dummyvariablecoding)) {
+    if (details$dummyvariablecoding) 
+      details$dummyvariablecoding <- c('t', 'session')
+    else
+      details$dummyvariablecoding <- NULL
+  }
+  ndvc <- length(details$dummyvariablecoding)
+  if (ndvc>0) {
+    contr.none <-function(n) contrasts(factor(1:n), contrasts = FALSE)
+    ## override any other specified contrasts for these predictors
+    details$contrasts <- replace (details$contrasts, details$dummyvariablecoding, 
+      list(contr.none))
+    if (length(details$contrasts)==0) details$contrasts <- NULL
+  }
+  # and provide plausible starts for all beta coef, not just first
+  #############################################################################
   
   distribution <- match.arg(distribution)
   distrib <- switch (distribution, poisson = 0, binomial = 1)
@@ -100,7 +148,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   # Multithread option 2018-04-11, 2020-11-02
   ##############################################
   
-  secr::setNumThreads(ncores, stackSize = "auto")  # change to match secr 
+  ncores <- secr::setNumThreads(ncores, stackSize = "auto")  # change to match secr 
   
   if (is.character(detectfn)) {
     detectfn <- match.arg(detectfn)
@@ -172,8 +220,13 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
       # specify 'choices' to extend permissable models to include 
       # 'annularR' while avoiding need to document it!
       movementmodel <- match.arg(movementmodel[1], 
-        choices = c('static','uncorrelated','normal','exponential', 't2D',
-          'uniform', 'annular', 'annular2', 'annularR'))
+        choices = c('static','uncorrelated', .openCRstuff$movementmodels))
+      if (movementmodel == 'frL') {
+        message("movement kernel 'frL' not allowed in openCR.fit() because ",
+          "it can crash R and is highly dependent on kernelradius. ",
+          "Try 'frG' instead.")
+        return(NULL)
+      }
     }
     ## integer code for movement model
     movementcode <- movecode(movementmodel)
@@ -191,11 +244,12 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   else {
     if (!is.null(mask)) warning("mask not used in non-spatial analysis")
     mask <- rep(NA, nstrata)
+    movementmodel <- ""
     movementcode <- -1
     edgecode <- -1
     usermodel <- ""
   }
-  
+
   ##############################################
   ## Remember start time and call
   ##############################################
@@ -269,11 +323,11 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   
   moveargsi <- c(-2,-2)
   if (secr) {
-    if (movementmodel %in% c('normal','exponential')) {
+    if (movementmodel %in% c('normal', 'exponential', 'BVN', 'BVE', 'frE', 'uniformzi', 'uncorrelatedzi')) {
       pnames <- c(pnames, 'move.a')
       moveargsi[1] <- .openCRstuff$sigmai[typecode(type)] + 1 + (detectfn %in% c(15,17,18,19))
     }
-    else if (movementmodel %in% c('t2D', 't2DS')) {
+    else if (movementmodel %in% c('t2D', 'BVT', 'frL', 'frG', 'BVNzi','BVEzi','frEzi')) {
       pnames <- c(pnames, 'move.a', 'move.b')
       moveargsi[1] <- .openCRstuff$sigmai[typecode(type)] + 1 + (detectfn %in% c(15,17,18,19))
       moveargsi[2] <- moveargsi[1]+1
@@ -338,7 +392,9 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     gamma = 'logit', kappa = 'log', g = 'logit',
     lambda = 'log', BN = 'log', BD = 'log', D = 'log', N = 'log',
     superN = 'log', superD = 'log', sigma = 'log', z = 'log', pmix='mlogit',
-    move.a = 'log', move.b = 'log', tau = 'mlogit')
+    move.a =  if (movementmodel %in% c('uniformzi','uncorrelatedzi')) 'logit' else 'log', 
+    move.b = if (movementmodel %in% c('BVNzi','BVEzi','frEzi')) 'logit' else 'log',
+    tau = 'mlogit')
   link <- replace (defaultlink, names(link), link)
   link[!(names(link) %in% pnames)] <- NULL
   if (details$nmix==1) link$pmix <- NULL
@@ -353,6 +409,16 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   # Prepare detection design matrices and lookup
   ##############################################
   memo ('Preparing design matrices', details$trace)
+
+  if (ndvc>0) {   # 2021-07-22
+    for (i in 1:length(model)) {
+      # remove intercept from models with dummy variable coding
+      if (any(details$dummyvariablecoding %in% all.vars(model[[i]]))) {
+        model[[i]] <- update(model[[i]], ~.-1)
+      }
+    }
+  }
+  
   design <- openCR.design (
     capthist   = capthist, 
     models     = model, 
@@ -407,7 +473,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   ##########################
   
   mqarray <- 0
-  if (secr && !(movementmodel %in% c('static','uncorrelated'))) {
+  if (secr && !(movementmodel %in% c('static','uncorrelated','uncorrelatedzi'))) {
     ## 2021-02-19 add annular option
     ## movement kernel
     k2 <- kernelradius
@@ -427,9 +493,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
       ring2 <- r >= (k2-0.5)
       kernel <- kernel[origin | ring1 | ring2, ]
     }
-    ## 2021-04-24 sparse kernels controlled by full argument
     if (sparsekernel) {
-      # ok <- kernel$x==0 | kernel$y == 0 | kernel$x == kernel$y | kernel$x == -kernel$y
       tol <- 1e-8
       ok <- 
         abs(kernel$x) < tol |
@@ -520,21 +584,32 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
       BD = (ncf + 1) / marea,
       D = (ncf + 1) / marea,
       N = ncf + 1,
-      superN = ncf*(1-distrib) + 20,   ## use N-n for binomial 2018-03-12
-      superD = (ncf + 20) / marea,
-      sigma =  rpsv,
-      z = 2,
-      move.a = if (secr) (if (movementmodel=='annular') 0.4 else rpsv) else 0.6,    # increased rpsv/2 to rpsv 2021-04-11
-      move.b = if (secr) (if (movementmodel %in% c('annular2','annularR')) 0.3 else 0.6) else 0.2,
-      pmix = 0.25
+        superN = ncf*(1-distrib) + 20,   ## use N-n for binomial 2018-03-12
+        superD = (ncf + 20) / marea,
+        sigma =  rpsv,
+        z = 2,
+        move.a = if (secr) (if (movementmodel %in% c('annular', 'uniformzi','uncorrelatedzi')) 0.4 else rpsv) else 0.6,    # increased rpsv/2 to rpsv 2021-04-11
+        move.b = if (secr) (if (movementmodel %in% c('annular2','annularR','BVNzi','BVEzi','frEzi')) 0.4 else 1.5) else 0.2,
+        pmix = 0.25
     )
     
     getdefault <- function (par) transform (default[[par]], link[[par]])
     defaultstart <- rep(0, NP)
-    for ( i in 1:length(parindx) ) {
-      defaultstart[parindx[[i]][1]] <- getdefault (names(model)[i])
+
+    startindx <- parindx
+    if (ndvc==0) {
+      startindx <- lapply(startindx, '[', 1)   ## only first
     }
-    
+    else {
+      for (i in 1:length(startindx)) {
+        if (!any(details$dummyvariablecoding %in% all.vars(model[[i]])) ) {
+          startindx[[i]] <- startindx[[i]][1]
+        }
+      }
+    }
+    for ( i in 1:length(startindx) ) {
+        defaultstart[startindx[[i]]] <- getdefault (names(model)[i])
+    }
     if(details$nmix>1) {
       ## scaled by mlogit.untransform
       defaultstart[parindx[['pmix']]] <- (2:details$nmix)/(details$nmix+1)
@@ -563,14 +638,16 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
         
         if (any(is.na(unlist(start3))))
           warning ("initial values not found")
-        defaultstart[parindx[['lambda0']][1]] <- transform (-log(1-start3[['g0']]), link[['lambda0']])
-        defaultstart[parindx[['sigma']][1]] <- transform (start3[['sigma']], link[['sigma']])
+        
+        
+        defaultstart[startindx[['lambda0']]] <- transform (-log(1-start3[['g0']]), link[['lambda0']])
+        defaultstart[startindx[['sigma']]] <- transform (start3[['sigma']], link[['sigma']])
         if (type == 'JSSAsecrD')
-          defaultstart[parindx[['D']][1]] <- transform (start3[['D']], link[['D']])
+          defaultstart[startindx[['D']]] <- transform (start3[['D']], link[['D']])
         else if (type == 'JSSAsecrB')
-          defaultstart[parindx[['BD']][1]] <- transform (start3[['D']]/J, link[['BD']])
+          defaultstart[startindx[['BD']]] <- transform (start3[['D']]/J, link[['BD']])
         else if (type %in% c('JSSAsecrf','JSSAsecrl','JSSAsecrb', 'JSSAsecrg'))
-          defaultstart[parindx[['superD']][1]] <- transform (start3[['D']], link[['superD']])
+          defaultstart[startindx[['superD']]] <- transform (start3[['D']], link[['superD']])
       }
       # CL types do not need density
     }
@@ -590,10 +667,10 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     }
     for (i in names(tmp)) {
       if (i == 'b') {
-        start[parindx[[i]][1]] <- tmp[[i]]
+        start[startindx[[i]]] <- tmp[[i]]
       }
       else {
-        start[parindx[[i]][1]] <- transform (tmp[[i]], link[[i]])
+        start[startindx[[i]]] <- transform (tmp[[i]], link[[i]])
       }
     }
   }
@@ -659,7 +736,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
       }
       distmat <- getdistmat (traps(CH), mask, detectfn == 20)
       cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
-      if (!(movementmodel %in% c('static','uncorrelated'))) {
+      if (!(movementmodel %in% c('static','uncorrelated','uncorrelatedzi'))) {
         mqarray <- mqsetup (mask, kernel, cellsize, edgecode)  
       }
     }
@@ -710,6 +787,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   assign("moveargsi",       moveargsi,       pos = data)
   assign("movementcode",    movementcode,    pos = data)
   assign("sparsekernel",    sparsekernel,    pos = data)
+  assign("anchored",        anchored,        pos = data)
   assign("edgecode",        edgecode,        pos = data)
   assign("usermodel",       usermodel,       pos = data)
   assign("kernel",          kernel,          pos = data)
@@ -741,8 +819,13 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   
   ## modified 2017-05-16 to assume most data are in the environment, not needing to be passed
   memo('Maximizing likelihood...', details$trace)
+  header <- paste0('Eval       Loglik ', paste(str_pad(betanames, width = betaw), collapse = ' '))
   if (details$trace) {
-    message('Eval       Loglik', paste(str_pad(betanames, width = betaw), collapse = ' '))
+    message(header)
+  }
+  logfilename <- details$log
+  if (logfilename != "" && is.character(logfilename)) {
+    cat(header, file = logfilename, sep = "\n", append = FALSE)
   }
   
   if (tolower(method) %in% c('newton-raphson', 'nr')) {
@@ -750,9 +833,8 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
       f        = loglikefn,
       data     = data,   # environment(),
       betaw    = betaw,
-      hessian  = tolower(details$hessian)=='auto',
-      stepmax  = 10)
-    ## cluster  = cluster)
+      hessian  = tolower(details$hessian)=='auto')
+    if (!is.null(details$control) && is.list(details$control)) args <- c(args, details$control)
     this.fit <- do.call (nlm, args)
     this.fit$par <- this.fit$estimate     # copy for uniformity
     this.fit$value <- this.fit$minimum    # copy for uniformity
@@ -820,7 +902,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
     eigH <- NA
     NP <- length(betanames)
     covar <- matrix(nrow = NP, ncol = NP)
-    if (!is.null(hess)) {
+    if (!is.null(hess) && !any(is.na(this.fit$hessian))) {   # 2021-08-07 additional check 
       eigH <- eigen(this.fit$hessian)$values
       ## eigH <- eigH/max(eigH)
       eigH <- abs(eigH)/max(abs(eigH))   ## 2020-05-28
@@ -839,7 +921,7 @@ openCR.fit <- function (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1
   }
   
   desc <- packageDescription("openCR")  ## for version number
-  if (secr && !(movementmodel %in% c('static','uncorrelated'))) 
+  if (secr && !(movementmodel %in% c('static','uncorrelated','uncorrelatedzi'))) 
     kernel <- kernel * spacing(mask)
   else
     kernel <- NULL

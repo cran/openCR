@@ -18,8 +18,8 @@ derived.openCR <- function (object, newdata = NULL, all.levels = FALSE,
     if ('h2' %in% allvars | 'h3' %in% allvars)
         warning ("derived.openCR does not handle finite mixtures")
     if (is.null(newdata)) {
-        newdata <- openCR.make.newdata(object, all.levels = all.levels)
-        # newdata <- makeNewData(object, all.levels = all.levels)
+        # newdata <- openCR.make.newdata(object, all.levels = all.levels)
+        newdata <- makeNewData(object, all.levels = all.levels)
     }
     onestratum <- function (newdata, stratumi) {
         nnew <- nrow(newdata)

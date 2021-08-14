@@ -9,24 +9,32 @@ PCH0secrjcpp <- function(type, x, nc, jj, cumss, kk, mm, cc0, PIA0, gk0, binomN,
     .Call(`_openCR_PCH0secrjcpp`, type, x, nc, jj, cumss, kk, mm, cc0, PIA0, gk0, binomN, Tsk)
 }
 
-PCH1secrparallelcpp <- function(x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, sparsekernel, edgecode, usermodel, kernel, mqarray, cellsize) {
-    .Call(`_openCR_PCH1secrparallelcpp`, x, type, grain, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, sparsekernel, edgecode, usermodel, kernel, mqarray, cellsize)
+PCH1secrparallelcpp <- function(x, type, grain, ncores, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, sparsekernel, anchored, edgecode, usermodel, kernel, mqarray, cellsize) {
+    .Call(`_openCR_PCH1secrparallelcpp`, x, type, grain, ncores, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, sparsekernel, anchored, edgecode, usermodel, kernel, mqarray, cellsize)
 }
 
 gethcpp <- function(nc1, cc, nmix, nk, ss, mm, PIA, Tsk, hk) {
     .Call(`_openCR_gethcpp`, nc1, cc, nmix, nk, ss, mm, PIA, Tsk, hk)
 }
 
+convolvemqcpp <- function(j, edgecode, mqarray, kernelp, pjm) {
+    .Call(`_openCR_convolvemqcpp`, j, edgecode, mqarray, kernelp, pjm)
+}
+
+fillkernelcpp <- function(kernel, kerneltype, sparsekernel, cellsize, jj, fnname, moveargsi, moveargs, normalize) {
+    .Call(`_openCR_fillkernelcpp`, kernel, kerneltype, sparsekernel, cellsize, jj, fnname, moveargsi, moveargs, normalize)
+}
+
 makegkcpp <- function(cc, kk, mm, detectfn, sigmai, openval, traps, mask) {
     .Call(`_openCR_makegkcpp`, cc, kk, mm, detectfn, sigmai, openval, traps, mask)
 }
 
-makegkParallelcpp <- function(detectfn, sigmai, grain, openval, traps, mask) {
-    .Call(`_openCR_makegkParallelcpp`, detectfn, sigmai, grain, openval, traps, mask)
+makegkParallelcpp <- function(detectfn, sigmai, grain, ncores, openval, traps, mask) {
+    .Call(`_openCR_makegkParallelcpp`, detectfn, sigmai, grain, ncores, openval, traps, mask)
 }
 
-makegkParalleldcpp <- function(detectfn, sigmai, grain, openval, distmat) {
-    .Call(`_openCR_makegkParalleldcpp`, detectfn, sigmai, grain, openval, distmat)
+makegkParalleldcpp <- function(detectfn, sigmai, grain, ncores, openval, distmat) {
+    .Call(`_openCR_makegkParalleldcpp`, detectfn, sigmai, grain, ncores, openval, distmat)
 }
 
 makelookupcpp <- function(x) {
@@ -37,11 +45,11 @@ pradelloglikcpp <- function(type, w, nc, jj, nmix, openval, PIAJ, intervals) {
     .Call(`_openCR_pradelloglikcpp`, type, w, nc, jj, nmix, openval, PIAJ, intervals)
 }
 
-allhistparallelcpp <- function(x, type, nc, CJSp1, grain, intervals, cumss, w, fi, li, openval, PIA, PIAJ) {
-    .Call(`_openCR_allhistparallelcpp`, x, type, nc, CJSp1, grain, intervals, cumss, w, fi, li, openval, PIA, PIAJ)
+allhistparallelcpp <- function(x, type, nc, CJSp1, grain, ncores, intervals, cumss, w, fi, li, openval, PIA, PIAJ) {
+    .Call(`_openCR_allhistparallelcpp`, x, type, nc, CJSp1, grain, ncores, intervals, cumss, w, fi, li, openval, PIA, PIAJ)
 }
 
-allhistsecrparallelcpp <- function(x, type, mm, nc, binomN, CJSp1, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, sparsekernel, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize) {
-    .Call(`_openCR_allhistsecrparallelcpp`, x, type, mm, nc, binomN, CJSp1, grain, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, sparsekernel, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize)
+allhistsecrparallelcpp <- function(x, type, mm, nc, binomN, CJSp1, grain, ncores, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, sparsekernel, anchored, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize) {
+    .Call(`_openCR_allhistsecrparallelcpp`, x, type, mm, nc, binomN, CJSp1, grain, ncores, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, sparsekernel, anchored, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize)
 }
 

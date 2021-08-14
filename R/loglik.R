@@ -42,41 +42,13 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
 # details$trace=T sends a one-line report to the screen
 
 {
-    #--------------------------------------------------------------------
-    # Fixed beta
-    fb <- data$details$fixedbeta
-    if (!is.null(fb)) {
-        fb[is.na(fb)] <- beta
-        beta <- fb    ## complete
-    }
-    if (data$details$debug>0) {
-        print(beta)
-    }
-    #--------------------------------------------------------------------
-    # Real parameters
-    realparval  <- makerealparameters (data$design, beta, data$parindx, data$link, data$fixed)
-    if (data$learnedresponse)
-        realparval0 <- makerealparameters (data$design0, beta, data$parindx, data$link, data$fixed)
-    else realparval0 <- realparval
-    #-----------------------------------------
-    # check valid parameter values
-    if (!all(is.finite(realparval))) {
-        message ('beta vector : ', paste(beta, collapse=', '))
-        message ('real vector : ', paste(realparval, collapse=','))
-        warning ("extreme 'beta' in 'openloglikfn' ",
-            "(try smaller stepmax in nlm Newton-Raphson?)")
-        return (1e10)
-    }
-    type <- typecode(data$type)
-    if (type<0) stop ("Invalid likelihood type")
-    if (type %in% 28:29 & any(unlist(data$stratumdata$primaryintervals) !=1)) 
-        stop ("kappa parameterisation available only if all intervals = 1")
     
     onestratumll <- function(stratum) {
         freq <- covariates(stratum$capthist)$freq
         if (is.null(freq)) freq <- rep(1, stratum$nc)
         if (length(freq) == 1) freq <- rep(freq, stratum$nc)
         ncf <- sum(freq)
+        comp <- numeric(4)
         
         # PIA  <- data$design$PIA [stratum$i,,,,, drop = FALSE]
         # PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
@@ -110,7 +82,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     stratum$primaryintervals)
             }
             else {
-                comp <- pradelloglikcpp(
+                comp[1:2] <- pradelloglikcpp(
                     as.integer(type),
                     as.integer(stratum$JScounts),
                     as.integer(stratum$nc),               ## needed for nrows of PIAJ
@@ -122,7 +94,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             }
         }
         else if (data$details$R & (type %in% c(28,29))) {
-            comp <- kappaloglik (type, realparval,  PIA, PIAJ, stratum, 
+            comp[1:4] <- kappaloglik (type, realparval,  PIA, PIAJ, stratum, 
                 data$details$nmix, 
                 data$details$CJSp1, 
                 data$distrib)
@@ -165,6 +137,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         as.integer(stratum$nc),
                         as.integer(data$details$CJSp1),
                         as.integer(data$details$grain),
+                        as.integer(data$ncores),
                         as.double (stratum$primaryintervals),
                         as.integer(stratum$cumss),
                         as.integer(stratum$capthist),
@@ -178,8 +151,6 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 freq * log(sump)  ## return vector of individual LL contributions
             }
             
-            
-            comp <- numeric(4)
             pmix <- fillpmix2(stratum$nc, data$details$nmix, PIA, realparval)
             
             #####################################################################
@@ -253,7 +224,37 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     #####################################################################
     # main line
     
-    if (data$details$debug>2) browser()
+    #--------------------------------------------------------------------
+    # Fixed beta
+    fb <- data$details$fixedbeta
+    if (!is.null(fb)) {
+        fb[is.na(fb)] <- beta
+        beta <- fb    ## complete
+    }
+    if (data$details$debug>0) {
+        print(beta)
+    }
+    #--------------------------------------------------------------------
+    # Real parameters
+    realparval  <- makerealparameters (data$design, beta, data$parindx, data$link, data$fixed)
+    if (data$learnedresponse)
+        realparval0 <- makerealparameters (data$design0, beta, data$parindx, data$link, data$fixed)
+    else realparval0 <- realparval
+    #-----------------------------------------
+    # check valid parameter values
+    if (!all(is.finite(realparval))) {
+        message ('beta vector : ', paste(beta, collapse=', '))
+        message ('real vector : ', paste(realparval, collapse=','))
+        warning ("extreme 'beta' in 'openloglikfn' ",
+            "(try smaller stepmax in nlm Newton-Raphson?)")
+        return (1e10)
+    }
+    type <- typecode(data$type)
+    if (type<0) stop ("Invalid likelihood type")
+    if (type %in% 28:29 & any(unlist(data$stratumdata$primaryintervals) !=1)) 
+        stop ("kappa parameterisation available only if all intervals = 1")
+
+        if (data$details$debug>2) browser()
     
     #####################################################################
     compbystratum <- lapply(data$stratumdata, onestratumll)
@@ -288,15 +289,23 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         if (data$details$debug>1) browser()
     }
     
-    .openCRstuff$iter <- .openCRstuff$iter + 1   ## moved outside loop 2011-09-28
+    ## optionally display message for this iteration on console or log file 
+    .openCRstuff$iter <- .openCRstuff$iter + 1
+    fb <- data$details$fixedbeta  # afresh
+    if (!is.null(fb)) beta <- beta[is.na(fb)]
+    progressstring <- paste(
+        c(format(.openCRstuff$iter, width=4), "   ",
+        formatC(round(loglik,dig), format='f', digits=dig, width=betaw+2),  " ",
+        formatC(beta, format='f', digits=dig+1, width=betaw+1)), collapse = " ")
     if (data$details$trace) {
-        if (!is.null(data$details$fixedbeta))
-            beta <- beta[is.na(data$details$fixedbeta)]
-        message(format(.openCRstuff$iter, width=4), ' ',
-            formatC(round(loglik,dig), format='f', digits=dig, width=10), ' ',
-            paste(formatC(beta, format='f', digits=dig+1, width=betaw), 
-                collapse = ' '))
-        flush.console()
+        if (((.openCRstuff$iter-1) %% data$details$trace) == 0) {
+            message(progressstring)
+            flush.console()
+        }
+    }
+    logfilename <- data$details$log
+    if (logfilename != "" && is.character(logfilename)) {
+        cat(progressstring, file = logfilename, sep="\n", append=TRUE)
     }
     
     if (oneeval) {

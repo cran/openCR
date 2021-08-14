@@ -144,8 +144,13 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
     if (movementcode > 1) {
         moveargsi <- pmax(moveargsi,0)
         moveargs <- getmoveargs (n, x, openval, PIAJ, intervals, moveargsi)
-        kernelp <- fillkernelp (jj, movementcode-2, sparsekernel, kernel, 
+        
+        # kernelp <- fillkernelp (jj, movementcode-2, sparsekernel, kernel, 
+        #     usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
+        
+        kernelp <- fillkernelC ( jj, movementcode-2, sparsekernel, kernel, 
             usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
+        
     }
     if(type==6) {
         minb <- fi[n]

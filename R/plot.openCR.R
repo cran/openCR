@@ -12,7 +12,7 @@ plot.openCR <- function(
     else
         xv <- 0:length(x$primaryintervals[[stratum]])
     sessionxv <- xv
-    if (intermediate.x & (par %in% c('phi', 'f', 'lambda', 'b', 'BN','BD')))
+    if (intermediate.x & (par %in% c('phi', 'f', 'lambda', 'b', 'BN','BD','move.a','move.b')))
         xv <- (xv + c(xv[-1],NA))/2
     xv <- xv + xoffset
 
@@ -29,8 +29,8 @@ plot.openCR <- function(
     if (is.null(sessnames)) sessnames <- 1:length(xv)
 
     if (is.null(newdata)) {
-        newdata <- openCR.make.newdata(x, all.levels = FALSE)
-        # newdata <- makeNewData (x, all.levels = FALSE)
+        # newdata <- openCR.make.newdata(x, all.levels = FALSE)
+        newdata <- makeNewData (x, all.levels = FALSE)
     }
     newdata <- newdata[newdata$stratum == stratum,]
     pred <- predict(x, newdata = newdata, alpha = alpha)[[par]]

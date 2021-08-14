@@ -223,8 +223,8 @@ vcov.openCR <- function (object, realnames = NULL, newdata = NULL, byrow = FALSE
         if (byrow) {
             ## need delta-method variance of reals given object$beta.vcv & newdata
             if (is.null(newdata)) {
-                newdata <- openCR.make.newdata (object)
-                # newdata <- makeNewData (object)
+                # newdata <- openCR.make.newdata (object)
+                newdata <- makeNewData (object)
             }
             rowi <- function (i) {
                 grad <- matrix(0, nrow = nreal, ncol = nbeta)
@@ -233,9 +233,14 @@ vcov.openCR <- function (object, realnames = NULL, newdata = NULL, byrow = FALSE
                     ## grad[rn,] <- fdHess (pars = object$fit$par, fun = reali, rn = rn)$gradient
                     par.rn <- object$parindx[[rn]]
                     dframe <- newdata[i,,drop=FALSE]
-                    dframe <- adjustlevels(rn, dframe, validlevels)
-                    mat <- model.matrix(object$model[[rn]], data = dframe,
-                                        contrasts.arg = object$details$contrasts)
+                    
+                    # dframe <- adjustlevels(rn, dframe, validlevels)
+                    # mat <- model.matrix(object$model[[rn]], data = dframe,
+                    #                     contrasts.arg = object$details$contrasts)
+                    # new wrapper function 2021-07-23
+                    
+                    mat <- get.model.matrix(object$model[[rn]], rn, dframe, validlevels, object$details$contrasts)
+                    
                     ## drop pmix beta0 column from design matrix (always zero)
                     if (rn == 'pmix') mat <- mat[,-1,drop=FALSE]
                     # UNCERTAIN HOW TO TREAT b... 2018-03-07
@@ -267,9 +272,14 @@ vcov.openCR <- function (object, realnames = NULL, newdata = NULL, byrow = FALSE
             vcvlist <- list()
             for (rn in realnames) {
                 par.rn <- object$parindx[[rn]]
-                dframe <- adjustlevels(rn, newdata, validlevels)
-                mat <- model.matrix(object$model[[rn]], data = dframe, 
-                                    contrasts.arg = object$details$contrasts)
+                
+                # dframe <- adjustlevels(rn, newdata, validlevels)
+                # mat <- model.matrix(object$model[[rn]], data = dframe, 
+                #                     contrasts.arg = object$details$contrasts)
+                # new wrapper function 2021-07-23
+                
+                mat <- get.model.matrix(object$model[[rn]], rn, newdata, validlevels, object$details$contrasts)
+                
                 ## drop pmix beta0 column from design matrix (always zero)
                 if (rn == 'pmix') mat <- mat[,-1,drop=FALSE]
                 lp <- mat %*% matrix(object$fit$par[par.rn], ncol = 1)
@@ -312,6 +322,26 @@ openCRlist <- function(...) {
     temp
 }
 
+############################################################################################
+
+## 2021-08-14
+## expects all ... to be openCRlist
+c.openCRlist <- function(..., recursive = FALSE) {
+    slist <- as.list(...)
+    result <- NextMethod('c', slist, recursive = FALSE)
+    class(result) <- 'openCRlist'
+    result
+}
+############################################################################################
+
+## 2021-08-14
+## extract method for openCRlist objects
+## retains class
+'[.openCRlist' <- function(x, i) {
+    y <- NextMethod("[")
+    class(y) <- class(x)
+    y
+}
 ############################################################################################
 
 # 2018-05-13 timevaryingcov handled in secr

@@ -3,7 +3,6 @@
 #include <RcppParallel.h>
 
 using namespace Rcpp;
-using namespace RcppParallel;
 
 //==============================================================================
 
@@ -38,9 +37,9 @@ NumericVector pradelloglikcpp (
 )
     
 { 
-    const RMatrix<double> openvalR(openval); /// Parameter values - turnover 
-    const RVector<int> PIAJR(PIAJ);          // lookup which parameter combination to use n, J, mix 
-    const RVector<double> intervalsR(intervals);    // vector of jj-1 between-occasion intervals 
+    const RcppParallel::RMatrix<double> openvalR(openval); /// Parameter values - turnover 
+    const RcppParallel::RVector<int> PIAJR(PIAJ);          // lookup which parameter combination to use n, J, mix 
+    const RcppParallel::RVector<double> intervalsR(intervals);    // vector of jj-1 between-occasion intervals 
 
     int    j,k;          // indices &  miscellaneous 
     int    x = 0;
@@ -111,7 +110,6 @@ NumericVector pradelloglikcpp (
     // 	Rprintf("j %4d p[j] %7.6f phij[j] %7.6f gamj[j] %7.6f mu[j] %7.6f chi[j] %7.6f xi[j] %7.6f\n",
     // 		j, p[j], phij[j], gamj[j], mu[j], chi[j], xi[j]);
     // }
-    // Rcpp::stop("stop");
 
     for (j=0; j<jj; j++) {
         if (xi[j]>0)

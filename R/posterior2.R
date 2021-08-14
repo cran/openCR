@@ -100,7 +100,9 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
         
         ## integer code for movement model
         movementcode <- movecode(object$movementmodel)
-        sparsekernel <- sparsebool(object$sparsekernel, object$movementmodel)
+        sparsekernel <- object$sparsekernel
+        anchored <- object$details$anchored
+        if (is.null(anchored)) anchored <- FALSE
         edgecode <- edgemethodcode(object$edgemethod)
 
         cellsize <- mqarray <- 0
@@ -134,11 +136,12 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
         }
         ##--------------------------------------------------------------
         distmat <- getdistmat(trps, object$mask, object$detectfn==20)
-        temp <- makegkParallelcpp (as.integer(object$detectfn),
-                                   as.integer(.openCRstuff$sigmai[type]),
-                                   as.integer(object$details$grain),
-                                   as.matrix(realparval),
-                                   as.matrix(distmat))
+        temp <- makegkParalleldcpp (as.integer(object$detectfn),
+            as.integer(.openCRstuff$sigmai[type]),
+            as.integer(object$details$grain),
+            as.integer(setNumThreads()),
+            as.matrix(realparval),
+            as.matrix(distmat))
         gk <- temp[[1]]
         hk <- temp[[2]]
         pmix <- fillpmix2(nc, nmix, PIA, realparval)
@@ -172,6 +175,7 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
                     as.integer(binomN),
                     as.integer(object$details$CJSp1),
                     as.integer(object$details$grain),
+                    as.integer(setNumThreads()),
                     as.double (object$intervals),
                     as.integer(cumss),
                     as.matrix (CH),     
@@ -186,6 +190,7 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
                     as.matrix (hi),      
                     as.integer(movementcode),
                     as.logical(sparsekernel),
+                    as.logical(anchored),
                     as.integer(edgecode),
                     as.character(object$usermodel),  ## 2019-05-07
                     as.integer(object$moveargsi),
@@ -215,6 +220,7 @@ classMembership.openCR <- function (object, fullCH = NULL, ...) {
                 as.integer(nc),
                 as.integer(object$details$CJSp1),
                 as.integer(object$details$grain),
+                as.integer(setNumThreads()),
                 as.double (object$intervals),
                 as.integer(cumss),
                 as.integer(CH),

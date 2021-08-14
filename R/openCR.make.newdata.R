@@ -11,12 +11,13 @@
 ## 2020-10-19 agecov
 ## 2020-12-07 tt occasion-level time variation cf Kendall et al. 1997
 ## 2021-04-25 2.0.0 stratified
-## 2021-05-11 makeNewData method for openCR objects (postponed)
 ## 2021-05-12 fixed bug in stratified sessioncov
+## 2021-07-02 fixed backward incompatibility bug details$minimumage not specified
+## 2021-07-30 makeNewData method for openCR objects
 ############################################################################################
 
-# makeNewData.openCR <- function (object, all.levels = FALSE, ...) {
-openCR.make.newdata <- function (object, all.levels = FALSE, ...) {
+makeNewData.openCR <- function (object, all.levels = FALSE, ...) {
+# openCR.make.newdata <- function (object, all.levels = FALSE, ...) {
         
     # 'Session', 't' are handled separately at end
     autovars <- c(.openCRstuff$learnedresponses, 'stratum', 'session','tt', 'h2','h3')
@@ -30,6 +31,11 @@ openCR.make.newdata <- function (object, all.levels = FALSE, ...) {
     nstrata <- length(stratanames)
     J <- sapply(primaryintervals(object), length)+1
     S <- if(ms(capthist)) sapply(capthist, ncol) else ncol(capthist)
+    
+    # fix backward compatibility bug 2021-07-02
+    if (is.null(object$details$minimumage)) object$details$minimumage <- 0
+    if (is.null(object$details$maximumage)) object$details$maximumage <- 1
+    
     agerange <- object$details$minimumage:object$details$maximumage
     sessioncov <- stdcovlist(object$sessioncov, 'scov', nstrata, J)
     timecov    <- stdcovlist(object$timecov, 'tcov', nstrata, S)
