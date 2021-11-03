@@ -2,7 +2,7 @@
 # 2021-06-14,16
 
 cumMove <- function (X, mask, kernel, edgemethod = c('truncate', 'wrap', 'none'), 
-    nstep = 1) {
+    nstep = 1, mqarray = NULL) {
     if (ms(mask)) {
         stop ("requires single mask")
     }
@@ -22,7 +22,9 @@ cumMove <- function (X, mask, kernel, edgemethod = c('truncate', 'wrap', 'none')
     }
     
     # generate lookup array
-    mqarray <- mqsetup (mask, kernel, cellsize, edgecode)  
+    if (is.null(mqarray)) {
+        mqarray <- mqsetup (mask, kernel, cellsize, edgecode)  
+    }
 
     # default to centre when X not specified
     if (missing(X)) X <- apply(mask, 2, mean)

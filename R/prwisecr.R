@@ -134,9 +134,10 @@ prw <- function (n, j, x, kk, binomN, cumss, w, PIA, Tsk, gk, h, p0, hindex, pjm
 ###################################################################################
 
 prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
-                      openval, PIA, PIAJ, binomN, Tsk, intervals, h, hindex,
-                      CJSp1, moveargsi, movementcode, sparsekernel, edgecode,
-                      usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL) {
+    openval, PIA, PIAJ, binomN, Tsk, intervals, h, hindex,
+    CJSp1, moveargsi, movementcode, sparsekernel, edgecode,
+    usermodel, kernel = NULL, mqarray = NULL, cellsize = NULL, 
+    r0) {
 
     ## precompute p0 to save time (multicatch only)
     p0 <- if (binomN == -2) exp(-h) else 1
@@ -145,11 +146,8 @@ prwisecr <- function (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk,
         moveargsi <- pmax(moveargsi,0)
         moveargs <- getmoveargs (n, x, openval, PIAJ, intervals, moveargsi)
         
-        # kernelp <- fillkernelp (jj, movementcode-2, sparsekernel, kernel, 
-        #     usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
-        
         kernelp <- fillkernelC ( jj, movementcode-2, sparsekernel, kernel, 
-            usermodel, cellsize, moveargsi, moveargs, normalize = TRUE)
+            usermodel, cellsize, r0, moveargsi, moveargs, normalize = TRUE)
         
     }
     if(type==6) {

@@ -15,6 +15,8 @@
 ## 2020-10-19 agecov for recoding age effects
 ## 2021-04-18 stratified
 ## 2021-05-12 test for time-varying trap covariates allows for stratification
+## 2021-09-27 usage bug fixed (used should have been binary)
+
 ################################################################################
 
 openCR.design <- function (capthist, models, type, naive = FALSE, 
@@ -564,14 +566,17 @@ openCR.design <- function (capthist, models, type, naive = FALSE,
     # Zero the index of trap+time pairs that were 'not set'
     # the external C code checks for this and sets p(detection) to zero
     #--------------------------------------------------------------------
-
     if (grepl('secr', type)) {
         for (stratum in 1:R) {
             if (MS) {
-                used <- usage(trps)[[stratum]]
+                # used <- usage(trps)[[stratum]]
+                # binary from 2021-09-27
+                used <- usage(trps)[[stratum]] > 0
             }
             else {
-                used <- usage(trps)
+                # used <- usage(trps) 
+                # binary from 2021-09-27
+                used <- usage(trps) > 0
             }
             if ((!is.null(unlist(used))) & (length(used)>0)) {
                 allused <- unlist(used)

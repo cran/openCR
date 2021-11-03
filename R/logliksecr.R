@@ -81,7 +81,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     get(data$usermodel),
                     data$kernel,
                     stratum$mqarray,
-                    stratum$cellsize)
+                    stratum$cellsize,
+                    data$details$r0
+                )
                 
                 sump <- sump + pmix[x,n] * temp
             }
@@ -127,7 +129,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.integer(data$moveargsi),
                     as.matrix (data$kernel),
                     as.matrix (stratum$mqarray),
-                    as.double (stratum$cellsize))
+                    as.double (stratum$cellsize),
+                    as.double (data$details$r0))
                 sump <- sump + pmix[x,] * temp
             }
             if (any(is.na(sump)) || any(sump<=0)) NA else freq * log(sump)
@@ -156,7 +159,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         if (data$details$debug>1) browser()
         # PIA <- data$design$PIA[stratum$i,,,,, drop = FALSE]
         # PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
-
+        
         nc1 <- max(stratum$nc,1)
         S <- stratum$cumss[stratum$J+1]
         PIA  <- data$design$PIA [stratum$i, 1:nc1, 1:S, 1:stratum$k, , drop = FALSE]
@@ -177,7 +180,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             as.matrix(stratum$distmat))
         gk <- array(temp[[1]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
         hk <- array(temp[[2]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
-        if (sum(hk)==0) {
+        sumhk <- sum(hk)
+        # additional checks 2021-10-09
+        if (is.na(sumhk) || !is.finite(sumhk) || sumhk==0) {
             return(NA)   # changed from 1e10 2021-06-01
         }
         
@@ -271,7 +276,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         get(data$usermodel),   # bug fixed 2019-04-14, 2019-05-07
                         data$kernel,
                         stratum$mqarray,
-                        stratum$cellsize)
+                        stratum$cellsize,
+                        data$details$r0
+                    )
                 }
                 else {
                     pch1 <-  PCH1secrparallelcpp(
@@ -299,7 +306,9 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         as.character(data$usermodel),
                         as.matrix(data$kernel),
                         as.matrix(stratum$mqarray),
-                        as.double (stratum$cellsize))
+                        as.double (stratum$cellsize),
+                        as.double (data$details$r0)
+                    )
                 }
                 pdot <- pdot + pmix[x] * pch1
             }
@@ -416,7 +425,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 formatC(beta, format='f', digits=dig+3, width=betaw+3)), collapse = " ")
         cat(progressstring, file = logfilename, sep="\n", append=TRUE)
     }
-
+    
     if (oneeval) {
         out <- c(loglik, beta)
         attr(out, 'components') <- compbystratum
@@ -426,7 +435,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         if (is.finite(loglik)) -loglik   # return the negative loglikelihood
         else 1e10
     }
-
+    
 }
 ############################################################################################
 

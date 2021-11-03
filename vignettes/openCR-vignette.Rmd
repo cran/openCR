@@ -1,5 +1,5 @@
 ---
-title: '**openCR** 2.1 - open population capture--recapture'
+title: '**openCR** 2.2 - open population capture--recapture'
 author: "Murray Efford"
 date: "`r Sys.Date()`"
 output: 
@@ -21,11 +21,13 @@ Sys.setenv(RCPP_PARALLEL_BACKEND = "tinythread")  ## to dodge CRAN ASAN issue
 
 \vspace{12pt}
 
-The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2020) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. Worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf], and simulation-based examples are in a further vignette openCR-simulations.pdf[^footnote1]. The spatial model was described by Efford and Schofield (2020).
+The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2020) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. The vignette [openCR-kernel.pdf][openCR-kernel.pdf] explains the intricacies of movement kernels; worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf][^footnote1]. The spatial model was described by Efford and Schofield (2020).
 
 This is still something of a work in progress, so be careful to check results 'make sense' and be aware of [limitations](#limitations).
 
 [^footnote1]: These supplementary vignettes are not included with the package. It is intended to distribute them on the website https://www.otago.ac.nz/density/. Otherwise contact the author.
+
+<!-- , and simulation-based examples are in a further vignette openCR-simulations.pdf -->
 
 # Outline 
 
@@ -183,7 +185,7 @@ Examples of data input code also appear on the help pages for data objects `Febp
 
 A multi-session capthist object will be converted automatically to a single-session object using function `secr::join` unless `stratified = TRUE` (see below). An appropriate intervals attribute is constructed, using the intervals attribute of the multi-session object for the intervals between primary sessions (1.0 if not specified), and setting other intervals to zero.
 
-Table 1. Input formats for \textbf{openCR} 2.1
+Table 1. Input formats for \textbf{openCR} 2.2
 
 | Input | `stratified` | Interpretation |
 |:-----------------|:----------|:----------------------------------------------------|
@@ -214,7 +216,7 @@ The various models available in **openCR** are named to encode the distinctions 
 
 Thus 'JSSAsecrfCL' is a spatial JSSA model parameterized in terms of per capita recruitment $f$ and fitted by maximizing the conditional likelihood (a spatial version of Link and Barker (2005), minus parameter covariation). Any movement model is specified separately with the 'movementmodel' argument of `openCR.fit`.
 
-Models of the form 'JSSA...CL' are variations on the Pradel--Link--Barker models. **openCR** 2.1 recognises labels of the form 'PLB...' as an alias for each of these models. Thus 'PLBf' is synonymous with 'JSSAfCL', and 'PLBsecrl' is synonymous with 'JSSAsecrlCL'.
+Models of the form 'JSSA...CL' are variations on the Pradel--Link--Barker models. **openCR** 2.2 recognises labels of the form 'PLB...' as an alias for each of these models. Thus 'PLBf' is synonymous with 'JSSAfCL', and 'PLBsecrl' is synonymous with 'JSSAsecrlCL'.
 
 Parameters vary with the type of model, as listed below. Each of these primary parameters ('real' parameters in MARK) may also be modelled as a linear combination of predictors on a suitable link scale, allowing the inclusion of covariates and constraints. The coefficients of the parameter-specific linear combinations are called 'beta' parameters in MARK; the likelihood is maximized with respect to the concatenated list of beta parameters.
 
@@ -558,44 +560,45 @@ The mean is backtransformed from the link scale. This results in some bias owing
 
 Potential movement of home ranges between primary sessions (= dispersal) is a critical part of open-population models. The argument `movementmodel` of `openCR.fit` allows the possibilities in Table 7. Two of these do not model movement at all. The default 'static' is a null model in which each animal retains the same home range. The 'uncorrelated' option models the locations of an animal independently in each primary session; information is sacrificed and no particular movement model is implied.
 
-The remaining options ('BVN', 'BVE', 'BVT', etc.) fit a dispersal kernel (Nathan et al. 2012) to represent movement between primary sessions. This usually requires at least one more parameter to represent the spatial scale of dispersal. 
+The remaining options ('BVN', 'BVE', 'BVC', 'BVT', etc.) fit a dispersal kernel (Nathan et al. 2012) to represent movement between primary sessions. This usually requires at least one more parameter to represent the spatial scale of dispersal. 
 
 **Table 7**. Models for movement between primary sessions.
 
 | Movement model | Parameters |Description (aliases in parentheses) |
 |-------------|------------|--------------------------------------------|
 | `static` | 0 | Centres constant across primary sessions |
-| `uncorrelated` | 0 | Centres unconstrained within habitat mask |
 | `BVN` | 1 | Bivariate normal ('normal', Gaussian)|
 | `BVE` | 1 | Bivariate Laplace kernel ('exponential') |
+| `BVC` | 1 | Bivariate Cauchy kernel |
 | `BVT` | 2 | Bivariate $t$ ('t2D', 2Dt)|
-| `frE` | 1 | Exponential distance moved |
-| `frG` | 2 | Gamma distance moved |
-| `frL` | 2 | Lognormal distance moved |
-| `annular` | 1 | non-zero only at centre and edge |
-| `uniform` | 0 | Uniform within arbitrary radius |
+| `RDE` | 1 | Exponential distance moved |
+| `RDG` | 2 | Gamma distance moved |
+| `RDL` | 2 | Lognormal distance moved |
+| `UNI` | 0 | Uniform within arbitrary radius |
+| `IND` | 0 | Centres unconstrained within habitat mask |
 | (user function) | 0,1,2 | User-supplied function (`ncores = 1` only)|
 
 Note: 'BVN', 'BVE' and 'BVT' kernels were previously designated 'normal', 'exponential' and 't2D' respectively, and these names are still recognised.
 
 ## Movement kernels {#kernels}
 
-All movement kernels in **openCR** are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin (Table 8). Three of the built-in kernels (BVN, BVE, BVT) are defined directly as bivariate probability density functions $g(r)$. Three others (currently denoted frE, frG, frL) are defined indirectly by the univariate distribution of distance moved $f(r)$ where a point on the kernel has polar coordinates $(r, \theta)$ assuming direction $\theta$ uniform on $(0,2\pi)$ (Cousens et al. 2008, Ergon and Gardner 2014).
+Note: The online vignette [openCR-kernel.pdf][openCR-kernel.pdf] covers movement kernels in detail. This section is retained for historical reasons and will be removed in future.
 
-The extent of the kernel is controlled by the argument 'kernelradius' that gives the radius in terms of mask cells. The default radius (10) results in a discretized kernel of 349 cells (square of 441 cells minus corners). Cell-specific probabilities are normalised so that they sum to 1.0 across the kernel. Dispersal probability effectively falls to zero at the boundary of the kernel, so the kernel radius is a critical part of the model. The 'uniform' kernel has no parameters but depends critically on the user-specified kernel radius, as does the little-used 'annular' kernel.
+All movement kernels in **openCR** are radially symmetrical. Relative probability of movement is specified in terms of radial distance $r$ from the point of origin (Table 8). Four of the built-in kernels (BVN, BVE, BVC, BVT) are defined directly as bivariate probability density functions $g(r)$. Three others (denoted RDE, RDG, RDL) are defined indirectly by the univariate distribution of distance moved $f(r)$ where a point on the kernel has polar coordinates $(r, \theta)$ assuming direction $\theta$ uniform on $(0,2\pi)$ (Cousens et al. 2008, Ergon and Gardner 2014).
 
-**Table 8**. Kernel probability density functions. 'move.a' and 'move.b' are the names used in **openCR** for scale and shape parameters, as indicated in the table. Based in part on Nathan et al. (2012, Table 15.1) and Clark et al. (1999) with adjustment for parameterisation in **openCR**. $g(r) = f(r)/(2\pi r)$.
+The extent of the kernel is controlled by the argument 'kernelradius' that gives the radius in terms of mask cells. Cell-specific probabilities are normalised so that they sum to 1.0 across the kernel. Dispersal probability effectively falls to zero at the boundary of the kernel, so the kernel radius is a critical part of the model. The uniform 'UNI' kernel has no parameters but depends critically on the user-specified kernel radius.
+
+**Table 8**. Kernel probability density functions. 'move.a' and 'move.b' are the names used in **openCR** for scale and shape parameters, as indicated in the table. Based in part on Nathan et al. (2012, Table 15.1) and Clark et al. (1999) with adjustment for parameterisation in **openCR**. $g(r) = f(r) / (2 \pi r)$.
 
 | Kernel | `move.a` | `move.b` | $f(r)$ | Mean $r$* |  
 |----------|-------|-----------|--------------------|----------------|
 | BVN | $\alpha$ | --- | $\frac{r}{ \alpha^2} e^{ \frac{-r^2}{2\alpha^2} }$ |$\alpha \sqrt{\frac{ \pi}{2}}$ |
 | BVE | $\alpha$ | --- | $\frac{r}{\alpha^2} e^{ \frac{-r}{\alpha}}$| $2\alpha$ |
 | BVT | $\alpha$ | $\beta$ | $\frac{2 \beta r}{\alpha^2} \left( 1 + \frac{r^2}{\alpha^2} \right)^{-(\beta+1)}$| $\alpha \frac{\sqrt \pi}{2} \frac{\Gamma \left( \beta-0.5 \right)}{\Gamma (\beta)}$|
-| frE | $\alpha$ | --- | $\frac{1}{\alpha} e^{\frac{-r}{\alpha}}$ | $\alpha$ |
-| frG | $\alpha$ | $\beta$ | $\frac{1}{\Gamma(\beta)\alpha^\beta} r^{\beta-1}  e^{ \frac{-r}{\alpha} }$ | $\alpha\beta$ | 
-| frL | $\log \mu$ | $1/(e^{\sigma^2}-1)$ | $\frac{1}{r \sigma \sqrt{2 \pi}} e^{ \frac{-(\ln(r)-\mu)^2}{2\sigma^2} }$ | $e^{\mu + \frac{\sigma^2}{2}}$ | 
-| `annular` | $\alpha$ | --- | | | | 
-| `uniform` | --- | ---| | | | 
+| RDE | $\alpha$ | --- | $\frac{1}{\alpha} e^{\frac{-r}{\alpha}}$ | $\alpha$ |
+| RDG | $\alpha$ | $\beta$ | $\frac{1}{\Gamma(\beta)\alpha^\beta} r^{\beta-1}  e^{ \frac{-r}{\alpha} }$ | $\alpha\beta$ | 
+| RDL | $\exp \mu$ | $1/(e^{\sigma^2}-1)$ | $\frac{1}{r \sigma \sqrt{2 \pi}} e^{ \frac{-(\ln(r)-\mu)^2}{2\sigma^2} }$ | $e^{\mu + \frac{\sigma^2}{2}}$ | 
+| `UNI` | --- | ---| | | | 
 | (user) | $a$ | $b$ | | | | 
 
 \* Continuous, untruncated, kernel. Expected values for the discretized and truncated kernel will be less (see `summary.kernel`). 
@@ -607,15 +610,15 @@ The 'BVT' kernel is the same as '2Dt' of Clark et al. (1999) and Nathan et al. (
 The `BVT' kernel approaches bivariate normal as $\beta \to \infty$ and Cauchy as $\beta \to 0$ (e.g., Clark et al. 1999).
 Clark et al. (1999 p. 1485) found it hard to fit this kernel to seed dispersal data. The mean is undefined for $\beta \le 0.5$.
 
-The `annular' kernel introduced in **openCR** 2.0.0 places proportion $p_0$ of the mass at zero (no movement) and the rest in an annulus bounded by the radii $c_1$ and $c_2$. The discrete implementation in **openCR** places all probability mass either at the central point (zero movement) or in the edge cells; $c_2$ is defined by the kernel radius and $c_2 - c_1$ by the kernel spacing. Cells with zero mass are dropped from the kernel.
+<!-- The `annular' kernel introduced in **openCR** 2.0.0 places proportion $p_0$ of the mass at zero (no movement) and the rest in an annulus bounded by the radii $c_1$ and $c_2$. The discrete implementation in **openCR** places all probability mass either at the central point (zero movement) or in the edge cells; $c_2$ is defined by the kernel radius and $c_2 - c_1$ by the kernel spacing. Cells with zero mass are dropped from the kernel. -->
 
 ## Zero-inflated kernels
 
-**openCR** 2.1 introduces zero-inflated versions of kernels otherwise defined with one parameter or none. Zero-inflated kernels use the suffix 'zi', hence 'BVNzi', 'BVEzi', 'frEzi', 'uniformzi'. The kernel-free movement model 'uncorrelated' also has a zero-inflated form 'uncorrelatedzi' that is not strictly uncorrelated. Each of these models has an additional zero-inflation parameter (move.b or move.a depending on whether the base kernel does or does not already have a parameter). Zero-inflated kernels often fit well, but it is common for the fitted scale parameter 'move.a' of BVNzi, BVEzi and frEzi models to become large and essentially unidentifiable, and to depend on the kernel radius or buffer width.
+**openCR** 2.2 introduces zero-inflated versions of kernels otherwise defined with one parameter or none. Zero-inflated kernels use the suffix 'zi', hence 'BVNzi', 'BVEzi', 'RDEzi', 'UNIzi'. The kernel-free independent movement model 'IND' also has a zero-inflated form 'INDzi' that is not strictly independent or uncorrelated. Each of these models has an additional zero-inflation parameter (move.b or move.a depending on whether the base kernel does or does not already have a parameter). Zero-inflated kernels often fit well, but it is common for the fitted scale parameter 'move.a' of BVNzi, BVEzi and RDEzi models to become large and essentially unidentifiable as the kernel for $r>0$ flattens.
 
 ## User-defined kernel
 
-A kernel function may be specified by the user and passed in the argument `movementmodel`. The function should have argument $r$, and optionally $a$, or $a$ and $b$ (the last two correspond to **openCR** parameters `move.a` and `move.b`) It should return a vector of values one for each element of $r$, although length(r) = 1 when the likelihood is evaluated in C++ (`details$R = FALSE`, the default). The code should give a valid result when $r = 0$. With the default link ('log' for both `move.a` and `move.b`) there is no risk of $a \leq 0$ or $b \leq 0$.
+A kernel function may be specified by the user and passed in the argument `movementmodel`. The function should have argument $r$, and optionally $a$, or $a$ and $b$ (the last two correspond to **openCR** parameters `move.a` and `move.b`) It should return a vector of values one for each element of $r$, although length(r) = 1 when the likelihood is evaluated in C++ (`details$R = FALSE`, the default). The code should give a valid result when $r = 0$ that will be used for the origin cell. With the default link ('log' for both `move.a` and `move.b`) there is no risk of $a \leq 0$ or $b \leq 0$. 
 
 ## Sparse kernels
 
@@ -624,7 +627,7 @@ A big problem with standard kernels as defined in **openCR** <2.0.0 is that the 
 Sparse kernels for normal, exponential and t2D distributions are obtained by setting `sparsekernel = TRUE` when fitting a model with `openCR.fit()`. Here is an example.
 
 ```{r sparsekernel, fig.width=8, fig.height=3.5}
-par(mar=c(3,1,4,5))
+par(mar = c(3,1,4,5))
 k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
   sparse = TRUE, clip = TRUE)
 plot(k)
@@ -701,7 +704,7 @@ The `print` method for objects from `derived` provides some control over formatt
 
 The **secr** functions `sim.popn` and `sim.capthist` provide the means to generate spatial open-population data with known survival probability, population trend $\lambda$ and detection parameters. Open population data are generated by setting nsessions > 1 in `sim.popn` and specifying a value for $\lambda$. Turnover settings are controlled by components of the 'details' argument of `sim.popn`. The **secr** help page ?turnover should be consulted. `sim.capthist` should be called with renumber = FALSE (otherwise individual capture histories cannot be matched across primary sessions). 
 
-Use the **openCR** function `sim.nonspatial` to generate non-spatial open-population data. **openCR** also provides these finctions to streamline simulation and speed it up by using multiple cores --
+Use the **openCR** function `sim.nonspatial` to generate non-spatial open-population data. **openCR** also provides these functions to streamline simulation --
 
 | Function | Purpose |
 |-------------|------------------------------------------------------------|
@@ -709,7 +712,9 @@ Use the **openCR** function `sim.nonspatial` to generate non-spatial open-popula
 | `runsim.spatial` | Generate data with `sim.popn` and `sim.capthist`, and fit models using `openCR.fit`| 
 | `sumsims` | Summarise list output from `runsim.nonspatial` or `runsim.spatial` |
 
-`runsim.nonspatial` and `runsim.spatial` are essentially wrappers; the user must provide appropriate argument values for each of the nested functions. See openCR-simulations.pdf for example code.
+`runsim.nonspatial` and `runsim.spatial` are essentially wrappers; the user must provide appropriate argument values for each of the nested functions. 
+
+<!-- See openCR-simulations.pdf for example code. -->
 
 # Troubleshooting
 
@@ -1159,8 +1164,8 @@ onejoined(leftlabel='stratum 3', yb = -0.5, le = c(4,3,4,4), intlabel='', col = 
 rect(-3, -2, 19.3, 8.7)
 ```
 
-[secr-manual.pdf]: https://www.otago.ac.nz/density/pdfs/secr-manual.pdf
 [secr-overview.pdf]: https://www.otago.ac.nz/density/pdfs/secr-overview.pdf
 [secr-datainput.pdf]: https://www.otago.ac.nz/density/pdfs/secr-datainput.pdf
 
 [openCR-examples.pdf]: https://www.otago.ac.nz/density/pdfs/openCR-examples.pdf
+[openCR-kernel.pdf]: https://www.otago.ac.nz/density/pdfs/openCR-kernel.pdf

@@ -41,7 +41,8 @@ struct Somesecrhistories : public Worker {
     const RMatrix<int>    kernel;
     const RMatrix<int>    mqarray;
     
-    double                cellsize;    
+    double                cellsize;   
+    double                r0;    
     int  kk, jj, kn, cc;
     bool indiv;
     
@@ -77,6 +78,7 @@ struct Somesecrhistories : public Worker {
         const IntegerMatrix kernel,
         const IntegerMatrix mqarray,
         double cellsize,
+        double r0,
         NumericVector output)    
         : 
             x(x), type(type), mm(mm), nc(nc), binomN(binomN), CJSp1(CJSp1),  
@@ -85,7 +87,7 @@ struct Somesecrhistories : public Worker {
             openval(openval), PIA(PIA), PIAJ(PIAJ), Tsk(Tsk), h(h), hindex(hindex), 
             movementcode(movementcode), sparsekernel(sparsekernel), anchored(anchored), 
             edgecode(edgecode), usermodel(usermodel), moveargsi(moveargsi), kernel(kernel), 
-            mqarray(mqarray), cellsize(cellsize), output(output) {
+            mqarray(mqarray), cellsize(cellsize), r0(r0), output(output) {
         
         // now can initialise these derived counts
         kk = Tsk.nrow();             // number of detectors
@@ -407,7 +409,7 @@ struct Somesecrhistories : public Worker {
         if (movementcode > 1) {
             getmoveargs (n, x, nc, jj, openval, PIAJ, moveargsi, moveargs);
             if (movementcode != 17) {   // kernel not needed for uncorrelatedz
-                fillkernelp (jj, fillcode, sparsekernel, cellsize, kernel, moveargsi, 
+                fillkernelp (jj, fillcode, sparsekernel, cellsize, r0, kernel, moveargsi, 
                     usermodel, moveargs, kernelp, true, grain, kernelreturncode);
             }
             if (kernelreturncode<0) return NAN;
@@ -467,7 +469,6 @@ struct Somesecrhistories : public Worker {
                         }
                     }
                     else if (anchored) {
-                        // anchored BVNac, BVEac
                         std::fill(alpha.begin(), alpha.end(), 1.0/mm);
                         for (m=0; m<mm; m++) {
                             // for now treat distribution p(x_j|x) as constant over sessions
@@ -544,7 +545,8 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
     const IntegerVector moveargsi, 
     const IntegerMatrix kernel,
     const IntegerMatrix mqarray,
-    double cellsize) {
+    double cellsize,
+    double r0) {
     
     NumericVector output(nc); 
 
@@ -557,7 +559,7 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
             movementcode, sparsekernel, anchored, edgecode,
             usermodel,
             moveargsi, kernel, mqarray, 
-            cellsize, output);
+            cellsize, r0, output);
     
     Rcpp::checkUserInterrupt();
     

@@ -10,11 +10,11 @@ msk[,] <- msk[,] - 255   # centre on 0,0
 
 # define full and sparse kernels
 k.BVN <- make.kernel('BVN', kernelradius = 20, spacing = 10, move.a = 50, 
-    clip = TRUE, sparse = FALSE)
+    clip = TRUE, sparsekernel = FALSE, r0 = 0)
 k.BVT1 <- make.kernel('BVT', kernelradius = 20, spacing = 10, move.a = 50, 
-    move.b = 1, clip = TRUE, sparse = FALSE)
+    move.b = 1, clip = TRUE, sparsekernel = FALSE, r0 = 0)
 k.BVN.sp <- make.kernel('BVN', kernelradius = 20, spacing = 10, move.a = 50, 
-    clip = TRUE, sparse = TRUE)
+    clip = TRUE, sparsekernel = TRUE, r0 = 0)
 
 # use traps object as basis for closed circular polygon
 poly <- make.circle(n = 500, radius = 100)
@@ -30,7 +30,7 @@ test_that("full BVN kernel has expected proportion in 2 x move.a", {
 # pkernel(100, 'BVT', move.a=50, move.b=1, truncate = 200) = 0.85 
 # and for this discretized and truncated kernel...
 test_that("full BVT1 kernel has expected proportion in 2 x move.a", {
-    expect_equal(proportionInPolygon(k.BVT1,poly, 'kernelp'), 0.8427389, 
+    expect_equal(proportionInPolygon(k.BVT1, poly, 'kernelp'), 0.8427389, 
         tolerance = 1e-4, check.attributes = FALSE)
     
 })
@@ -39,7 +39,7 @@ test_that("proportionInPolygon matches expected value after cumMove from point",
     
     # initial distribution defaults to central point; one step
     X <- cumMove(mask = msk, kernel = k.BVN.sp, nstep = 1)
-    expect_equal(proportionInPolygon(X,poly), 0.8655493, 
+    expect_equal(proportionInPolygon(X,poly), 0.8632878, 
         tolerance = 1e-4, check.attributes = FALSE)
     
 })
@@ -48,7 +48,7 @@ test_that("proportionInPolygon matches expected value after cumMove from polygon
     
     # initial distribution across polygon; two steps
     X <- cumMove(poly, msk, k.BVN.sp, nstep = 2)
-    expect_equal(proportionInPolygon(X, poly),  0.4702565, 
+    expect_equal(proportionInPolygon(X, poly),  0.4761272, 
         tolerance = 1e-4, check.attributes = FALSE)
     
 })
@@ -60,11 +60,11 @@ test_that("qkernel medians match expected", {
         tolerance = 1e-6, check.attributes = FALSE)
     expect_equal(qkernel(0.5, 'BVT', 30, 3), 30*sqrt(0.5^(-1/3)-1), 
         tolerance = 1e-6, check.attributes = FALSE)
-    expect_equal(qkernel(0.5, 'frE', 30), -30*log(0.5), 
+    expect_equal(qkernel(0.5, 'RDE', 30), -30*log(0.5), 
         tolerance = 1e-6, check.attributes = FALSE)
-    expect_equal(qkernel(0.5, 'frG', 30, 3), qgamma(0.5, shape=3, scale=30),  
+    expect_equal(qkernel(0.5, 'RDG', 30, 3), qgamma(0.5, shape=3, scale=30),  
         tolerance = 1e-6, check.attributes = FALSE)
-    expect_equal(qkernel(0.5, 'frL', 30, 3), 30, 
+    expect_equal(qkernel(0.5, 'RDL', 30, 3), 30, 
         tolerance = 1e-6, check.attributes = FALSE)
     
 })
@@ -81,40 +81,48 @@ test_that("gkernel matches expected", {
         tolerance = 1e-6, check.attributes = FALSE)
     expect_equal(gkernel(r, 'BVT', alpha, beta), beta/pi/alpha^2 * (1 + r^2/alpha^2)^(-beta-1), 
         tolerance = 1e-6, check.attributes = FALSE)
-    expect_equal(gkernel(r, 'frE', alpha), exp(-r/alpha)/2/pi/r/alpha, 
+    expect_equal(gkernel(r, 'RDE', alpha), exp(-r/alpha)/2/pi/r/alpha, 
         tolerance = 1e-6, check.attributes = FALSE)
-    expect_equal(gkernel(r, 'frG', alpha, beta), r^(beta-2) * exp(-r/alpha)/2/pi/gamma(beta)/alpha^beta,  
+    expect_equal(gkernel(r, 'RDG', alpha, beta), r^(beta-2) * exp(-r/alpha)/2/pi/gamma(beta)/alpha^beta,  
         tolerance = 1e-6, check.attributes = FALSE)
-    expect_equal(gkernel(r, 'frL', alpha, beta), exp(-(log(r)-mu)^2 / 2 / sigma^2) /(2*pi)^1.5/r^2/sigma, 
+    expect_equal(gkernel(r, 'RDL', alpha, beta), exp(-(log(r)-mu)^2 / 2 / sigma^2) /(2*pi)^1.5/r^2/sigma, 
         tolerance = 1e-6, check.attributes = FALSE)
 })
 
 test_that("discretized kernel matches expected", {
     alpha <- 30
-    
-    # full kernel
+    # full kernel BVE
     k <- make.kernel('BVE', kernelradius = 10, spacing = 10, move.a = alpha,
-        sparsekernel = FALSE, clip = TRUE, normalize = TRUE)
+        sparsekernel = FALSE, clip = TRUE, normalize = TRUE, r0=0)
     d <- sqrt(apply(k^2,1,sum))
     p <- covariates(k)$kernelp
     ci <- which(k$x==0 & k$y==0)
     expect_equal(sum(p), 1.0, tolerance = 1e-8)
     expect_equal(sum(p*d), 47.13507891, tolerance = 1e-6)
     
+    # full kernel BVC, r0 = 1/sqrt(pi)
+    k <- make.kernel('BVC', kernelradius = 10, spacing = 10, move.a = alpha,
+        sparsekernel = FALSE, clip = TRUE, normalize = FALSE, r0=1/sqrt(pi))
+    d <- sqrt(apply(k^2,1,sum))
+    p <- covariates(k)$kernelp
+    ci <- which(k$x==0 & k$y==0)
+    expect_equal(sum(p), 0.7258447181, tolerance = 1e-6)
+    p <- p/sum(p)
+    expect_equal(sum(p*d), 41.59256317, tolerance = 1e-6)
+    
     # sparse kernel
     k <- make.kernel('BVE', kernelradius = 10, spacing = 10, move.a = alpha,
-        sparsekernel = TRUE, clip = TRUE, normalize = TRUE)
+        sparsekernel = TRUE, clip = TRUE, normalize = TRUE, r0=0)
     d <- sqrt(apply(k^2,1,sum))
     p <- covariates(k)$kernelp
     expect_equal(sum(p), 1.0, tolerance = 1e-8)
-    expect_equal(sum(p*d), 48.0341207495, tolerance = 1e-6)
+    expect_equal(sum(p*d), 45.9770124, tolerance = 1e-6)
     
     # large full kernel
     k <- make.kernel('BVE', kernelradius = 100, spacing = 5, move.a = alpha,
-        sparsekernel = FALSE, clip = TRUE, normalize = TRUE)
+        sparsekernel = FALSE, clip = TRUE, normalize = TRUE, r0=0)
     d <- sqrt(apply(k^2,1,sum))
     p <- covariates(k)$kernelp
-    sum(p*d)
     expect_equal(sum(p*d), 59.984398563, tolerance = 1e-6)
     
 })
@@ -124,11 +132,11 @@ test_that("zero-inflated quantiles matches expected", {
             tolerance = 1e-6, check.attributes = FALSE)
         expect_equal(qkernel(0.9, 'BVEzi', 30, 0.3), 103.0669556, 
             tolerance = 1e-6, check.attributes = FALSE)
-        expect_equal(qkernel(0.9, 'frEzi', 30, 0.3),  58.3773044717, 
+        expect_equal(qkernel(0.9, 'RDEzi', 30, 0.3),  58.3773044717, 
             tolerance = 1e-6, check.attributes = FALSE)
-        expect_equal(qkernel(0.9, 'uniformzi', 0.3, truncate=100), 100, 
+        expect_equal(qkernel(0.9, 'UNIzi', 0.3, truncate=100), 100, 
             tolerance = 1e-6, check.attributes = FALSE)
-        expect_equal(qkernel(0.2, 'uniformzi', 0.3, truncate=100), 0, 
+        expect_equal(qkernel(0.2, 'UNIzi', 0.3, truncate=100), 0, 
             tolerance = 1e-6, check.attributes = FALSE)
 })
 
@@ -146,3 +154,4 @@ test_that("zero-inflated quantiles matches expected", {
 #         tolerance = 1e-6, check.attributes = FALSE)
 # })
 
+# make.kernel('UNIzi', 30,10,0.5)

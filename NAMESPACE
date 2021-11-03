@@ -1,18 +1,19 @@
 import (secr)
 import (parallel)
 
-importFrom (graphics, "axis", "box", "contour", "plot", "points", "segments", 
-    "mtext", "lines", "par", "symbols")
+importFrom (graphics, "abline", "axis", "box", "contour", "plot", "points", "segments", 
+    "mtext", "lines", "par", "rug", "symbols")
 importFrom (utils, "packageDescription", "packageVersion", "flush.console", "combn", "head", "tail")
 importFrom (MASS, "ginv", "eqscplot")
 importFrom (nlme, "fdHess")
 importFrom (stringr, "str_trim", "str_split", "str_c", "str_pad")
 importFrom (plyr, "count", "rbind.fill")
 importFrom (abind, "abind")
-importFrom (stats, "AIC", "coef", "logLik", "as.formula", "model.matrix", "nlm", "optim", "vcov",
+importFrom (stats, "AIC", "as.formula", "coef", "contrasts", "dist", "integrate", 
+    "logLik", "model.matrix", "nlm", "optim", "vcov",
     "predict", "qnorm", "dpois", "dbinom", "dnbinom", "dgamma", "dlnorm", 
     "pgamma", "pnorm", "qexp", "qgamma", "qlnorm", "runif", "sd", "median", 
-    "uniroot", "update", "contrasts")
+    "uniroot", "update")
 importFrom (methods, "formalArgs")
 importFrom (Rcpp, "evalCpp")
 importFrom (RcppParallel, "RcppParallelLibs", "setThreadOptions", "defaultNumThreads")
@@ -50,12 +51,13 @@ export (pkernel)
 export (qkernel)
 export (matchscale)
 export (cumMove)
+export (expected.d)
 export (proportionInPolygon)
 export (ucare.cjs)
 export (moving.fit)
 export (extractFocal)
-
 export (stratify)
+# export (modelAverage) 
 
 export (strata)
 S3method(strata, default)
@@ -68,6 +70,9 @@ S3method (LLsurface, openCR)
 S3method (plot, kernel)
 S3method (summary, kernel)
 S3method (print, summary.kernel)
+
+S3method(modelAverage, openCR)
+S3method(modelAverage, openCRlist)
 
 S3method (print, openCR)
 S3method (summary, openCR)
@@ -82,7 +87,6 @@ S3method (logLik, openCR)
 S3method (coef, openCR)
 S3method (classMembership, openCR)
 S3method (makeNewData, openCR)
-## export(openCR.make.newdata)
 
 S3method (rev, capthist)
 

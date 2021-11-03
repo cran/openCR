@@ -22,13 +22,13 @@ prwi (type, n, x, jj, cumss, nmix, w, fi, li, openval, PIA, PIAJ, intervals, CJS
 prwisecr (type, n, x, nc, jj, kk, mm, nmix, cumss, w, fi, li, gk, openval, 
     PIA, PIAJ, binomN, Tsk, intervals, h, hindex, CJSp1, moveargsi, 
     movementcode, sparsekernel, edgecode, usermodel, kernel = NULL, 
-    mqarray = NULL, cellsize = NULL)
+    mqarray = NULL, cellsize = NULL, r0)
 
 PCH1 (type, x, nc, cumss, nmix, openval0, PIA0, PIAJ, intervals)
 
 PCH1secr (type, individual, x, nc, jj, cumss, kk, mm, openval0, PIA0, PIAJ, gk0,
     binomN, Tsk, intervals,  moveargsi, movementcode, sparsekernel, edgecode, 
-    usermodel, kernel, mqarray, cellsize) 
+    usermodel, kernel, mqarray, cellsize, r0) 
 
 pradelloglik (type, w, openval, PIAJ, intervals)
 
@@ -63,7 +63,8 @@ cyclic.fit (..., maxcycle = 10, tol = 1e-5, trace = FALSE)
   \item{kernel}{dataframe with columns x,y relative coordinates of kernel cell centres}
   \item{mqarray}{integer matrix}
   \item{cellsize}{numeric length of side of kernel cell}
-  
+  \item{r0}{numeric; effective radius of zero cell for movement models (usually 0.5)}
+
   \item{gk}{real array}
   \item{Tsk}{array detector usage}
 

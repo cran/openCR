@@ -17,8 +17,8 @@
   recruitment is flexible (options include population growth rate \eqn{\lambda}, 
   per capita recruitment \eqn{f} and seniority \eqn{\gamma}). Spatially explicit 
   analyses may assume home-range centres are fixed or allow dispersal between
-  primary sessions according to a normal, exponential or user-defined
-  kernel.
+  primary sessions according to various probability kernels, including bivariate 
+  normal (BVN) and bivariate \emph{t} (BVT).
 
 }
 
@@ -27,8 +27,8 @@
 \tabular{ll}{
 Package: \tab openCR\cr
 Type: \tab Package\cr
-Version: \tab 2.1.0\cr
-Date: \tab 2021-08-14\cr
+Version: \tab 2.2.0\cr
+Date: \tab 2021-11-03\cr
 License: \tab GNU General Public License Version 2 or later\cr
 }
 

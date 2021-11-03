@@ -29,6 +29,8 @@
 ## 2021-04-20 2.0.0 stratified
 ## 2021-07-22 dummyvariablecoding
 ## 2021-08-09 iterlim 300 default for nlm (less frequent code 4)
+## 2021-10-05 revamp of preferred aliases for movementmodel
+## 2021-10-06 allow RDL
 ################################################################################
 
 openCR.fit <- function (
@@ -39,10 +41,13 @@ openCR.fit <- function (
   mask = NULL, 
   detectfn = c('HHN','HHR','HEX','HAN','HCG','HVP', 'HPX'), 
   binomN = 0, 
-  movementmodel = c('static','uncorrelated','BVN','BVE','BVT','frE','frG','frL', 'uniform'),
+  movementmodel = c('static', 'BVN', 'BVE', 'BVT', 'RDE', 'RDG','RDL','IND', 'UNI',
+      'BVNzi', 'BVEzi', 'RDEzi', 'INDzi', 'UNIzi'),
   edgemethod = c('truncate', 'wrap', 'none'), 
-  kernelradius = 10,
-  sparsekernel = FALSE, 
+  # kernelradius = 10,
+  # sparsekernel = FALSE, 
+  kernelradius = 30,
+  sparsekernel = TRUE, 
   start = NULL, 
   link = list(), 
   fixed = list(), 
@@ -80,35 +85,35 @@ openCR.fit <- function (
   
   #########################################################################
   ## Use input 'details' to override various defaults
-    defaultdetails <- list(
-        autoini = NULL, 
-        CJSp1 = FALSE, 
-        contrasts = NULL, 
-        control = if (method=='Newton-Raphson') list(iterlim=300) else list(),
-        debug = 0, 
-        grain = 1,
-        hessian = 'auto', 
-        ignoreusage = FALSE, 
-        initialage = 0, 
-        LLonly = FALSE,
-        minimumage = 0, 
-        maximumage = 1,
-        multinom = FALSE,
-        R = FALSE, 
-        squeeze = TRUE, 
-        trace = FALSE,
-        initialstratum = 1,
-        log = '',
-        dummyvariablecoding = NULL,
-        anchored = FALSE
-    )
+  defaultdetails <- list(
+    autoini = NULL, 
+    CJSp1 = FALSE, 
+    contrasts = NULL, 
+    control = if (method=='Newton-Raphson') list(iterlim=300) else list(),
+    debug = 0, 
+    grain = 1,
+    hessian = 'auto', 
+    ignoreusage = FALSE, 
+    initialage = 0, 
+    LLonly = FALSE,
+    minimumage = 0, 
+    maximumage = 1,
+    multinom = FALSE,
+    R = FALSE, 
+    squeeze = TRUE, 
+    trace = FALSE,
+    initialstratum = 1,
+    log = '',
+    dummyvariablecoding = NULL,
+    anchored = FALSE,
+    r0 = 1/sqrt(pi)      # effective radius of zero cell in movement kernel
+  )
   
   if (is.logical(details$hessian)) {
     details$hessian <- ifelse(details$hessian, 'auto', 'none')
   }
   if (!is.null(details$kernelradius)) {
-      ## 2021-05-30
-      warning ("kernelradius is now full argument of openCR.fit; value in details ignored")
+    warning ("kernelradius is now full argument of openCR.fit; value in details ignored")
   }
   
   ##
@@ -122,7 +127,7 @@ openCR.fit <- function (
   ##############################################
   # Dummy variable coding 2021-07-22
   ##############################################
-
+  
   # allow TRUE to mean 't' or 'session' predictors
   if (is.logical(details$dummyvariablecoding)) {
     if (details$dummyvariablecoding) 
@@ -219,14 +224,18 @@ openCR.fit <- function (
       usermodel <- ""
       # specify 'choices' to extend permissable models to include 
       # 'annularR' while avoiding need to document it!
+      
       movementmodel <- match.arg(movementmodel[1], 
-        choices = c('static','uncorrelated', .openCRstuff$movementmodels))
-      if (movementmodel == 'frL') {
-        message("movement kernel 'frL' not allowed in openCR.fit() because ",
-          "it can crash R and is highly dependent on kernelradius. ",
-          "Try 'frG' instead.")
-        return(NULL)
+        choices = c('static', .openCRstuff$movementmodels))
+      
+      movementmodel <- stdmovement(movementmodel)
+      if (details$r0 <= 0 && movementmodel %in% c('RDG','RDL','RDLS','BVC','RDE')) {
+          warning ("cannot use zero value for r0 with movement model ", movementmodel, 
+              "; setting r0 to 1/sqrt(pi)");
+          details$r0 <- 1/sqrt(pi)
       }
+      
+      
     }
     ## integer code for movement model
     movementcode <- movecode(movementmodel)
@@ -240,6 +249,9 @@ openCR.fit <- function (
       warning("specify edgemethod 'wrap' or 'truncate' to avoid ", 
         "bias in movement models")
     }
+    if (movementmodel %in% .openCRstuff$kernelmodels && kernelradius==10) {
+      warning("kernelradius may be inadequate - try sparsekernel with larger radius")
+    }
   }
   else {
     if (!is.null(mask)) warning("mask not used in non-spatial analysis")
@@ -249,7 +261,7 @@ openCR.fit <- function (
     edgecode <- -1
     usermodel <- ""
   }
-
+  
   ##############################################
   ## Remember start time and call
   ##############################################
@@ -323,11 +335,13 @@ openCR.fit <- function (
   
   moveargsi <- c(-2,-2)
   if (secr) {
-    if (movementmodel %in% c('normal', 'exponential', 'BVN', 'BVE', 'frE', 'uniformzi', 'uncorrelatedzi')) {
+    if (movementmodel %in% c('RDE', 'BVN', 'BVE', 'BVC', 'INDzi', 'UNIzi', 'uniformzi',
+      'normal', 'exponential','frE','uncorrelatedzi')) {
       pnames <- c(pnames, 'move.a')
       moveargsi[1] <- .openCRstuff$sigmai[typecode(type)] + 1 + (detectfn %in% c(15,17,18,19))
     }
-    else if (movementmodel %in% c('t2D', 'BVT', 'frL', 'frG', 'BVNzi','BVEzi','frEzi')) {
+    else if (movementmodel %in% c('RDG','RDL','BVT','BVNzi','BVEzi','RDEzi','BVN2', 'RDLS',
+      'frL', 'frG', 'frEzi', 't2D')) {
       pnames <- c(pnames, 'move.a', 'move.b')
       moveargsi[1] <- .openCRstuff$sigmai[typecode(type)] + 1 + (detectfn %in% c(15,17,18,19))
       moveargsi[2] <- moveargsi[1]+1
@@ -344,7 +358,7 @@ openCR.fit <- function (
         }
       }
     }
-    else if (movementmodel == 'uniform') {
+    else if (movementmodel %in% c('uniform','UNI')) {
       ## no parameters, no action needed
     }
     else if (movementmodel == 'annular') {
@@ -392,8 +406,8 @@ openCR.fit <- function (
     gamma = 'logit', kappa = 'log', g = 'logit',
     lambda = 'log', BN = 'log', BD = 'log', D = 'log', N = 'log',
     superN = 'log', superD = 'log', sigma = 'log', z = 'log', pmix='mlogit',
-    move.a =  if (movementmodel %in% c('uniformzi','uncorrelatedzi')) 'logit' else 'log', 
-    move.b = if (movementmodel %in% c('BVNzi','BVEzi','frEzi')) 'logit' else 'log',
+    move.a =  if (movementmodel %in% c('INDzi', 'UNIzi', 'uncorrelatedzi','uniformzi')) 'logit' else 'log', 
+    move.b = if (movementmodel %in% c('BVNzi','BVEzi', 'RDEzi', 'frEzi')) 'logit' else 'log',
     tau = 'mlogit')
   link <- replace (defaultlink, names(link), link)
   link[!(names(link) %in% pnames)] <- NULL
@@ -409,7 +423,7 @@ openCR.fit <- function (
   # Prepare detection design matrices and lookup
   ##############################################
   memo ('Preparing design matrices', details$trace)
-
+  
   if (ndvc>0) {   # 2021-07-22
     for (i in 1:length(model)) {
       # remove intercept from models with dummy variable coding
@@ -418,7 +432,6 @@ openCR.fit <- function (
       }
     }
   }
-  
   design <- openCR.design (
     capthist   = capthist, 
     models     = model, 
@@ -584,18 +597,19 @@ openCR.fit <- function (
       BD = (ncf + 1) / marea,
       D = (ncf + 1) / marea,
       N = ncf + 1,
-        superN = ncf*(1-distrib) + 20,   ## use N-n for binomial 2018-03-12
-        superD = (ncf + 20) / marea,
-        sigma =  rpsv,
-        z = 2,
-        move.a = if (secr) (if (movementmodel %in% c('annular', 'uniformzi','uncorrelatedzi')) 0.4 else rpsv) else 0.6,    # increased rpsv/2 to rpsv 2021-04-11
-        move.b = if (secr) (if (movementmodel %in% c('annular2','annularR','BVNzi','BVEzi','frEzi')) 0.4 else 1.5) else 0.2,
-        pmix = 0.25
+      superN = ncf*(1-distrib) + 20,   ## use N-n for binomial 2018-03-12
+      superD = (ncf + 20) / marea,
+      sigma =  rpsv,
+      z = 2,
+      move.a = if (secr) (if (movementmodel %in% c('annular', 'uniformzi','uncorrelatedzi','INDzi', 'UNIzi')) 0.4 else rpsv) else 0.6,    # increased rpsv/2 to rpsv 2021-04-11
+      move.b = if (secr) (if (movementmodel %in% c('annular2','annularR','BVNzi','BVEzi','RDEzi','frEzi')) 0.4 else 
+        if (movementmodel %in% c('BVN2')) rpsv*2 else 1.5) else 0.2,
+      pmix = 0.25
     )
     
     getdefault <- function (par) transform (default[[par]], link[[par]])
     defaultstart <- rep(0, NP)
-
+    
     startindx <- parindx
     if (ndvc==0) {
       startindx <- lapply(startindx, '[', 1)   ## only first
@@ -608,7 +622,7 @@ openCR.fit <- function (
       }
     }
     for ( i in 1:length(startindx) ) {
-        defaultstart[startindx[[i]]] <- getdefault (names(model)[i])
+      defaultstart[startindx[[i]]] <- getdefault (names(model)[i])
     }
     if(details$nmix>1) {
       ## scaled by mlogit.untransform

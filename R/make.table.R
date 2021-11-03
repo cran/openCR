@@ -49,7 +49,9 @@ make.table <- function (fits, parm = 'phi', fields = 'estimate', strata = 1,
         rown <- names(fits)
         labellist <- lapply(fits, '[[', 'sessionlabels')
         # for backward compatibility 2021-04-26
-        if (!is.list(labellist[[1]])) labellist <- list(labellist)
+        #if (!is.list(labellist[[1]])) labellist <- list(labellist)
+        # 2021-09-24 fix
+        if (!is.list(labellist)) labellist <- list(labellist)
         coln <- unique(as.character(unlist(labellist)))
         tab <- matrix (nrow = length(rown), ncol = length(coln), 
             dimnames = list(model = rown, session = coln))

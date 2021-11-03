@@ -9,9 +9,17 @@
 // 2021-07-27 grain = -1 for debug messages
 // 2021-07-29 BVNz, BVEz, uniformz, frEz  (11,12,13,14)
 // 2021-08-07 String input for usermodel converted to std::string for thread safety
+// 2021-09-25 BVN2 (16)
+// 2021-10-06 protect Boost call from infinite scale lognormal
+// 2021-10-12 strict new codes RDE, RDG, RDL etc. 
 
 #include <Rcpp.h>
 #include <RcppParallel.h>
+
+// see https://www.boost.org/doc/libs/1_77_0/libs/math/doc/html/math_toolkit/stat_tut/weg/error_eg.html
+// and https://www.boost.org/doc/libs/1_77_0/libs/math/doc/html/math_toolkit/pol_tutorial/changing_policy_defaults.html
+// return NAN for invalid inputs
+#define BOOST_MATH_DOMAIN_ERROR_POLICY ignore_error
 #include <boost/math/distributions.hpp>       // gamma, normal, lognormal distributions
 
 // [[Rcpp::depends(BH)]]
@@ -76,7 +84,7 @@ void convolvemq1 (
     int kn = mqarray.ncol();    // number of points on kernel
     int q;
     double sump;
-
+    
     if (edgecode == 2) {
         // adjust for edge-truncated kernel
         sump = 0;
@@ -114,10 +122,10 @@ Rcpp::NumericVector convolvemqcpp (
         const Rcpp::NumericMatrix mqarray,
         const Rcpp::NumericVector kernelp,
         Rcpp::NumericVector pjm)
-    {
+{
     int mm = mqarray.nrow();            // number of points on mask
     int kn = mqarray.ncol();            // number of points on kernel
-
+    
     int m, q, mq;
     double sump;
     std::vector<double> workpjm(mm);
@@ -306,11 +314,31 @@ std::vector<double> annulus (
 // cannot call R function from RcppParallel worker ncores > 1
 // hence fnname ignored when grain > 0 and no calls to warning() stop() or Rprintf()
 
+// kerneltype takes these values
+
+// BVN    = 0 
+// BVE    = 1 
+// user   = 2 
+// BVT    = 3
+// UNI    = 4 
+// RDE    = 8 
+// RDG    = 9 
+// RDL    = 10 
+// BVNzi  = 11
+// BVEzi  = 12
+// UNIzi  = 13
+// RDEzi  = 14
+// BVN2   = 16
+// RDLS   = 17
+// BVC    = 18
+// BVCzi  = 19
+
 void fillkernelp (
-        int    jj,       // number of sessions
+        int    jj,          // number of sessions
         int    kerneltype, 
         bool   sparsekernel,
         double cellsize,
+        double r0,          // effective radius of zero cell as proportion of cell width
         const  RcppParallel::RMatrix<int> kernel, 
         const  RcppParallel::RVector<int> moveargsi, 
         const  std::string fnname,
@@ -323,7 +351,7 @@ void fillkernelp (
     int j,k,x,y;
     int n1 = 0;
     int n2 = 0;
-    double r,r2,a2;
+    double r,r2,a2,b2;
     double a = 1.0;
     double b = 1.0;
     double p0 = 1;
@@ -331,13 +359,17 @@ void fillkernelp (
     double R = 0;
     double diag;
     double cellarea = cellsize * cellsize;
+    // unused variants of r0
+    // double r0 = (1+std::sqrt(2))/4;
+    // double r0 = 1 / sqrt(M_PI);  // r0 = 1/sqrt(pi) gives circle of same area as cell
     int kn = kernel.nrow();
     int centrek = 0;
     bool oneparameter = kerneltype==0 || kerneltype==1 || kerneltype==8 || 
-        kerneltype == 13;
+        kerneltype == 13 || kerneltype == 18;
     bool twoparameter = kerneltype==3 || kerneltype==9 || kerneltype==10 ||
-        kerneltype==11 || kerneltype==12 || kerneltype == 14;
-    bool zeroinflated = kerneltype>=11 && kerneltype<=14;
+        kerneltype==11 || kerneltype==12 || kerneltype == 14 || kerneltype == 16 ||
+        kerneltype == 17;
+    bool zeroinflated = (kerneltype>=11 && kerneltype<=14) || (kerneltype == 19);
     std::vector<double> p(jj-1);
     std::vector<double> sumj(jj-1);
     std::vector<double> tempkernel(kn);
@@ -359,8 +391,9 @@ void fillkernelp (
             repeat[j]  = repeat[j] && (moveargs[j+jj]==moveargs[j-1+jj]);
         }
     }
-        
+    
     returncode = 1;
+    r0 = r0 * cellsize;   
     
     //-------------------------------------------------------------------------
     // iterate over sessions, ignoring last
@@ -375,7 +408,7 @@ void fillkernelp (
             sumj[j] = sumj[j-1];
         }
         else
-            {
+        {
             
             //----------------------------------------------
             // annular
@@ -407,7 +440,7 @@ void fillkernelp (
                 tempkernel = annulus(p0, R, kernel);
                 // debug
                 // if (j==0) for (k = 0; k < kn; k++) {
-                    // if (grain<0) Rprintf(" k %4d tempkernel[k] %8.6f\n",  k, tempkernel[k]); 
+                // if (grain<0) Rprintf(" k %4d tempkernel[k] %8.6f\n",  k, tempkernel[k]); 
                 // }
             }
             //----------------------------------------------
@@ -427,74 +460,131 @@ void fillkernelp (
             }
             sumj[j] = 0;   // zero accumulator for session j
             a2 = a * a;
+            b2 = b * b;
             
             // for each point in discretized kernel
             for (k = 0; k < kn; k++) {
                 
                 x = kernel[k];
                 y = kernel[k+kn];
-                if (abs(x) == abs(y) && x!=0) diag = std::sqrt(2); else diag = 1;
+                // 2021-10-14 adjusted to include first circle of cells
+                if (abs(x) == abs(y) && (abs(x)<1.5)) diag = std::sqrt(2); else diag = 1;
                 r2 = (x*x + y*y) * cellarea;
                 r = std::sqrt(r2);
-                if (r<= 0) centrek = k;
-
-                
-                // BVN or BVNz Gaussian kernel 
-                if (kerneltype == 0 || kerneltype == 11) {        
-                    kernelp[j * kn + k] = exp(-r2 / 2 / a2)  / 2 / M_PI / a2 * cellarea;
+                if (x==0 && y==0) {
+                    r = 0;          // to be sure
+                    centrek = k;    // for post hoc zero inflation
                 }
                 
-                // BVE or BVEz Negative exponential kernel 
+                // BVN or BVNzi Gaussian kernel 
+                if (kerneltype == 0 || kerneltype == 11) {    
+                    if (r>0 || r0==0) {
+                        kernelp[j * kn + k] = exp(-r2 / 2 / a2)  / 2 / M_PI / a2 * cellarea;
+                    }
+                    else  {
+                        kernelp[j * kn + k] = 1 - exp(-r0*r0/2/a2);
+                    }
+                }
+                
+                // equal mixture of two BVN kernels 
+                else if (kerneltype == 16) {        
+                    if (r>0 || r0==0) {
+                        kernelp[j * kn + k] = 0.5 * cellarea * 
+                        (exp(-r2 / 2 / a2)  / 2 / M_PI / a2 + 
+                        exp(-r2 / 2 / b2)  / 2 / M_PI / b2);
+                    }
+                    else {
+                        kernelp[j * kn + k] = 1 - 0.5 * (exp(-r0*r0/2/a2) + exp(-r0*r0/2/b2));
+                    }
+                }
+                
+                // BVE or BVEzi Laplace kernel 
                 else if (kerneltype == 1 || kerneltype == 12) {   
-                    kernelp[j * kn + k] = exp(-r / a) / 2 / M_PI / a2 * cellarea;
+                    if (r>0 || r0==0) {
+                        kernelp[j * kn + k] = exp(-r / a) / 2 / M_PI / a2 * cellarea;
+                    }
+                    else {
+                        kernelp[j * kn + k] = 1 - (r0/a + 1) * exp(-r0/a);
+                    }
                 }
-                
-                // BVT 2-D t kernel 
+                // BVC kernel 
+                else if (kerneltype == 18 || kerneltype == 19) {   
+                    if (r>0) {
+                        kernelp[j * kn + k] =  1 / (2 * M_PI) * a / pow(r2 + a2, 1.5) * cellarea;       
+                    }
+                    else {
+                        kernelp[j * kn + k] =   1 - a / std::sqrt(a2 + r0*r0); 
+                    }
+                    // Rprintf("r %8.6g, a %8.6g, a2 %8.6g, r0 %8.6g, p %8.6g \n",
+                    //    r, a, a2, r0, kernelp[j * kn + k]);
+                }
+                // BVT kernel 
                 else if (kerneltype == 3) {   
-                    kernelp[j * kn + k] = b / M_PI / a2 / pow(1 + r2/a2, b+1) * cellarea;
+                    if (r>0 || r0==0) {
+                        kernelp[j * kn + k] = b / M_PI / a2 / pow(1 + r2/a2, b+1) * cellarea;
+                    }
+                    else {
+                        kernelp[j * kn + k] = 1 - pow(a2 / (a2 + r0*r0), b);
+                    }
                 }
                 
-                // uniform or uniformz kernel 
+                // UNI or UNIzi kernel 
                 else if (kerneltype == 4 || kerneltype == 13) {  
                     kernelp[j * kn + k] = 1.0 / kn;
                 }
                 
-                // frE or frEz kernel 
+                // RDE or RDEzi kernel 
                 else if (kerneltype == 8 || kerneltype == 14) {  
                     if (r>0)
                         kernelp[j * kn + k] =  exp(-r/a) / a / 2 / M_PI / r * cellarea;
                     else {
-                        kernelp[j * kn + k] =  (1 - exp(-cellsize/2/a));
+                        kernelp[j * kn + k] =  (1 - exp(-r0/a));
                     }
                 }
                 
-                // frG kernel 
+                // RDG kernel 
                 else if (kerneltype == 9) {   
                     boost::math::gamma_distribution<> gam(b, a);  // shape, scale
                     if (r>0) {
                         kernelp[j * kn + k] =  boost::math::pdf(gam, r) / 2 / M_PI / r * cellarea;
                     }
                     else {
-                        kernelp[j * kn + k] =  boost::math::cdf(gam, cellsize/2);
+                        kernelp[j * kn + k] =  boost::math::cdf(gam, r0);
                     }
                 }
                 
-                // frL kernel 
+                // RDL kernel 
                 else if (kerneltype == 10) {  
                     double mu = log(a); 
                     double s = sqrt(log(1 + 1/b));
-                    boost::math::lognormal_distribution<> ln (mu, s);
-                    if (r>0) {
-                        kernelp[j * kn + k] = boost::math::pdf(ln,r) / 2 / M_PI / r * cellarea;
+                    // 2021-10-06 catch bad input 
+                    if (std::isinf(s)) {
+                        kernelp[j * kn + k] = 1/kn;    // uniform
                     }
                     else {
-                        kernelp[j * kn + k] = boost::math::cdf(ln, cellsize/2);
+                        boost::math::lognormal_distribution<> ln (mu, s);
+                        if (r>0) {
+                            kernelp[j * kn + k] = boost::math::pdf(ln,r) / 2 / M_PI / r * cellarea;
+                        }
+                        else {
+                            kernelp[j * kn + k] = boost::math::cdf(ln, r0);
+                        }
                     }
                 }
-                
+                // RDLS kernel 
+                else if (kerneltype == 17) {   
+                    if (r>0) {
+                        kernelp[j * kn + k] =  
+                            2 / (M_PI * r * b) / (pow(r/a, 1/b) + pow(r/a, -1/b)) / 2 / M_PI/ r * cellarea;    
+                    }
+                    else {
+                        double rtmp = cellsize/4;  // ad hoc because I don't know F()
+                        kernelp[j * kn + k] =  
+                            2 / (M_PI * rtmp * b) / (pow(rtmp/a, 1/b) + pow(rtmp/a, -1/b)) / 2 / M_PI/ rtmp * cellarea;
+                    }
+                }
                 //------------------------------------------
                 // oddball kernels
-                
                 // User kernel - not available when multithreaded (grain >= 1)
                 else if (kerneltype == 2 && grain<1) {
                     // call R function from C++
@@ -509,7 +599,7 @@ void fillkernelp (
                         p = Rcpp::as< std::vector<double> >(f(r));
                     kernelp[j * kn + k] = p[0];
                 }
-
+                
                 // annular kernel 
                 else if (kerneltype == 5) {  
                     if (r<1e-8)
@@ -548,7 +638,10 @@ void fillkernelp (
                 
                 // apply relative weighting for sparsekernel
                 if (sparsekernel && r>0) {
-                        kernelp[j * kn + k] = 2 * M_PI * r * diag * kernelp[j * kn + k];
+                    // kernelp[j * kn + k] = 2 * M_PI * r * diag * kernelp[j * kn + k];
+                    // kernelp[j * kn + k] = 2 * M_PI * r * diag * kernelp[j * kn + k] / 8;
+                    // 2021-10-14 
+                    kernelp[j * kn + k] = 2 * M_PI * r * diag * kernelp[j * kn + k] / 8 / cellsize;
                 }
                 
                 // sum pdf across kernel for session j
@@ -613,6 +706,7 @@ Rcpp::NumericVector fillkernelcpp (
         int    kerneltype, 
         bool   sparsekernel,
         double cellsize,
+        double r0,
         int    jj,
         const  std::string fnname,
         const  Rcpp::IntegerVector moveargsi, 
@@ -631,20 +725,21 @@ Rcpp::NumericVector fillkernelcpp (
     RcppParallel::RVector<int> moveargsivec(moveargsi);
     std::vector<double> moveargsvec = Rcpp::as< std::vector<double> >(moveargs);
     std::vector<double> kernelp(kn*(jj-1));
-
+    
     fillkernelp (
-        jj, 
-        kerneltype, 
-        sparsekernel, 
-        cellsize, 
-        kernelmat, 
-        moveargsivec, 
-        fnname, 
-        moveargsvec, 
-        kernelp, 
-        normalize, 
-        grain,
-        returncode);
+            jj, 
+            kerneltype, 
+            sparsekernel, 
+            cellsize, 
+            r0,
+            kernelmat, 
+            moveargsivec, 
+            fnname, 
+            moveargsvec, 
+            kernelp, 
+            normalize, 
+            grain,
+            returncode);
     
     if (returncode<0) kernelp[0] = NAN;
     

@@ -20,14 +20,16 @@ JSSA models that are conditional on the number observed. Cormack-Jolly-Seber
 openCR.fit (capthist, type = "CJS", model = list(p~1, phi~1, sigma~1), 
     distribution = c("poisson", "binomial"), mask = NULL, 
     detectfn = c("HHN", "HHR", "HEX", "HAN", "HCG", "HVP", "HPX"), binomN = 0, 
-    movementmodel = c("static","uncorrelated","BVN","BVE","BVT","frE","frG","frL",
-    "uniform"), edgemethod = c("truncate","wrap","none"), 
-    kernelradius = 10, sparsekernel = FALSE, start = NULL, link = list(), 
-    fixed = list(), stratumcov = NULL, sessioncov = NULL, timecov = NULL, 
-    agecov = NULL, dframe = NULL, dframe0 = NULL, details = list(), 
-    method = "Newton-Raphson", trace = NULL, ncores = NULL, 
-    stratified = FALSE, ...)
+    movementmodel = c('static', 'BVN', 'BVE', 'BVT', 'RDE', 'RDG','RDL','IND', 'UNI',
+      'BVNzi', 'BVEzi', 'RDEzi', 'INDzi', 'UNIzi'), edgemethod = 
+    c("truncate","wrap","none"), kernelradius = 30, sparsekernel = TRUE, 
+    start = NULL, link = list(), fixed = list(), stratumcov = NULL, 
+    sessioncov = NULL, timecov = NULL, agecov = NULL, dframe = NULL, 
+    dframe0 = NULL, details = list(), method = "Newton-Raphson", trace = NULL, 
+    ncores = NULL, stratified = FALSE, ...)
 }
+% changed 2.1.1 2021-10-19
+% c("truncate","wrap","none"), kernelradius = 10, sparsekernel = FALSE, 
 
 \arguments{
 
@@ -154,7 +156,7 @@ masked area) ("binomial") or unconditional ("poisson").
 \code{distribution} affects the sampling variance of the estimated
 density. The default is "poisson" as in \pkg{secr}.
 
-Movement models and their discretized kernels are described in the \href{../doc/openCR-vignette.pdf}{vignette}. 
+Movement models are list at \link{Movement models}. Their use is described in the \href{../doc/openCR-vignette.pdf}{vignette}. 
 
 \code{edgemethod} controls movement probabilities at the mask edge in spatial models that include movement. "none" typically causes bias in estimates; "wrap" wraps kernel probabilities to the opposing edge of a rectangular mask; "truncate" scales the values of an edge-truncated kernel so that they always sum to 1.0 (safer and more general than "wrap").
 
@@ -214,6 +216,8 @@ the Hessian from the optimisation function is used. \cr
 \code{initialage} \tab 0 \tab Numeric (uniform age at first capture) 
 or character value naming an individual covariate; see \code{\link{age.matrix}} \cr
 
+\code{initialstratum} \tab 1 \tab Number of stratum to use for finding default starting values (cf autoini in \pkg{secr}) \cr
+
 \code{LLonly} \tab FALSE \tab TRUE causes the function to return a single
 evaluation of the log likelihood at the initial values, followed by the 
 initial values \cr
@@ -226,12 +230,13 @@ this age class; see \code{\link{age.matrix}} \cr
 \code{multinom} \tab FALSE \tab Include the multinomial constant in the 
 reported log-likelihood. \cr
 
+\code{r0} \tab 0.5 \tab effective radius of zero cell in movement kernel (multiple of cell width) \cr
+
 \code{R} \tab FALSE \tab Switch from the default C++ code to 
 slower functions in native R (useful for debugging; not all models) \cr
 
 \code{squeeze} \tab TRUE \tab  Apply \code{\link{squeeze}} to capthist before analysis. Non-spatial models fit faster, because histories often non-unique.\cr
 
-\code{initialstratum} \tab 1 \tab Number of stratum to use for finding default starting values (cf autoini in \pkg{secr}) \cr
 }
 
 If \code{method = "Newton-Raphson"} then \code{\link[stats]{nlm}} is
@@ -365,6 +370,9 @@ component `posterior'. Now see \code{\link{classMembership}} for that functional
 From 1.5.0 onwards the number of threads uses the environment variable 
 RCPP_PARALLEL_NUM_THREADS, as in \code{\link{secr.fit}}. This may be set once
 in a session with \code{secr::setNumThreads}.
+
+The default movement arguments changed in \pkg{openCR} 2.1.1. Now 
+\code{kernelradius = 30, sparsekernel = TRUE}.
 
 }
 

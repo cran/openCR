@@ -171,6 +171,7 @@ struct pch1struct : public Worker {
     const RMatrix<int> kernel;
     const RMatrix<int> mqarray;
     double cellsize;
+    double r0;
     int   fillcode;
     
     // output likelihoods, one per animal
@@ -197,6 +198,7 @@ struct pch1struct : public Worker {
         const IntegerMatrix kernel,
         const IntegerMatrix mqarray,
         double cellsize,        
+        double r0,
         NumericVector output)    
         : 
             x(x), type(type), grain(grain), jj(jj), mm(mm), nc(nc), 
@@ -205,7 +207,7 @@ struct pch1struct : public Worker {
             moveargsi(moveargsi), movementcode(movementcode), 
             sparsekernel(sparsekernel), anchored(anchored), edgecode(edgecode), 
             usermodel(usermodel), kernel(kernel), mqarray(mqarray), 
-            cellsize(cellsize), output(output) 
+            cellsize(cellsize), r0(r0), output(output) 
     {
         kn = kernel.nrow();
         cc0 = openval0.nrow();
@@ -242,7 +244,7 @@ struct pch1struct : public Worker {
             getmoveargs (n, x, nc, jj, openval0, PIAJ, moveargsi, moveargs);
             // if (grain<0) for (j=0;j<(jj-1); j++) Rprintf("j %d moveargs[j] %8.6g \n", j, moveargs[j]);
             if (movementcode != 17) {
-                fillkernelp (jj, fillcode, sparsekernel, cellsize,
+                fillkernelp (jj, fillcode, sparsekernel, cellsize, r0,
                     kernel, moveargsi, usermodel, moveargs, kernelp, true, grain,
                     kernelreturncode);
             }
@@ -359,7 +361,8 @@ NumericVector PCH1secrparallelcpp (
         const std::string usermodel,
         const IntegerMatrix kernel,
         const IntegerMatrix mqarray,
-        double cellsize) {
+        double cellsize,
+        double r0) {
     
     NumericVector output(nc); 
 
@@ -367,7 +370,7 @@ NumericVector PCH1secrparallelcpp (
     pch1struct pch1 (x, type, grain, jj, mm, nc, 
         cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals,
         moveargsi, movementcode, sparsekernel, anchored, edgecode, 
-        usermodel, kernel, mqarray, cellsize, output);
+        usermodel, kernel, mqarray, cellsize, r0, output);
     
     Rcpp::checkUserInterrupt();
     

@@ -58,11 +58,14 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
     cellsize <- mqarray <- kernel <- 0    # until set for movement model
     movementcode <- movecode(object$movementmodel)
     sparsekernel <- object$sparsekernel
-    anchored <- object$details$anchored
+    anchored <- details$anchored
     if (is.null(anchored)) anchored <- FALSE
+    r0 <- details$r0
+    if (is.null(r0)) r0 <- 1/sqrt(pi)
+    
     edgecode <- edgemethodcode(object$edgemethod)
     # 2021-02-21 modified for annular
-    if (object$movementmodel %in% .openCRstuff$movementmodels) {
+    if (object$movementmodel %in% .openCRstuff$kernelmodels) {
         k2 <- object$kernelradius
         cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
         kernel <- expand.grid(x = -k2:k2, y = -k2:k2)
@@ -129,7 +132,7 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
         pmix <- matrix(1, nrow = details$nmix, ncol = nc)
     }
     onea <- function (x) {
-        if (object$details$R) {
+        if (details$R) {
             pch1 <-  PCH1secr(
                 type,
                 as.logical(individual),
@@ -158,7 +161,7 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
             pch1 <-  PCH1secrparallelcpp(
                 as.integer(x-1),
                 as.integer(type),
-                as.integer(object$details$grain),
+                as.integer(details$grain),
                 as.integer(setNumThreads()),
                 as.logical(individual),
                 as.integer(J),
@@ -180,7 +183,8 @@ openCR.esa <- function (object, bysession = FALSE, stratum = 1) {
                 as.character(object$usermodel),
                 as.matrix(kernel),
                 as.matrix(mqarray),
-                as.double (cellsize))
+                as.double (cellsize),
+                as.double (r0))
         }
         pmix[x,] * pch1
     }

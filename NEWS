@@ -1,3 +1,30 @@
+version 2.2.0 (2021-11-03)
+
+New features and changed behaviour
+    o openCR.fit() new defaults: kernelradius = 30, sparsekernel = TRUE
+    o plot.kernel() accepts meshcol argument
+    o make.kernel() acquires argument 'session' for model input
+    o expected.d() expected movement from movement parameters, fitted model etc.
+    o summary.kernel() expected distances use expected.d() and may differ
+    o matchscale() acquires argument 'expected' to match expected distance
+    o 'BVN2' movement model (equal mixture two BVN)
+    o bivariate Cauchy movement model 'BVC' (BVT with fixed move.b = 0.5)
+    o log-sech movement model 'RDLS' (partial implementation)
+    o extensions to plot.kernel
+
+Bugs fixed
+    o openCR.fit() failed with non-binary detector usage
+    o domain errors in inputs to Boost statistical distributions could crash R
+    o make.table() could fail with models fitted before 2.1.0
+
+Other
+    o new aliases for movementmodel 'RDE', RDG','RDL','RDEzi','IND','INDzi'
+    o RDL movementmodel no longer blocked (Boost call bypassed if scale infinite)
+    o openCR.fit() more robust to extreme parameter values (spatial models)
+    o more documentation of movement models
+    o improved weighting of sparse kernels; details argument 'r0' for 
+      effective radius of zero cell
+
 version 2.1.0 (2021-08-14)
 
 New features and changed behaviour

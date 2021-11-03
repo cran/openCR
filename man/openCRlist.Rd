@@ -1,5 +1,6 @@
 \name{openCRlist}
 \alias{openCRlist}
+\alias{[.openCRlist}
 
 \title{Bundle openCR Models}
 
@@ -12,12 +13,15 @@
 \usage{
 
 openCRlist (...)
+\method{[}{openCRlist}(x, i)
 
 }
 
 \arguments{
   
   \item{\dots}{ openCR objects}
+  \item{x}{openCRlist}
+  \item{i}{indices}
 
 }
 

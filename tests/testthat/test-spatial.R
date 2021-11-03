@@ -57,11 +57,13 @@ test_that("correct movement likelihood", {
         tolerance = 1e-4, check.attributes = FALSE)
     
     argsmove$movementmodel <- "BVE"
+    argsmove$details$r0 <- 0   # historical
     expect_equal(do.call(openCR.fit, argsmove)[1], -358.28315775, 
         tolerance = 1e-4, check.attributes = FALSE)
     
     argsmove$movementmodel <- "BVT"
     argsmove$start$move.b <- 5
+    argsmove$details$r0 <- 0.5
     expect_equal(do.call(openCR.fit, argsmove)[1], -357.34627618, 
         tolerance = 1e-4, check.attributes = FALSE)
 

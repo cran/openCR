@@ -53,6 +53,7 @@ void fillkernelp (
         int                              kerneltype, 
         bool                             sparsekernel,
         double                           cellsize,
+        double                           r0,
         const RcppParallel::RMatrix<int> kernel, 
         const RcppParallel::RVector<int> moveargsi, 
         const std::string                fnname,

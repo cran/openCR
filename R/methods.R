@@ -308,18 +308,23 @@ vcov.openCR <- function (object, realnames = NULL, newdata = NULL, byrow = FALSE
 openCRlist <- function(...) {
     dots <- match.call(expand.dots = FALSE)$...
     allargs <- list(...)
-    if (is.null(names(allargs))) {
-        dots2 <- substitute(list(...))[-1]
-        names(allargs) <- sapply(dots2, deparse)
+    if (length(allargs)==1 && inherits(allargs[[1]], 'openCRlist')) {
+        return (allargs[[1]])
     }
-    allargs <- lapply(allargs, function(x) if (inherits(x, 'openCR')) list(x) else x)
-    temp <- do.call(c, allargs)
-    if (is.null(names(temp)))
-        names(temp) <- paste("openCR", 1:length(temp), sep="")
-    if (!all(sapply(temp, function(x) inherits(x, 'openCR'))))
-        stop ("objects must be of class 'openCR' or 'openCRlist'")
-    class(temp) <- 'openCRlist'
-    temp
+    else {
+        if (is.null(names(allargs))) {
+            dots2 <- substitute(list(...))[-1]
+            names(allargs) <- sapply(dots2, deparse)
+        }
+        allargs <- lapply(allargs, function(x) if (inherits(x, 'openCR')) list(x) else x)
+        temp <- do.call(c, allargs)
+        if (is.null(names(temp)))
+            names(temp) <- paste("openCR", 1:length(temp), sep="")
+        if (!all(sapply(temp, function(x) inherits(x, 'openCR'))))
+            stop ("objects must be of class 'openCR' or 'openCRlist'")
+        class(temp) <- 'openCRlist'
+        temp
+    }
 }
 
 ############################################################################################
@@ -330,6 +335,7 @@ c.openCRlist <- function(..., recursive = FALSE) {
     slist <- as.list(...)
     result <- NextMethod('c', slist, recursive = FALSE)
     class(result) <- 'openCRlist'
+    # names?
     result
 }
 ############################################################################################

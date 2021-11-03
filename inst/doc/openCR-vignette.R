@@ -202,7 +202,7 @@ fit <- openCR.fit(dipperCH, model = phi~t, details = list(contrasts = list(t = c
 invlogit(coef(fit)['phi',c('beta','lcl','ucl')])
 
 ## ----sparsekernel, fig.width=8, fig.height=3.5------------------------------------------
-par(mar=c(3,1,4,5))
+par(mar = c(3,1,4,5))
 k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
   sparse = TRUE, clip = TRUE)
 plot(k)
