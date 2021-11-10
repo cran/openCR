@@ -21,7 +21,7 @@ Sys.setenv(RCPP_PARALLEL_BACKEND = "tinythread")  ## to dodge CRAN ASAN issue
 
 \vspace{12pt}
 
-The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2020) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. The vignette [openCR-kernel.pdf][openCR-kernel.pdf] explains the intricacies of movement kernels; worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf][^footnote1]. The spatial model was described by Efford and Schofield (2020).
+The R package **openCR** fits both non-spatial and spatial capture--recapture models to data from open animal populations, where there is turnover during sampling. The interface generally resembles that of **secr** (Efford 2021) upon which **openCR** depends for some functions. This document explains the purpose and general features of **openCR**. Help pages should be consulted for more detail on particular functions. The vignette [openCR-kernel.pdf][openCR-kernel.pdf] explains the intricacies of movement kernels; worked examples using published datasets are given in another vignette [openCR-examples.pdf][openCR-examples.pdf][^footnote1]. The spatial model was described by Efford and Schofield (2020).
 
 This is still something of a work in progress, so be careful to check results 'make sense' and be aware of [limitations](#limitations).
 
@@ -39,7 +39,7 @@ This is still something of a work in progress, so be careful to check results 'm
 
 Spatial versions of the CJS and JSSA model types are also provided[^footnote2a]. The spatial models allow for 'multi', 'proximity' or 'count' detectors as defined in **secr**. Several functions are implemented for the decline in hazard of detection with distance. Movement between primary sessions may be modelled (cf Ergon and Gardner 2014; Glennie et al. 2019), but particular care is needed, especially with respect to [kernel](#kernels) truncation.
 
-[^footnote2a]: The utility of the spatial CJS model type (CJSsecr) is in doubt because the distribution of detected animals is not uniform at first detection, but rather biased towards the vicinity of the detectors.
+[^footnote2a]: A direct spatial implementation of CJS fails because the distribution of detected animals is not uniform at first detection, but rather biased towards the vicinity of the detectors. Set `details = list(CJSp1 = TRUE)` to model first detections and get sensible estimates (model type 'CJSsecr').
 
 ## Data
 
@@ -160,7 +160,9 @@ By definition, the interval between primary sessions is long enough for turnover
 
 # Data structure and input
 
-Data should be provided to `openCR.fit` as **secr** 'capthist' objects. The occasions of a single-session dataset are treated as open-population temporal samples. For spatial analyses, the capthist object should use a point detector type ('multi', 'proximity' or 'count').
+Data should be provided to `openCR.fit` as **secr** 'capthist' objects. The occasions of a single-session[^footnote7] dataset are treated as open-population temporal samples. For spatial analyses, the capthist object should use a point detector type ('multi', 'proximity' or 'count').
+
+[^footnote7]: The terms 'single-session' and 'multi-session' are here used in the **secr** sense ([secr-multisession]). **openCR** uses these data structures, but interprets them differently as explained here. 
 
 **openCR** mostly uses the terminology of primary and secondary sessions (Pollock 1982) rather than 'session' and 'occasions' as in **secr**. Where 'session' appears without qualifier it refers to a primary session composed of one or more secondary sessions.
 
@@ -295,7 +297,6 @@ Table 5. Parameters of spatial **openCR** models
 | JSSAsecrlCL | PLBsecrl | + | + | + | + |   |   |   | + |   |   |   |
 | JSSAsecrb   | | + | + | + | + | + |   |   |   | + |   |   |
 | JSSAsecrf   | | + | + | + | + |   | + |   |   | + |   |   |
-| JSSAsecrg   | | + | + | + | + |   |   | + |   | + |   |   |
 | JSSAsecrl   | | + | + | + | + |   |   |   | + | + |   |   |
 | JSSAsecrB   | | + | + | + | + |   |   |   |   |   | + |   |
 | JSSAsecrD   | | + | + | + | + |   |   |   |   |   |   | + |
@@ -365,29 +366,30 @@ The types 'secrD' and 'secrCL' cause `openCR.fit` to treat the data as if from a
 ```{r compare, cache = mycache, warning = FALSE}
 msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
 
-secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
-openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
+fit_secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
+fit_openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
 
 # massage the predict.openCR results to the same format as predict.secr
-pred_openCR <- plyr::rbind.fill(predict(openCR))
+pred_openCR <- plyr::rbind.fill(predict(fit_openCR))
+
 pred_openCR <- pred_openCR[c(2,1,3), !(names(pred_openCR) %in% c('stratum','session'))]
-rownames(pred_openCR) <- secr$realnames
+rownames(pred_openCR) <- fit_secr$realnames
 
 # compare estimates
-predict(secr)[,-1]
+predict(fit_secr)[,-1]
 pred_openCR
 ```
 
 ```{r timing}
 # compare timings in seconds
-c(secr = secr$proctime, openCR = openCR$proctime)
+c(secr = fit_secr$proctime, openCR = fit_openCR$proctime)
 ```
 
 The maximised log likelihoods differ because **openCR** does not include the multinomial constant. **secr** has function `logmultinom` that lets us add it back:
 
 ```{r multinom}
 # compare maximised log likelihoods
-c(secr.logLik = logLik(secr), openCR.logLik = logLik(openCR) + logmultinom(captdata))
+c(secr.logLik = logLik(fit_secr), openCR.logLik = logLik(fit_openCR) + logmultinom(captdata))
 ```
 
 ## Finite mixtures
@@ -624,11 +626,11 @@ A kernel function may be specified by the user and passed in the argument `movem
 
 A big problem with standard kernels as defined in **openCR** <2.0.0 is that the number of cells increases with the square of the radius. Processing time is roughly proportional to the number of cells, and kernels with many cells fit slowly. **openCR** 2.0.0 introduces novel 'sparse' kernels that include only those grid cells that lie on 4 axes (N-S, E-W, NW-SE, NE-SW). The number of cells then increases only linearly with radius. Cell-wise movement probabilities are adjusted so that the distribution of dispersal distances is almost unchanged (essentially multiplying by $2\pi r$ at radius $r$, and adjusting cells on the oblique axes by $\sqrt 2$).
 
-Sparse kernels for normal, exponential and t2D distributions are obtained by setting `sparsekernel = TRUE` when fitting a model with `openCR.fit()`. Here is an example.
+Sparse kernels are obtained by setting `sparsekernel = TRUE` when fitting a model with `openCR.fit()`. Here is an example.
 
 ```{r sparsekernel, fig.width=8, fig.height=3.5}
 par(mar = c(3,1,4,5))
-k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
+k <- make.kernel(movementmodel = 'BVN', kernelradius = 10, spacing = 10, move.a = 40, 
   sparse = TRUE, clip = TRUE)
 plot(k)
 symbols(0,0, add = TRUE, circles = 100, inches = FALSE)
@@ -658,7 +660,7 @@ A kernel may be constructed with `make.kernel` and visualised with the `plot` me
 
 ```{r plotkernel, fig.width = 8, fig.height = 3.5}
 par (mar = c(3,3,4,6), cex = 0.9)
-k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
+k <- make.kernel (movementmodel = 'BVN', spacing = 10, move.a = 40, clip = TRUE)
 plot(k, contour = TRUE)
 summary(k)
 ```
@@ -796,7 +798,7 @@ Spatial models are slow to fit. Consider these options
 setNumThreads(7)
 ```
 
-The `grain size' (see [RcppParallel](https://rcppcore.github.io/RcppParallel/)) may be varied with details$grain, but it seems to have little effect. 
+The `grain size' tuning parameter (see [RcppParallel](https://rcppcore.github.io/RcppParallel/)) may be varied with details$grain, but it seems to have little effect. 
 
 # Extras
 
@@ -940,8 +942,8 @@ Crosbie, S. F. and Manly, B. F. J. (1985) Parsimonious modelling of capture--mar
 Efford, M. G. (2004) Density estimation in live-trapping
 studies. *Oikos* **106**, 598--610.
 
-Efford, M. G. (2020). secr: Spatially explicit capture--recapture models. R package version
-  4.3.2. https://CRAN.R-project.org/package=secr/
+Efford, M. G. (2021). secr: Spatially explicit capture--recapture models. R package version
+  4.4.8. https://CRAN.R-project.org/package=secr/
   
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:
@@ -1169,3 +1171,4 @@ rect(-3, -2, 19.3, 8.7)
 
 [openCR-examples.pdf]: https://www.otago.ac.nz/density/pdfs/openCR-examples.pdf
 [openCR-kernel.pdf]: https://www.otago.ac.nz/density/pdfs/openCR-kernel.pdf
+[secr-multisession]: https://www.otago.ac.nz/density/pdfs/secr-multisession.pdf

@@ -1,46 +1,46 @@
-#include <Rcpp.h>
-#include <RcppParallel.h>
 #include "utils.h"
-
-using namespace Rcpp;
-using namespace RcppParallel;
 
 //==============================================================================
 
-struct Somehistories : public Worker {
+struct Somehistories : public RcppParallel::Worker {
     
     // input data
-    int   x;
-    int   type;
-    int   nc;
-    int   CJSp1;                   
-    int   jj;
-    int   cc;
-    const RVector<double> intervals;
-    const RVector<int> cumss;
-    const RVector<int> w;
-    const RVector<int> fi;
-    const RVector<int> li;
-    const RMatrix<double> openval;
-    const RVector<int> PIA;
-    const RVector<int> PIAJ;
+    const int   x;
+    const int   type;
+    const int   nc;
+    const int   CJSp1;                   
+    const int   jj;
+    const int   cc;
+    const RcppParallel::RVector<double> intervals;
+    const RcppParallel::RVector<int> cumss;
+    const RcppParallel::RVector<int> w;
+    const RcppParallel::RVector<int> fi;
+    const RcppParallel::RVector<int> li;
+    const RcppParallel::RMatrix<double> openval;
+    const RcppParallel::RVector<int> PIA;
+    const RcppParallel::RVector<int> PIAJ;
     
     // output likelihoods, one per detection history
-    RVector<double> output;
+    RcppParallel::RVector<double> output;
     
     // Constructor to initialize an instance of Somehistories 
-    // The RMatrix class can be automatically converted to from the Rcpp matrix type
+    // The RcppParallel::RMatrix class can be automatically converted to from the Rcpp matrix type
     Somehistories(
-        int x, int type, int nc, int CJSp1, int jj, int cc,                   
-        const NumericVector intervals,
-        const IntegerVector cumss,
-        const IntegerVector w,
-        const IntegerVector fi, 
-        const IntegerVector li,
-        const NumericMatrix openval,
-        const IntegerVector PIA,
-        const IntegerVector PIAJ,
-        NumericVector output)    
+        const int x, 
+        const int type, 
+        const int nc, 
+        const int CJSp1, 
+        const int jj, 
+        const int cc,                   
+        const Rcpp::NumericVector intervals,
+        const Rcpp::IntegerVector cumss,
+        const Rcpp::IntegerVector w,
+        const Rcpp::IntegerVector fi, 
+        const Rcpp::IntegerVector li,
+        const Rcpp::NumericMatrix openval,
+        const Rcpp::IntegerVector PIA,
+        const Rcpp::IntegerVector PIAJ,
+        Rcpp::NumericVector output)    
         : 
         x(x), type(type), nc(nc), CJSp1(CJSp1), jj(jj), cc(cc), 
         intervals(intervals), cumss(cumss), w(w), fi(fi), li(li),
@@ -133,18 +133,23 @@ struct Somehistories : public Worker {
 };
 
 // [[Rcpp::export]]
-NumericVector allhistparallelcpp (int x, int type, int nc,
-                                  int CJSp1, int grain, int ncores,
-                                  const NumericVector intervals, 
-                                  const IntegerVector cumss, 
-                                  const IntegerVector w,
-                                  const IntegerVector fi, 
-                                  const IntegerVector li,
-                                  const NumericMatrix openval,
-                                  const IntegerVector PIA, 
-                                  const IntegerVector PIAJ) {
- 
-    NumericVector output(nc); 
+Rcpp::NumericVector allhistparallelcpp (
+        const int x, 
+        const int type, 
+        const int nc,
+        const int CJSp1, 
+        const int grain, 
+        const int ncores,
+        const Rcpp::NumericVector intervals, 
+        const Rcpp::IntegerVector cumss, 
+        const Rcpp::IntegerVector w,
+        const Rcpp::IntegerVector fi, 
+        const Rcpp::IntegerVector li,
+        const Rcpp::NumericMatrix openval,
+        const Rcpp::IntegerVector PIA, 
+        const Rcpp::IntegerVector PIAJ) {
+    
+    Rcpp::NumericVector output(nc); 
     
     // Construct and initialise
     Somehistories somehist (x, type, nc, CJSp1, 
@@ -156,7 +161,7 @@ NumericVector allhistparallelcpp (int x, int type, int nc,
     
     if (ncores>1) {    
         // Run operator() on multiple threads
-        parallelFor(0, nc, somehist, grain, ncores);
+        RcppParallel::parallelFor(0, nc, somehist, grain, ncores);
     }
     else {
         // for debugging avoid multithreading and allow R calls e.g. Rprintf

@@ -16,10 +16,11 @@
 ## 2021-07-31 new movement models, general tidy up
 ## 2021-09-21 tidy .openCRstuff$movementmodels, add .openCRstuff$kernelmodels
 ## 2021-10-12 stdmovement
+## 2021-11-03 openCR 2.2.0 
 ###############################################################################
 
 .openCRstuff <- new.env()
-# .openCRstuff$packageType <- ' pre-release'
+#.openCRstuff$packageType <- ' pre-release'
 .openCRstuff$packageType <- ''
 .openCRstuff$iter <- 0
 .openCRstuff$suspendedtypes <- c('JSSAfgCL', 'JSSAfg')

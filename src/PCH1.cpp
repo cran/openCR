@@ -1,11 +1,4 @@
 #include "utils.h"
-#include <Rcpp.h>
-#include <RcppParallel.h>
-
-using namespace Rcpp;
-using namespace RcppParallel;
-
-//==============================================================================
 
 //-------------------------------------------------------------
 // return JSSA probability animal n detected at least once   
@@ -17,20 +10,24 @@ using namespace RcppParallel;
 //-------------------------------------------------------------
 
 // [[Rcpp::export]]
-NumericVector PCH1cpp (int type, int x, int nc, int jj, 
-    const IntegerVector cumss, int nmix,
-    const NumericMatrix openval0, 
-    const IntegerVector PIA0,  
-    const IntegerVector PIAJ,  
-    const NumericVector intervals)
+Rcpp::NumericVector PCH1cpp (
+        const int type, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const Rcpp::IntegerVector cumss, int nmix,
+        const Rcpp::NumericMatrix openval0, 
+        const Rcpp::IntegerVector PIA0,  
+        const Rcpp::IntegerVector PIAJ,  
+        const Rcpp::NumericVector intervals)
 {
-    RVector<int> cumssR(cumss);
-    RMatrix<double> openval0R(openval0);
-    RVector<int> PIA0R(PIA0);
-    RVector<int> PIAJR(PIAJ);
-    RVector<double> intervalsR(intervals);
+    RcppParallel::RVector<int> cumssR(cumss);
+    RcppParallel::RMatrix<double> openval0R(openval0);
+    RcppParallel::RVector<int> PIA0R(PIA0);
+    RcppParallel::RVector<int> PIAJR(PIAJ);
+    RcppParallel::RVector<double> intervalsR(intervals);
     
-    NumericVector pdt(nc, 0.0);
+    std::vector<double> pdt(nc);   
     double pbd, ptmp;
     int j,n,s;
     int b,d;
@@ -63,18 +60,24 @@ NumericVector PCH1cpp (int type, int x, int nc, int jj,
             }
         }
     }
-    return pdt;
+    // return pdt;
+    return Rcpp::wrap(pdt);
 }
 //==============================================================================
 
 // probability of not being detected in primary session j
 // each mask point m
 void pr0njmx (int n, int x, 
-    const RVector<int> cumss, 
-    int nc,  int jj, int kk, int mm, int cc0, int binomN,  
-    const RVector<int> PIA0, 
-    const RVector<double> gk0, 
-    const RMatrix<double> Tsk, 
+    const RcppParallel::RVector<int> cumss, 
+    const int nc,  
+    const int jj, 
+    const int kk, 
+    const int mm, 
+    const int cc0, 
+    const int binomN,  
+    const RcppParallel::RVector<int> PIA0, 
+    const RcppParallel::RVector<double> gk0, 
+    const RcppParallel::RMatrix<double> Tsk, 
     std::vector<double> &pjm) {
     
     int c, i, j, k, m, s, ci, gi, pi, ss;
@@ -108,27 +111,35 @@ void pr0njmx (int n, int x,
         }
     }
     if (hazard) {
-        for (i = 0; i < jj*mm; i++) pjm[i] = exp(-pjm[i]);
+        for (i = 0; i < jj*mm; i++) pjm[i] = std::exp(-pjm[i]);
     }
 }
 //==============================================================================
 
 // [[Rcpp::export]]
-NumericVector PCH0secrjcpp (int type, int x, int nc, int jj,
-    const IntegerVector cumss, 
-    int kk, int mm, int cc0,
-    const IntegerVector PIA0, 
-    const NumericVector gk0, 
-    int binomN, 
-    const NumericMatrix Tsk) {
+Rcpp::NumericVector PCH0secrjcpp (
+        const int type, 
+        const int x, 
+        const int nc, 
+        const int jj,
+        const Rcpp::IntegerVector cumss, 
+        const int kk, 
+        const int mm, 
+        const int cc0,
+        const Rcpp::IntegerVector PIA0, 
+        const Rcpp::NumericVector gk0, 
+        const int binomN, 
+        const Rcpp::NumericMatrix Tsk) {
     
-    const RVector<int> cumssR(cumss); 
-    const RVector<int> PIA0R(PIA0); 
-    const RVector<double> gk0R(gk0);
-    const RMatrix<double> TskR(Tsk);
+    const RcppParallel::RVector<int> cumssR(cumss); 
+    const RcppParallel::RVector<int> PIA0R(PIA0); 
+    const RcppParallel::RVector<double> gk0R(gk0);
+    const RcppParallel::RMatrix<double> TskR(Tsk);
     
     // by primary session
-    NumericVector pdt(nc * jj, 0.0);
+    // Rcpp::NumericVector pdt(nc * jj, 0.0);
+    std::vector<double> pdt(nc * jj);
+    
     int j, m, n;
     std::vector<double> pjmat(jj*mm);
     for (n = 0; n<nc; n++) {
@@ -140,66 +151,74 @@ NumericVector PCH0secrjcpp (int type, int x, int nc, int jj,
             }
         }
     }
-    return pdt;
+    // return pdt;
+    return Rcpp::wrap(pdt);
 }
 //==============================================================================
 
-struct pch1struct : public Worker {
-    int x;
-    int type;
-    int grain;
-    int jj;
-    int kk;
-    int mm;
-    int nc;
-    int kn;
-    int cc0;
-    const RVector<int> cumss;
-    const RMatrix<double> openval0;
-    const RVector<int> PIA0;
-    const RVector<int> PIAJ;
-    const RVector<double> gk0;
-    int   binomN;
-    const RMatrix<double> Tsk;
-    const RVector<double> intervals;
-    const RVector<int> moveargsi;
-    int   movementcode;
-    bool  sparsekernel;
-    bool  anchored;
-    int   edgecode;
-    std::string usermodel;
-    const RMatrix<int> kernel;
-    const RMatrix<int> mqarray;
-    double cellsize;
-    double r0;
+struct pch1struct : public RcppParallel::Worker {
+    const int x;
+    const int type;
+    const int grain;
+    const int jj;
+    const int mm;
+    const int nc;
+    const RcppParallel::RVector<int> cumss;
+    const RcppParallel::RMatrix<double> openval0;
+    const RcppParallel::RVector<int> PIA0;
+    const RcppParallel::RVector<int> PIAJ;
+    const RcppParallel::RVector<double> gk0;
+    const int   binomN;
+    const RcppParallel::RMatrix<double> Tsk;
+    const RcppParallel::RVector<double> intervals;
+    const RcppParallel::RVector<int> moveargsi;
+    const int   movementcode;
+    const bool  sparsekernel;
+    const bool  anchored;
+    const int   edgecode;
+    const std::string usermodel;
+    const RcppParallel::RMatrix<int> kernel;
+    const RcppParallel::RMatrix<int> mqarray;
+    const double cellsize;
+    const double r0;
+    
+    int   kk;
+    int   kn;
+    int   cc0;
     int   fillcode;
     
     // output likelihoods, one per animal
-    RVector<double> output;
+    RcppParallel::RVector<double> output;
     
     // Constructor to initialize an instance of Somehistories 
     // The RMatrix class can be automatically converted to from the Rcpp matrix type
     pch1struct(
-        int x, int type, int grain, int jj, int mm, int nc, 
-        const IntegerVector cumss,
-        const NumericMatrix openval0,
-        const IntegerVector PIA0,
-        const IntegerVector PIAJ,
-        const NumericVector gk0,
-        int binomN,
-        const NumericMatrix Tsk,
-        const NumericVector intervals,
-        const IntegerVector moveargsi,
-        int   movementcode,
-        bool  sparsekernel,
-        bool  anchored,
-        int   edgecode,
-        std::string usermodel,
-        const IntegerMatrix kernel,
-        const IntegerMatrix mqarray,
-        double cellsize,        
-        double r0,
-        NumericVector output)    
+        const int x, 
+        const int type, 
+        const int grain, 
+        const int jj, 
+        const int mm, 
+        const int nc, 
+        const Rcpp::IntegerVector cumss,
+        const Rcpp::NumericMatrix openval0,
+        const Rcpp::IntegerVector PIA0,
+        const Rcpp::IntegerVector PIAJ,
+        const Rcpp::NumericVector gk0,
+        const int binomN,
+        const Rcpp::NumericMatrix Tsk,
+        const Rcpp::NumericVector intervals,
+        const Rcpp::IntegerVector moveargsi,
+        const int   movementcode,
+        const bool  sparsekernel,
+        const bool  anchored,
+        const int   edgecode,
+        const std::string usermodel,
+        const Rcpp::IntegerMatrix kernel,
+        const Rcpp::IntegerMatrix mqarray,
+        const double cellsize,        
+        const double r0,
+        
+        Rcpp::NumericVector output)    
         : 
             x(x), type(type), grain(grain), jj(jj), mm(mm), nc(nc), 
             cumss(cumss), openval0(openval0), PIA0(PIA0), PIAJ(PIAJ), 
@@ -336,35 +355,35 @@ struct pch1struct : public Worker {
 };
 
 // [[Rcpp::export]]
-NumericVector PCH1secrparallelcpp (
-        int   x, 
-        int   type, 
-        int   grain, 
-        int   ncores,
-        bool  individual,
-        int   jj,  
-        int   mm, 
-        int   nc,
-        const IntegerVector cumss, 
-        const NumericMatrix openval0, 
-        const IntegerVector PIA0, 
-        const IntegerVector PIAJ, 
-        const NumericVector gk0, 
-        int   binomN, 
-        const NumericMatrix Tsk, 
-        const NumericVector intervals,
-        const IntegerVector moveargsi,
-        int   movementcode,
-        bool  sparsekernel,
-        bool  anchored,
-        int   edgecode,
+Rcpp::NumericVector PCH1secrparallelcpp (
+        const int   x, 
+        const int   type, 
+        const int   grain, 
+        const int   ncores,
+        const bool  individual,
+        const int   jj,  
+        const int   mm, 
+        const int   nc,
+        const Rcpp::IntegerVector cumss, 
+        const Rcpp::NumericMatrix openval0, 
+        const Rcpp::IntegerVector PIA0, 
+        const Rcpp::IntegerVector PIAJ, 
+        const Rcpp::NumericVector gk0, 
+        const int   binomN, 
+        const Rcpp::NumericMatrix Tsk, 
+        const Rcpp::NumericVector intervals,
+        const Rcpp::IntegerVector moveargsi,
+        const int   movementcode,
+        const bool  sparsekernel,
+        const bool  anchored,
+        const int   edgecode,
         const std::string usermodel,
-        const IntegerMatrix kernel,
-        const IntegerMatrix mqarray,
-        double cellsize,
-        double r0) {
+        const Rcpp::IntegerMatrix kernel,
+        const Rcpp::IntegerMatrix mqarray,
+        const double cellsize,
+        const double r0) {
     
-    NumericVector output(nc); 
+    Rcpp::NumericVector output(nc); 
 
     // Construct and initialise
     pch1struct pch1 (x, type, grain, jj, mm, nc, 
@@ -377,7 +396,7 @@ NumericVector PCH1secrparallelcpp (
     if (individual) {
         if (ncores>1) {
             // Run operator() on multiple threads
-            parallelFor(0, nc, pch1, grain, ncores);
+            RcppParallel::parallelFor(0, nc, pch1, grain, ncores);
         }
         else {
             pch1.operator()(0,nc);    // for debugging avoid multithreading to allow R calls

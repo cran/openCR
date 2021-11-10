@@ -10,6 +10,7 @@
 # 2020-10-25 fixed bug in open.secr.loglikfn component 3
 # 2021-04-19 stratified
 # 2021-08-14 c and [ methods for openCRlist
+# 2021-11-08 PIA, PIAJ overwritten for naive animal, rather than always copied  
 
 # types
 
@@ -157,18 +158,12 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             stop("open-population secr requires multi, proximity or count detector type")
         
         if (data$details$debug>1) browser()
-        # PIA <- data$design$PIA[stratum$i,,,,, drop = FALSE]
-        # PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
-        
+
         nc1 <- max(stratum$nc,1)
         S <- stratum$cumss[stratum$J+1]
         PIA  <- data$design$PIA [stratum$i, 1:nc1, 1:S, 1:stratum$k, , drop = FALSE]
         PIAJ <- data$design$PIAJ[stratum$i, 1:nc1, 1:stratum$J, , drop = FALSE]
         
-        if (data$learnedresponse)
-            PIA0 <- data$design0$PIA[stratum$i, 1:nc1, 1:S, 1:stratum$k, , drop = FALSE]
-        else
-            PIA0 <- PIA
         #-----------------------------------------
         
         ## number of threads was set in openCR.fit
@@ -235,11 +230,11 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         
         #####################################################################
         # Component 2: Probability of unobserved histories a^{-n} in likelihood for uniform-D
-        
+
         if ((type %in% c(9,10,11,25,30)) ## CL and require global pdot for component 3
             | (type %in% c(7,8,12,13,14,24,31))) {                   ## all other
-            
-            if (data$learnedresponse) {   ## overwrite gk with model for naive animal
+            LR <- data$learnedresponse
+            if (LR) {   ## overwrite gk with model for naive animal
                 temp <- makegkParalleldcpp (as.integer(data$detectfn),
                     as.integer(.openCRstuff$sigmai[type]),
                     as.integer(data$details$grain),
@@ -248,6 +243,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     as.matrix(stratum$distmat))
                 gk <- array(temp[[1]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
                 hk <- array(temp[[2]], dim=c(nrow(realparval), stratum$k, stratum$m))  # array form for R use
+                PIA0 <- data$design0$PIA[stratum$i, 1:nc1, 1:S, 1:stratum$k, , drop = FALSE]
+                PIAJ0 <- data$design0$PIAJ[stratum$i, 1:nc1, 1:stratum$J, , drop = FALSE] 
             }
             ## else use gk as gk0, hk as hk0
             pdot <- rep(0, stratum$nc)  # vector: one value for each unique observed history
@@ -263,8 +260,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         stratum$k,
                         stratum$m,
                         realparval0,
-                        PIA0,
-                        PIAJ,
+                        if (LR) PIA0 else PIA,
+                        if (LR) PIAJ0 else PIAJ,
                         if (detectr %in% c("multi", "poissoncount")) hk else gk,  ## 2019-05-19
                         binomN,
                         stratum$usge,
@@ -292,8 +289,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                         as.integer(stratum$nc),
                         as.integer(stratum$cumss),
                         as.matrix (realparval0),
-                        as.integer(PIA0),
-                        as.integer(PIAJ),
+                        as.integer(if (LR) PIA0 else PIA),
+                        as.integer(if (LR) PIAJ0 else PIAJ),
                         as.double (if (detectr %in% c("multi", "poissoncount")) hk else gk),  ## 2019-05-19
                         as.integer(binomN),
                         as.matrix (stratum$usge),
@@ -315,6 +312,7 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             pdot <- rep(pdot, freq)
             comp[2] <- - sum(log(pdot))    ## log(1 / a_i)
         }
+
         #####################################################################
         # Component 3: Probability of observing nc animals (non-CL types)
         if (type %in% c(7,8,12,13,14,24, 31)) {
@@ -337,6 +335,8 @@ open.secr.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                 lnbinomial (ncf, N, meanpdot),
                 NA)
         }
+        
+        #####################################################################
         
         comp
     }   # end of onestratumll

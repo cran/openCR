@@ -1,7 +1,5 @@
-#include <Rcpp.h>
-#include <RcppParallel.h>
+#include "utils.h"
 
-using namespace Rcpp;
 #define fuzz 1e-200
 #define huge 1e10
 
@@ -25,42 +23,30 @@ int i4 (int i, int j, int k, int l, int ii, int jj, int kk) {
 
 //--------------------------------------------------------------------------
 
-// probability of count
-double gpois (int count, double lambda, int uselog)
+// customised dbinom 
+double gbinom(int count, int size, double p)
 {
-    if (count == 0) {
-        if (uselog)
-            return (-lambda);
-        else
-            return (exp(-lambda));
-    }
-    else
-        return (R::dpois(count, lambda, uselog));
-}
-//--------------------------------------------------------------------------
-
-double gbinom(int count, int size, double p, int uselog)
-{
-    double x;
+    double x, q;
     int i;
-    if (count == 0) {
-        p = 1 - p;
-        x = p;
-        for (i=1; i< size; i++) x = x*p;
-        if (uselog) x = log(x);
-        return (x);   // faster 
+    if ((count < 0) || (count > 0 && p <= 0)) {
+        x = 0;
     }
-    else
-        return (R::dbinom (count, size, p, uselog));
+    else if (count == 0) {
+        if (size== 0)
+            x = 1;
+        else {
+            q = 1 - p;
+            x = q;
+            for (i=1; i< size; i++) x *= q;
+        }
+    }
+    else {
+        boost::math::binomial_distribution<> bin(size, p);
+        x = boost::math::pdf(bin, count);
+    }
+    return (x);   
 }
-//--------------------------------------------------------------------------
 
-double gbinomFP (int count, double size, double p, int uselog)
-    // allow non integer size for Binomial
-{
-    return ( lgamma(size+1) - lgamma(size-count+1) - lgamma(count+1) +
-        count * log(p) + (size - count) * log (1-p) );
-}
 //--------------------------------------------------------------------------
 
 // probability of count for session s, detector k, animal i
@@ -72,11 +58,12 @@ double pski ( int binomN,
     double Tski,
     double g) {
     
+    double lambda = 0.0;
     double result = 1.0;
     
     if (binomN == -1) {                              // binary proximity detectors : Bernoulli
         if (abs(Tski-1) > 1e-10) {                   // effort not unity; adjust g 
-            g = 1 - pow(1 - g, Tski);
+            g = 1 - std::pow(1 - g, Tski);
         }
         if (count>0)                                 
             result = g;  
@@ -84,21 +71,30 @@ double pski ( int binomN,
             result = 1 - g;
     }
     else if (binomN == 0) {                          // count detectors : Poisson 
-        if (count == 0) 
-            result = exp(-Tski * g);                 // routinely apply Tsk adjustment to cum. hazard 
-        else
-            result = R::dpois(count, Tski * g, 0); 
+        lambda = Tski * g;
+        if ((count < 0) || (count>0 && lambda<=0)) {         
+            result = 0;
+        }
+        else if (count == 0) {
+            result = std::exp(-lambda);            // routinely apply Tsk adjustment to cum. hazard 
+        }
+        else {
+            //result = R::dpois(count, Tski * g * pI, 0); 
+            boost::math::poisson_distribution<> pois(lambda);
+            result = boost::math::pdf(pois,count);
+        }
     }
     else if (binomN == 1) {                          // count detectors : Binomial, size from Tsk
-        result = gbinom (count, round(Tski), g, 0); 
+        result = gbinom (count, round(Tski), g); 
     }
     else if (binomN > 1) {                           // count detectors : Binomial, specified size 
         if (abs(Tski-1) > 1e-10) {                   // effort not unity, adjust g 
-            g = 1 - pow(1 - g, Tski);
+            g = 1 - std::pow(1 - g, Tski);
         }
-        result = gbinom (count, binomN, g, 0);
+        result = gbinom (count, binomN, g);
     }
-    else Rcpp::stop("binomN < -1 not allowed");  // code multi -2 separately
+    else result = NAN;   // code multi -2 separately
+    // Rcpp::stop("binomN < -1 not allowed");
     
     return (result);
 }
@@ -106,10 +102,10 @@ double pski ( int binomN,
 
 // distance between two points given by row k in traps and row m in mask
 double dkm (
-        int k, 
-        int m, 
-        RcppParallel::RMatrix<double> traps, 
-        RcppParallel::RMatrix<double> mask
+        const int k, 
+        const int m, 
+        const RcppParallel::RMatrix<double> &traps, 
+        const RcppParallel::RMatrix<double> &mask
 )
 {
     return(std::sqrt((traps(k,0) - mask(m,0)) * (traps(k,0) - mask(m,0)) +
@@ -119,13 +115,14 @@ double dkm (
 
 // rectangular distance between two points given by row k in traps and row m in mask
 double dkmrect (
-        int k, 
-        int m, 
-        RcppParallel::RMatrix<double> traps, 
-        RcppParallel::RMatrix<double> mask
+        const int k, 
+        const int m, 
+        const RcppParallel::RMatrix<double> &traps, 
+        const RcppParallel::RMatrix<double> &mask
     )
 {
-    return(std::max(fabs(traps(k,0) - mask(m,0)), fabs(traps(k,1) - mask(m,1))));
+    return(std::max(std::fabs(traps(k,0) - mask(m,0)), 
+                    std::fabs(traps(k,1) - mask(m,1))));
 }
 //--------------------------------------------------------------------------
 
@@ -133,14 +130,14 @@ double dkmrect (
 
 // hazard detection functions 14-20
 double hfn (
-        int k, 
-        int m, 
-        int c, 
+        const int k, 
+        const int m, 
+        const int c, 
         const RcppParallel::RMatrix<double> openval,  
         const RcppParallel::RMatrix<double> traps,
         const RcppParallel::RMatrix<double> mask, 
-        int sigmai, 
-        int detectfn)
+        const int sigmai, 
+        const int detectfn)
 {
     double d;
     double sigma;
@@ -154,10 +151,10 @@ double hfn (
     }
     
     if (detectfn == 14) { 
-        return (openval(c,0) * exp(-d*d/2/sigma/sigma));                   // HHN
+        return (openval(c,0) * std::exp(-d*d/2/sigma/sigma));                   // HHN
     }
     else if (detectfn == 16) {
-        return (openval(c,0) * exp(-d/sigma));                             // HEX
+        return (openval(c,0) * std::exp(-d/sigma));                             // HEX
     }
     else if (detectfn == 20) {
         if (d<=sigma)
@@ -169,31 +166,34 @@ double hfn (
     else {
         z =  openval(c,sigmai+1);
         if (detectfn == 15) {
-            return (openval(c,0) * (1 - exp(-pow(d/sigma, -z))));          // HHR
+            return (openval(c,0) * (1 - std::exp(-std::pow(d/sigma, -z))));      // HHR
         }
         else if (detectfn == 17) {
-            return (openval(c,0) * exp(-(d-z)*(d-z) / 2 / sigma / sigma)); // HAN
+            return (openval(c,0) * std::exp(-(d-z)*(d-z) / 2 / sigma / sigma));  // HAN
         }
         else if (detectfn == 18) {
-            return (openval(c,0) * R::pgamma(d,z,sigma/z,0,0));            // HCG
+            // return (openval(c,0) * R::pgamma(d,z,sigma/z,0,0));               // HCG
+            boost::math::gamma_distribution<> gam(z,sigma/z);
+            // use complement for upper tail
+            return (openval(c,0) * boost::math::cdf(boost::math::complement(gam, d)));                     // HCG
         }
         else if (detectfn == 19) {
-            return (openval(c,0) * exp(- pow(d /sigma , z)));              // HVP
+            return (openval(c,0) * std::exp(- std::pow(d /sigma , z)));          // HVP
         }
-        else Rcpp::stop("detectfn not allowed in openCR");
+        else return NAN; // Rcpp::stop("detectfn not allowed in openCR");
     }
 }
 //--------------------------------------------------------------------------
 
 // hazard detection functions 14-20
 double hfnd (
-        int k, 
-        int m, 
-        int c, 
+        const int k, 
+        const int m, 
+        const int c, 
         const RcppParallel::RMatrix<double> openval,  
         const RcppParallel::RMatrix<double> distmat,
-        int sigmai, 
-        int detectfn
+        const int sigmai, 
+        const int detectfn
     )
 {
     double d;
@@ -202,10 +202,10 @@ double hfnd (
     sigma =  openval(c, sigmai);
     d = distmat(k,m);
     if (detectfn == 14) { 
-        return (openval(c,0) * exp(-d*d/2/sigma/sigma));                   // HHN
+        return (openval(c,0) * std::exp(-d*d/2/sigma/sigma));                   // HHN
     }
     else if (detectfn == 16) {
-        return (openval(c,0) * exp(-d/sigma));                             // HEX
+        return (openval(c,0) * std::exp(-d/sigma));                             // HEX
     }
     else if (detectfn == 20) {
         if (d<=sigma)
@@ -217,18 +217,18 @@ double hfnd (
     else {
         z =  openval(c,sigmai+1);
         if (detectfn == 15) {
-            return (openval(c,0) * (1 - exp(-pow(d/sigma, -z))));          // HHR
+            return (openval(c,0) * (1 - std::exp(-std::pow(d/sigma, -z))));          // HHR
         }
         else if (detectfn == 17) {
-            return (openval(c,0) * exp(-(d-z)*(d-z) / 2 / sigma / sigma)); // HAN
+            return (openval(c,0) * std::exp(-(d-z)*(d-z) / 2 / sigma / sigma)); // HAN
         }
         else if (detectfn == 18) {
             return (openval(c,0) * R::pgamma(d,z,sigma/z,0,0));            // HCG
         }
         else if (detectfn == 19) {
-            return (openval(c,0) * exp(- pow(d /sigma , z)));              // HVP
+            return (openval(c,0) * std::exp(- std::pow(d /sigma , z)));              // HVP
         }
-        else Rcpp::stop("detectfn not allowed in openCR");
+        else return NAN; // Rcpp::stop("detectfn not allowed in openCR");
     }
 }
 //--------------------------------------------------------------------------
@@ -236,10 +236,10 @@ double hfnd (
 
 
 void getp (
-        int n, 
-        int x, 
-        int nc, 
-        int ss, 
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int ss, 
         const RcppParallel::RMatrix<double> openval,  
         const RcppParallel::RVector<int> PIA, 
         std::vector<double> &p
@@ -252,11 +252,15 @@ void getp (
 }
 //--------------------------------------------------------------------------
 
-void getphij (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &phij) {
+void getphij (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &phij) {
     // column 2 
     int j;
     double phi;
@@ -264,17 +268,21 @@ void getphij (int n, int x, int nc, int jj,
         // jj-1 because one fewer intervals than primary sessions  
         phi = openval(PIAJ[i3(n, j, x, nc, jj)]-1, 1);       
         // adjust for interval duration  
-        phij[j] = exp(log(phi) * intervals[j]);  
+        phij[j] = std::exp(std::log(phi) * intervals[j]);  
     }
     phij[jj-1] = 0;
 }
 //--------------------------------------------------------------------------
 
-void getmoveargs (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    const RcppParallel::RVector<int> moveargsi,
-    std::vector<double> &moveargs) {
+void getmoveargs (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const RcppParallel::RVector<int> moveargsi,
+        std::vector<double> &moveargs) {
     // column moveargsi (and maybe moveargsi + 1) 
     int j;
     int moveaindex;
@@ -298,10 +306,15 @@ void getmoveargs (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getpj (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &pj) {
+void getpj (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        std::vector<double> &pj) 
+{
     // column 2 
     int j;
     for (j = 0; j < jj; j++) {
@@ -310,10 +323,16 @@ void getpj (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getg (int type, int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &g) {
+void getg (
+        const int type, 
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        std::vector<double> &g) 
+{
     // column 4 
     int j;
     for (j = 0; j < jj; j++) {
@@ -325,31 +344,41 @@ void getg (int type, int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getfj (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &phij,
-    std::vector<double> &fj) {
+void getfj (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const RcppParallel::RVector<double> intervals, 
+        const std::vector<double> phij,
+        std::vector<double> &fj) 
+{
     // column 3 
     int j;
     double f,phi;
     for (j = 0; j < (jj-1); j++) {
         // jj-1 because one fewer intervals than primary sessions  
         f = openval(PIAJ[i3(n, j, x, nc, jj )]-1, 2); 
-        phi = exp(log(phij[j]) / intervals[j]);
+        phi = std::exp(std::log(phij[j]) / intervals[j]);
         // adjust for interval duration  
-        fj[j] = exp(log(phi+f) * intervals[j]) - phij[j];  
+        fj[j] = std::exp(std::log(phi+f) * intervals[j]) - phij[j];  
     }
     fj[jj-1] = 0;
 }
 //--------------------------------------------------------------------------
 
-void getlj (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &lj) {
+void getlj (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &lj) 
+{
     // column 3 
     int j;
     double l;
@@ -357,52 +386,67 @@ void getlj (int n, int x, int nc, int jj,
         // jj-1 because one fewer intervals than primary sessions  
         l = openval(PIAJ[i3(n, j, x, nc, jj )]-1, 2); 
         // adjust for interval duration  
-        lj[j] = exp(log(l) * intervals[j]);  
+        lj[j] = std::exp(std::log(l) * intervals[j]);  
     }
     lj[jj-1] = 0;
 }
 //--------------------------------------------------------------------------
 
-void getgaml (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &gam) {
+void getgaml (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &gam) 
+{
     // column 3 
     int j;
     double phij;
     double lamj;
     for (j = 0; j < (jj-1); j++) {
         phij = openval(PIAJ[i3(n, j, x, nc, jj)]-1, 1); 
-        phij = exp(log(phij) * intervals[j]);  
+        phij = std::exp(std::log(phij) * intervals[j]);  
         lamj = openval(PIAJ[i3(n, j, x, nc, jj)]-1, 2); 
-        lamj = exp(log(lamj) * intervals[j]);  
+        lamj = std::exp(std::log(lamj) * intervals[j]);  
         gam[j+1] = phij/lamj;
     }
     gam[0] = 0;
 }
 //--------------------------------------------------------------------------
 
-void getgamj (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &gamj) {
+void getgamj (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &gamj) 
+{
     // column 3 
     int j;
     double gam;
     for (j = 1; j < jj; j++) {
         gam = openval(PIAJ[i3(n, j, x, nc, jj)]-1, 2); 
-        gamj[j] = exp(log(gam) * intervals[j-1]);  
+        gamj[j] = std::exp(std::log(gam) * intervals[j-1]);  
     }
     gamj[0] = 0;
 }
 //--------------------------------------------------------------------------
 
-void getkapj (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &kapj) {
+void getkapj (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        std::vector<double> &kapj) 
+{   
     // column 3 
     int j;
     for (j = 1; j < jj; j++) {
@@ -417,40 +461,50 @@ void getkapj (int n, int x, int nc, int jj,
 //     c(0,openval[PIAJ[n, J2, x],3])
 // }
 
-void getbeta0 (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &beta) {
+void getbeta0 (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        std::vector<double> &beta) 
+{
     // column 3 
     int j;
     double sumbeta = 0;
     for (j = 1; j < jj; j++) {
         beta[j] = openval(PIAJ[i3(n, j, x, nc, jj )]-1,2); 
-        sumbeta += exp(beta[j]);
+        sumbeta += std::exp(beta[j]);
     }
     beta[0] = 1;
     for (j = 1; j < jj; j++) {
-        beta[j] = exp(beta[j]) / (1 + sumbeta);
+        beta[j] = std::exp(beta[j]) / (1 + sumbeta);
         beta[0] -= beta[j];
     }
 }
 //--------------------------------------------------------------------------
 
-void gettau (int n, int x, int nc, int jj,
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &tau,
-    int M) {
+void gettau (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj,
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        std::vector<double> &tau,
+        const int M) 
+{
     // column 5 
     int j;
     double sumtau = 0;
     for (j = 0; j < M; j++) {
         tau[j] = openval(PIAJ[i3(n, j, x, nc, jj )]-1, 4);
-        sumtau += exp(tau[j]);
+        sumtau += std::exp(tau[j]);
     }
     tau[M] = 1;
     for (j = 0; j < M; j++) {
-        tau[j] = exp(tau[j]) / (1 + sumtau);
+        tau[j] = std::exp(tau[j]) / (1 + sumtau);
         tau[M] -= tau[j];
     }
     for (j = M+1; j < jj; j++)
@@ -458,10 +512,15 @@ void gettau (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getDj (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &Dj) {
+void getDj (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        std::vector<double> &Dj) 
+{
     // column 3 
     int j;
     for (j = 0; j < jj; j++) {
@@ -471,12 +530,17 @@ void getDj (int n, int x, int nc, int jj,
 //--------------------------------------------------------------------------
 
 // per capita recruitment cf Link & Barker 2005, Schwarz 'Gentle Intro'
-void getbetaf (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &phij,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &beta) {
+void getbetaf (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const std::vector<double> phij,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &beta) 
+{
     int j;
     double sumbeta = 1;
     std::vector<double> d(jj);
@@ -498,12 +562,17 @@ void getbetaf (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getbetal (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ,
-    std::vector<double> &phij,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &beta) {
+void getbetal (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ,
+        const std::vector<double> phij,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &beta) 
+{
     int j;
     double sumbeta = 1;
     std::vector<double> d(jj);
@@ -533,12 +602,17 @@ void getbetal (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getbetag (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ, 
-    std::vector<double> &phij,
-    const RcppParallel::RVector<double> intervals, 
-    std::vector<double> &beta) {
+void getbetag (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ, 
+        const std::vector<double> phij,
+        const RcppParallel::RVector<double> intervals, 
+        std::vector<double> &beta) 
+{
     int j;
     double sumbeta = 1;
     std::vector<double> d(jj);
@@ -570,11 +644,16 @@ void getbetag (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getbetak (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ, 
-    std::vector<double> &phij,
-    std::vector<double> &beta) {
+void getbetak (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ, 
+        const std::vector<double> phij,
+        std::vector<double> &beta) 
+{
     int i,j;
     std::vector<double> tau(jj);
     std::vector<double> pj(jj);
@@ -618,10 +697,15 @@ void getbetak (int n, int x, int nc, int jj,
 // }
 
 // return parameterisation cf Pledger et al. 2010 p 885 
-void getbetaB (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ, 
-    std::vector<double> &beta) {
+void getbetaB (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ, 
+        std::vector<double> &beta) 
+{
     int j;
     double sumB = 0;
     std::vector<double> B(jj);
@@ -635,11 +719,16 @@ void getbetaB (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getbetaD (int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ, 
-    std::vector<double> &phij,
-    std::vector<double> &beta) {
+void getbetaD (
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ, 
+        const std::vector<double> phij,
+        std::vector<double> &beta) 
+{
     int j;
     double sumB;
     std::vector<double> B(jj);
@@ -658,12 +747,18 @@ void getbetaD (int n, int x, int nc, int jj,
 }
 //--------------------------------------------------------------------------
 
-void getbeta (int type, int n, int x, int nc, int jj, 
-    const RcppParallel::RMatrix<double> openval,  
-    const RcppParallel::RVector<int> PIAJ, 
-    const RcppParallel::RVector<double> intervals,
-    std::vector<double> &phij,
-    std::vector<double> &beta) {
+void getbeta (
+        const int type, 
+        const int n, 
+        const int x, 
+        const int nc, 
+        const int jj, 
+        const RcppParallel::RMatrix<double> openval,  
+        const RcppParallel::RVector<int> PIAJ, 
+        const RcppParallel::RVector<double> intervals,
+        const std::vector<double> phij,
+        std::vector<double> &beta) 
+{
     if ((type == 2) || (type == 17) || (type == 11) || (type == 13) || 
         (type == 41) || (type == 43) || (type == 30) || (type == 31)) 
         getbeta0 (n, x, nc, jj, openval, PIAJ, beta);
@@ -682,6 +777,6 @@ void getbeta (int type, int n, int x, int nc, int jj,
         getbetag (n, x, nc, jj, openval, PIAJ, phij, intervals, beta);
     else if ((type == 28) || (type == 29))
         getbetak (n, x, nc, jj, openval, PIAJ, phij, beta);
-    else Rcpp::stop("no beta for this type");
+    else ; // Rcpp::stop("no beta for this type");
 }
 //--------------------------------------------------------------------------

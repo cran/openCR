@@ -11,6 +11,8 @@
 # 2019-04-09 explicit treatment of count detector; dropuse of data$multi
 # 2020-12-07 CJSmte (Markovian Temporary Emigration) trial - not completed
 # 2021-04-19 stratified
+# 2021-11-08 PIAJ recalc to fix bug in nonspatial learned response models and valgrind issue
+# 2021-11-08 PIA, PIAJ overwritten for naive animal, rather than always copied  
 
 # types
 
@@ -50,17 +52,11 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
         ncf <- sum(freq)
         comp <- numeric(4)
         
-        # PIA  <- data$design$PIA [stratum$i,,,,, drop = FALSE]
-        # PIAJ <- data$design$PIAJ[stratum$i,,,, drop = FALSE]
         nc1 <- max(stratum$nc,1)
         S <- stratum$cumss[stratum$J+1]
         PIA  <- data$design$PIA [stratum$i, 1:nc1, 1:S, , , drop = FALSE]
         PIAJ <- data$design$PIAJ[stratum$i, 1:nc1, 1:stratum$J, , drop = FALSE]
-        if (data$learnedresponse)
-            PIA0 <- data$design0$PIA[stratum$i,1:nc1, 1:S, , , drop = FALSE]
-        else
-            PIA0 <- PIA
-        
+
         if (data$details$debug>1) {
             message('Stratum ', stratum$i)
             message('Type    ', type)
@@ -73,6 +69,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             message('intervals')
             print(stratum$primaryintervals)
             flush.console()
+            browser()
         }
         
         if (type %in% c(20,26)) {
@@ -161,11 +158,16 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             else
                 temp <- allhistparallel()
             comp[1] <- sum(temp)
-            
+
             #####################################################################
             # Component 2: Probability of missed animals (all-zero histories)
             # not CJS, CJSmte
             if (type %in% c(2:4,15:19, 21, 22, 23, 27, 28, 29)) {
+                LR <- data$learnedresponse
+                if (LR) {
+                    PIA0 <- data$design0$PIA[stratum$i, 1:nc1, 1:S, , , drop = FALSE] 
+                    PIAJ0 <- data$design0$PIAJ[stratum$i, 1:nc1, 1:stratum$J, , drop = FALSE]
+                }
                 pdot <- rep(0, stratum$nc)
                 for (x in 1:data$details$nmix) {   # loop over latent classes
                     if (data$details$R) {
@@ -176,8 +178,8 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                             stratum$cumss,
                             data$details$nmix,
                             realparval0,
-                            PIA0,
-                            PIAJ,
+                            if (LR) PIA0 else PIA,
+                            if (LR) PIAJ0 else PIAJ,
                             stratum$primaryintervals)
                     }
                     else {
@@ -189,8 +191,8 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                             as.integer(stratum$cumss),
                             as.integer(data$details$nmix),
                             as.matrix(realparval0),
-                            as.integer(PIA0),
-                            as.integer(PIAJ),
+                            as.integer(if (LR) PIA0 else PIA),
+                            as.integer(if (LR) PIAJ0 else PIAJ),
                             as.double(stratum$primaryintervals))
                     }
                     pdot <- pdot + pmix[x] * pch1
@@ -216,6 +218,9 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
                     lnbinomial (ncf, superN + ncf, meanpdot),
                     NA)
             }
+            
+            #####################################################################
+            
             
         }
         comp
@@ -254,7 +259,7 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
     if (type %in% 28:29 & any(unlist(data$stratumdata$primaryintervals) !=1)) 
         stop ("kappa parameterisation available only if all intervals = 1")
 
-        if (data$details$debug>2) browser()
+    if (data$details$debug>2) browser()
     
     #####################################################################
     compbystratum <- lapply(data$stratumdata, onestratumll)

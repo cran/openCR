@@ -1,3 +1,15 @@
+version 2.2.1 (2021-11-09)
+
+New features and changed behaviour
+    o none
+
+Bugs fixed
+    o openCR.fit() did not correctly fit non-spatial learned response (b) models 
+      such as model = p~b, type = 'JSSAfCL' (bug undetected for some years).
+
+Other
+    o tidied C++ code, edited vignette
+
 version 2.2.0 (2021-11-03)
 
 New features and changed behaviour

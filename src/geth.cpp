@@ -1,13 +1,16 @@
-#include <Rcpp.h>
 #include "utils.h"   // i3, i4
 
-using namespace Rcpp;
-
 // [[Rcpp::export]]
-List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm, 
-              const IntegerVector PIA, 
-              const NumericMatrix Tsk, 
-              const NumericVector hk) {
+Rcpp::List gethcpp (
+        const int nc1, 
+        const int cc, 
+        const int nmix, 
+        const int nk, 
+        const int ss, 
+        const int mm, 
+        const Rcpp::IntegerVector PIA, 
+        const Rcpp::NumericMatrix Tsk, 
+        const Rcpp::NumericVector hk) {
     
     // This function fills a vector h representing a 4-D (x,m,n,s) array with
     // the total hazard (summed across traps) for animal n on occasion s 
@@ -20,7 +23,7 @@ List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm,
     int c,i,m,n,k,x,gi,hi,s;
     double Tski;          
     
-    NumericMatrix xmat (nc1*ss, nk*(nmix+1));
+    Rcpp::NumericMatrix xmat (nc1*ss, nk*(nmix+1));
     for (n=0; n<nc1; n++) {
         for (s=0; s<ss; s++) {
             for (k=0; k<nk; k++) {                         
@@ -31,10 +34,10 @@ List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm,
             }
         }
     }
-    List lookup = makelookupcpp(xmat);
-    NumericMatrix ymat = as<NumericMatrix>(lookup["lookup"]);
-    IntegerVector index = as<IntegerVector>(lookup["index"]);
-    IntegerMatrix hindex(nc1, ss);
+    Rcpp::List lookup = makelookupcpp(xmat);
+    Rcpp::NumericMatrix ymat = Rcpp::as<Rcpp::NumericMatrix>(lookup["lookup"]);
+    Rcpp::IntegerVector index = Rcpp::as<Rcpp::IntegerVector>(lookup["index"]);
+    Rcpp::IntegerMatrix hindex(nc1, ss);
     int uniquerows = ymat.nrow();
     for (n=0; n<nc1; n++) {
         for (s=0; s<ss; s++) {
@@ -43,7 +46,7 @@ List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm,
     }
     
     int hlength = uniquerows * mm * nmix;
-    NumericVector h(hlength);
+    Rcpp::NumericVector h(hlength);
     for (i=0; i<hlength; i++) h[i] = 0;
     
     // search hindex for each row index in turn, identifying first n,s with the index
@@ -72,8 +75,8 @@ List gethcpp (int nc1, int cc, int nmix, int nk, int ss, int mm,
         if (hi >= uniquerows) break;
     }
     
-    return List::create(Named("h") = h,
-                        Named("hindex") = hindex);
+    return Rcpp::List::create(Rcpp::Named("h") = h,
+                        Rcpp::Named("hindex") = hindex);
     
 }
 //==============================================================================

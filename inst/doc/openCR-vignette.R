@@ -88,25 +88,26 @@ rect(-3, -2, 19.3, 8.7)
 ## ----compare, cache = mycache, warning = FALSE------------------------------------------
 msk <- make.mask(traps(captdata), buffer = 100, type = 'trapbuffer')
 
-secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
-openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
+fit_secr <- secr.fit(captdata, detectfn = 'HHN', mask = msk, trace = FALSE)
+fit_openCR <- openCR.fit(captdata, detectfn = 'HHN', mask = msk, type = 'secrD')
 
 # massage the predict.openCR results to the same format as predict.secr
-pred_openCR <- plyr::rbind.fill(predict(openCR))
+pred_openCR <- plyr::rbind.fill(predict(fit_openCR))
+
 pred_openCR <- pred_openCR[c(2,1,3), !(names(pred_openCR) %in% c('stratum','session'))]
-rownames(pred_openCR) <- secr$realnames
+rownames(pred_openCR) <- fit_secr$realnames
 
 # compare estimates
-predict(secr)[,-1]
+predict(fit_secr)[,-1]
 pred_openCR
 
 ## ----timing-----------------------------------------------------------------------------
 # compare timings in seconds
-c(secr = secr$proctime, openCR = openCR$proctime)
+c(secr = fit_secr$proctime, openCR = fit_openCR$proctime)
 
 ## ----multinom---------------------------------------------------------------------------
 # compare maximised log likelihoods
-c(secr.logLik = logLik(secr), openCR.logLik = logLik(openCR) + logmultinom(captdata))
+c(secr.logLik = logLik(fit_secr), openCR.logLik = logLik(fit_openCR) + logmultinom(captdata))
 
 ## ----makedf, cache = mycache------------------------------------------------------------
 makedf.b <- function (ch, spatial = FALSE, nmix = 1, naive = FALSE) {
@@ -203,14 +204,14 @@ invlogit(coef(fit)['phi',c('beta','lcl','ucl')])
 
 ## ----sparsekernel, fig.width=8, fig.height=3.5------------------------------------------
 par(mar = c(3,1,4,5))
-k <- make.kernel(movementmodel = 'normal', kernelradius = 10, spacing = 10, move.a = 40, 
+k <- make.kernel(movementmodel = 'BVN', kernelradius = 10, spacing = 10, move.a = 40, 
   sparse = TRUE, clip = TRUE)
 plot(k)
 symbols(0,0, add = TRUE, circles = 100, inches = FALSE)
 
 ## ----plotkernel, fig.width = 8, fig.height = 3.5----------------------------------------
 par (mar = c(3,3,4,6), cex = 0.9)
-k <- make.kernel (movementmodel = 'normal', spacing = 10, move.a = 40, clip = TRUE)
+k <- make.kernel (movementmodel = 'BVN', spacing = 10, move.a = 40, clip = TRUE)
 plot(k, contour = TRUE)
 summary(k)
 

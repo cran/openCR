@@ -1,64 +1,60 @@
-#include <Rcpp.h>
 #include "utils.h"
-#include <RcppParallel.h>
-
-using namespace Rcpp;
-using namespace RcppParallel;
 
 //==============================================================================
 
 // [[Rcpp::export]]
-List makegkcpp (
-        int cc, 
-        int kk, 
-        int mm, 
-        int detectfn, 
-        int sigmai, 
-        const NumericMatrix openval, 
-        const NumericMatrix traps,
-        const NumericMatrix mask
+Rcpp::List makegkcpp (
+        const int cc, 
+        const int kk, 
+        const int mm, 
+        const int detectfn, 
+        const int sigmai, 
+        const Rcpp::NumericMatrix openval, 
+        const Rcpp::NumericMatrix traps,
+        const Rcpp::NumericMatrix mask
 ) 
 {
-    const RMatrix<double> openvalR(openval); 
-    const RMatrix<double> trapsR(traps);
-    const RMatrix<double> maskR(mask);
+    const RcppParallel::RMatrix<double> openvalR(openval); 
+    const RcppParallel::RMatrix<double> trapsR(traps);
+    const RcppParallel::RMatrix<double> maskR(mask);
     int k, m, c, gi;
-    NumericVector gk(cc * kk * mm); 
-    NumericVector hk(cc * kk * mm);
+    Rcpp::NumericVector gk(cc * kk * mm); 
+    Rcpp::NumericVector hk(cc * kk * mm);
     for (k=0; k<kk; k++) {
         for (m=0; m<mm; m++) {
             for (c=0; c<cc; c++) {
                 gi = i3(c,k,m,cc, kk);
                 hk[gi] = hfn(k, m, c, openvalR, trapsR, maskR, sigmai, detectfn);
-                gk[gi] = 1 - exp(-hk[gi]);
+                gk[gi] = 1 - std::exp(-hk[gi]);
             }
         }
     }
-    return List::create(gk, hk);
+    return Rcpp::List::create(gk, hk);
 }
+
 //==============================================================================
 
-struct Hckm : public Worker {
+struct Hckm : public RcppParallel::Worker {
     
     // input data
-    int sigmai;
-    int detectfn;
-    const RMatrix<double> openval;
-    const RMatrix<double> traps;
-    const RMatrix<double> mask;
+    const int sigmai;
+    const int detectfn;
+    const RcppParallel::RMatrix<double> openval;
+    const RcppParallel::RMatrix<double> traps;
+    const RcppParallel::RMatrix<double> mask;
     
     // output vector to write to
-    RVector<double> hk;
-    RVector<double> gk;
+    RcppParallel::RVector<double> hk;
+    RcppParallel::RVector<double> gk;
     
     // initialize from Rcpp input and output matrixes (the RMatrix class
     // can be automatically converted to from the Rcpp matrix type)
     Hckm(int sigmai, int detectfn,
-         const NumericMatrix openval, 
-         const NumericMatrix traps, 
-         const NumericMatrix mask, 
-         NumericVector hk,
-         NumericVector gk)
+         const Rcpp::NumericMatrix openval, 
+         const Rcpp::NumericMatrix traps, 
+         const Rcpp::NumericMatrix mask, 
+         Rcpp::NumericVector hk,
+         Rcpp::NumericVector gk)
         : sigmai(sigmai), detectfn(detectfn), openval(openval), 
           traps(traps), mask(mask), hk(hk), gk(gk) {}
 
@@ -71,7 +67,7 @@ struct Hckm : public Worker {
                 for (int c=0; c < cc; c++) {
                     int gi = i3(c,k,m, cc, kk);
                     hk[gi] = hfn(k, m, c, openval, traps, mask, sigmai, detectfn);
-                    gk[gi] = 1 - exp(-hk[gi]);
+                    gk[gi] = 1 - std::exp(-hk[gi]);
                 }
             }
             
@@ -80,48 +76,52 @@ struct Hckm : public Worker {
 };
 
 // [[Rcpp::export]]
-List makegkParallelcpp (int detectfn, int sigmai, int grain, int ncores,
-                        const NumericMatrix& openval, 
-                        const NumericMatrix& traps,
-                        const NumericMatrix& mask
+Rcpp::List makegkParallelcpp (
+        const int detectfn, 
+        const int sigmai, 
+        const int grain, 
+        const int ncores,
+        const Rcpp::NumericMatrix& openval, 
+        const Rcpp::NumericMatrix& traps,
+        const Rcpp::NumericMatrix& mask
 ) 
 {
-    NumericVector hk(openval.nrow() * traps.nrow() * mask.nrow()); 
-    NumericVector gk(openval.nrow() * traps.nrow() * mask.nrow()); 
+    Rcpp::NumericVector hk(openval.nrow() * traps.nrow() * mask.nrow()); 
+    Rcpp::NumericVector gk(openval.nrow() * traps.nrow() * mask.nrow()); 
     
     Hckm hckm (sigmai, detectfn, openval, traps, mask, hk, gk);
     
     if (ncores>1) {
-        parallelFor(0, mask.nrow(), hckm, grain, ncores);
+        RcppParallel::parallelFor(0, mask.nrow(), hckm, grain, ncores);
     }
     else {
         hckm.operator()(0,mask.nrow());    // for debugging avoid multithreading to allow R calls
     }
-    return List::create(gk, hk);
+    return Rcpp::List::create(gk, hk);
 }
 //==============================================================================
 
-struct Hckmd : public Worker {
+struct Hckmd : public RcppParallel::Worker {
     
     // input data
-    int sigmai;
-    int detectfn;
-    const RMatrix<double> openval;
-    const RMatrix<double> distmat;
+    const int sigmai;
+    const int detectfn;
+    const RcppParallel::RMatrix<double> openval;
+    const RcppParallel::RMatrix<double> distmat;
 
     // output vector to write to
-    RVector<double> hk;
-    RVector<double> gk;
+    RcppParallel::RVector<double> hk;
+    RcppParallel::RVector<double> gk;
     
     // initialize from Rcpp input and output matrixes (the RMatrix class
     // can be automatically converted to from the Rcpp matrix type)
     Hckmd(
-        int sigmai, 
-        int detectfn,
-        const NumericMatrix openval, 
-        const NumericMatrix distmat, 
-        NumericVector hk,
-        NumericVector gk)
+        const int sigmai, 
+        const int detectfn,
+        const Rcpp::NumericMatrix openval, 
+        const Rcpp::NumericMatrix distmat, 
+        Rcpp::NumericVector hk,
+        Rcpp::NumericVector gk)
         : sigmai(sigmai), detectfn(detectfn), openval(openval), 
             distmat(distmat), hk(hk), gk(gk) {}
     
@@ -134,7 +134,7 @@ struct Hckmd : public Worker {
                 for (int c=0; c < cc; c++) {
                     int gi = i3(c,k,m, cc, kk);
                     hk[gi] = hfnd(k, m, c, openval, distmat, sigmai, detectfn);
-                    gk[gi] = 1 - exp(-hk[gi]);
+                    gk[gi] = 1 - std::exp(-hk[gi]);
                 }
             }
             
@@ -143,26 +143,26 @@ struct Hckmd : public Worker {
 };
 
 // [[Rcpp::export]]
-List makegkParalleldcpp (
-        int detectfn, 
-        int sigmai, 
-        int grain, 
-        int ncores,
-        const NumericMatrix& openval, 
-        const NumericMatrix& distmat
+Rcpp::List makegkParalleldcpp (
+        const int detectfn, 
+        const int sigmai, 
+        const int grain, 
+        const int ncores,
+        const Rcpp::NumericMatrix& openval, 
+        const Rcpp::NumericMatrix& distmat
 ) 
 {
-    NumericVector hk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
-    NumericVector gk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
+    Rcpp::NumericVector hk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
+    Rcpp::NumericVector gk(openval.nrow() * distmat.nrow() * distmat.ncol()); 
     
     Hckmd hckmd (sigmai, detectfn, openval, distmat, hk, gk);
     
     if (ncores>1) {
-        parallelFor(0, distmat.ncol(), hckmd, grain, ncores);
+        RcppParallel::parallelFor(0, distmat.ncol(), hckmd, grain, ncores);
     }
     else {
         hckmd.operator()(0,distmat.ncol());    // for debugging avoid multithreading to allow R calls
     }
-    return List::create(gk, hk);
+    return Rcpp::List::create(gk, hk);
 }
 //==============================================================================

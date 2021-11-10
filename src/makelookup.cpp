@@ -1,12 +1,9 @@
-#include <Rcpp.h>
-//#include "utils.h"
-
-using namespace Rcpp;
+#include "utils.h"
 
 //==============================================================================
 
 // [[Rcpp::export]]
-List makelookupcpp (const NumericMatrix x)  
+Rcpp::List makelookupcpp (const Rcpp::NumericMatrix x)  
     
 {
     // Create lookup table to the unique rows in a matrix
@@ -23,8 +20,8 @@ List makelookupcpp (const NumericMatrix x)
     int ncol = x.ncol();
 
     // outputs
-    NumericMatrix y (nrow, ncol);
-    IntegerVector index (nrow);   // output lookup rows of x in y
+    Rcpp::NumericMatrix y (nrow, ncol);
+    Rcpp::IntegerVector index (nrow);   // output lookup rows of x in y
     int resultcode = 1;
     
     // Avoid sort for now as it's complex to keep order of first occurrence, not needed
@@ -56,13 +53,13 @@ List makelookupcpp (const NumericMatrix x)
 	index[i] = k+1;
     }
     
-    y = y(Range(0,unique), Range(0,ncol-1));
+    y = y(Rcpp::Range(0,unique), Rcpp::Range(0,ncol-1));
     colnames(y) = colnames(x);
     
-    return List::create(
-        Named("resultcode") = resultcode,
-        Named("lookup") = y,
-        Named("index") = index);
+    return Rcpp::List::create(
+        Rcpp::Named("resultcode") = resultcode,
+        Rcpp::Named("lookup") = y,
+        Rcpp::Named("index") = index);
         
 }
 //==============================================================================

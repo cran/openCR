@@ -13,22 +13,15 @@
 // 2021-10-06 protect Boost call from infinite scale lognormal
 // 2021-10-12 strict new codes RDE, RDG, RDL etc. 
 
-#include <Rcpp.h>
-#include <RcppParallel.h>
-
-// see https://www.boost.org/doc/libs/1_77_0/libs/math/doc/html/math_toolkit/stat_tut/weg/error_eg.html
-// and https://www.boost.org/doc/libs/1_77_0/libs/math/doc/html/math_toolkit/pol_tutorial/changing_policy_defaults.html
-// return NAN for invalid inputs
-#define BOOST_MATH_DOMAIN_ERROR_POLICY ignore_error
-#include <boost/math/distributions.hpp>       // gamma, normal, lognormal distributions
+#include "utils.h"
 
 // [[Rcpp::depends(BH)]]
 
 void convolvemq (
-        int    mm,                    // number of points on mask 
-        int    kn,                    // number of points on kernel
-        int    j,                     // session number 1..jj 
-        int    edgecode,              // 0 none, no action; 1 wrapped, no action; 2 normalize truncated kernel
+        const int    mm,                    // number of points on mask 
+        const int    kn,                    // number of points on kernel
+        const int    j,                     // session number 1..jj 
+        const int    edgecode,              // 0 none, no action; 1 wrapped, no action; 2 normalize truncated kernel
         const  RcppParallel::RMatrix<int> &mqarray, // input [& 2020-10-31]
         std::vector<double> &kernelp, // p(move|dx,dy) for points in kernel 
         std::vector<double> &pjm      // return value
@@ -72,10 +65,10 @@ void convolvemq (
 
 // from single point m
 void convolvemq1 (
-        int    m,                     // initial location on mask
-        int    j,                     // session number 1..jj 
-        int    edgecode,              // 0 none, no action; 1 wrapped, no action; 2 normalize truncated kernel
-        const  RcppParallel::RMatrix<int> &mqarray, // input [& 2020-10-31]
+        const int    m,                     // initial location on mask
+        const int    j,                     // session number 1..jj 
+        const int    edgecode,              // 0 none, no action; 1 wrapped, no action; 2 normalize truncated kernel
+        const RcppParallel::RMatrix<int> &mqarray, // input [& 2020-10-31]
         const std::vector<double> &kernelp, // p(move|dx,dy) for points in kernel 
         std::vector<int>    &mj,
         std::vector<double> &pj      // return value
@@ -117,11 +110,11 @@ void convolvemq1 (
 // Interface for use in R
 // [[Rcpp::export]]
 Rcpp::NumericVector convolvemqcpp (
-        int    j,
-        int    edgecode,
+        const int    j,
+        const int    edgecode,
         const Rcpp::NumericMatrix mqarray,
         const Rcpp::NumericVector kernelp,
-        Rcpp::NumericVector pjm)
+        const Rcpp::NumericVector pjm)
 {
     int mm = mqarray.nrow();            // number of points on mask
     int kn = mqarray.ncol();            // number of points on kernel
@@ -334,18 +327,18 @@ std::vector<double> annulus (
 // BVCzi  = 19
 
 void fillkernelp (
-        int    jj,          // number of sessions
-        int    kerneltype, 
-        bool   sparsekernel,
-        double cellsize,
-        double r0,          // effective radius of zero cell as proportion of cell width
-        const  RcppParallel::RMatrix<int> kernel, 
-        const  RcppParallel::RVector<int> moveargsi, 
-        const  std::string fnname,
-        const  std::vector<double> &moveargs, 
+        const int    jj,          // number of sessions
+        const int    kerneltype, 
+        const bool   sparsekernel,
+        const double cellsize,
+        const double r0,          // effective radius of zero cell as proportion of cell width
+        const RcppParallel::RMatrix<int> kernel, 
+        const RcppParallel::RVector<int> moveargsi, 
+        const std::string fnname,
+        const std::vector<double> &moveargs, 
         std::vector<double> &kernelp,
-        bool   normalize,
-        int    grain,
+        const bool   normalize,
+        const int    grain,
         int    &returncode) 
 {
     int j,k,x,y;
@@ -358,10 +351,8 @@ void fillkernelp (
     double p1 = 0;
     double R = 0;
     double diag;
-    double cellarea = cellsize * cellsize;
-    // unused variants of r0
-    // double r0 = (1+std::sqrt(2))/4;
-    // double r0 = 1 / sqrt(M_PI);  // r0 = 1/sqrt(pi) gives circle of same area as cell
+    double cellarea = cellsize * cellsize;  // square metres
+    double r0w = r0 * cellsize;             // metres
     int kn = kernel.nrow();
     int centrek = 0;
     bool oneparameter = kerneltype==0 || kerneltype==1 || kerneltype==8 || 
@@ -393,7 +384,6 @@ void fillkernelp (
     }
     
     returncode = 1;
-    r0 = r0 * cellsize;   
     
     //-------------------------------------------------------------------------
     // iterate over sessions, ignoring last
@@ -479,10 +469,10 @@ void fillkernelp (
                 // BVN or BVNzi Gaussian kernel 
                 if (kerneltype == 0 || kerneltype == 11) {    
                     if (r>0 || r0==0) {
-                        kernelp[j * kn + k] = exp(-r2 / 2 / a2)  / 2 / M_PI / a2 * cellarea;
+                        kernelp[j * kn + k] = std::exp(-r2 / 2 / a2)  / 2 / M_PI / a2 * cellarea;
                     }
                     else  {
-                        kernelp[j * kn + k] = 1 - exp(-r0*r0/2/a2);
+                        kernelp[j * kn + k] = 1 - std::exp(-r0w*r0w/2/a2);
                     }
                 }
                 
@@ -490,21 +480,21 @@ void fillkernelp (
                 else if (kerneltype == 16) {        
                     if (r>0 || r0==0) {
                         kernelp[j * kn + k] = 0.5 * cellarea * 
-                        (exp(-r2 / 2 / a2)  / 2 / M_PI / a2 + 
-                        exp(-r2 / 2 / b2)  / 2 / M_PI / b2);
+                        (std::exp(-r2 / 2 / a2)  / 2 / M_PI / a2 + 
+                        std::exp(-r2 / 2 / b2)  / 2 / M_PI / b2);
                     }
                     else {
-                        kernelp[j * kn + k] = 1 - 0.5 * (exp(-r0*r0/2/a2) + exp(-r0*r0/2/b2));
+                        kernelp[j * kn + k] = 1 - 0.5 * (std::exp(-r0w*r0w/2/a2) + std::exp(-r0w*r0w/2/b2));
                     }
                 }
                 
                 // BVE or BVEzi Laplace kernel 
                 else if (kerneltype == 1 || kerneltype == 12) {   
                     if (r>0 || r0==0) {
-                        kernelp[j * kn + k] = exp(-r / a) / 2 / M_PI / a2 * cellarea;
+                        kernelp[j * kn + k] = std::exp(-r / a) / 2 / M_PI / a2 * cellarea;
                     }
                     else {
-                        kernelp[j * kn + k] = 1 - (r0/a + 1) * exp(-r0/a);
+                        kernelp[j * kn + k] = 1 - (r0w/a + 1) * std::exp(-r0w/a);
                     }
                 }
                 // BVC kernel 
@@ -513,10 +503,10 @@ void fillkernelp (
                         kernelp[j * kn + k] =  1 / (2 * M_PI) * a / pow(r2 + a2, 1.5) * cellarea;       
                     }
                     else {
-                        kernelp[j * kn + k] =   1 - a / std::sqrt(a2 + r0*r0); 
+                        kernelp[j * kn + k] =   1 - a / std::sqrt(a2 + r0w*r0w); 
                     }
-                    // Rprintf("r %8.6g, a %8.6g, a2 %8.6g, r0 %8.6g, p %8.6g \n",
-                    //    r, a, a2, r0, kernelp[j * kn + k]);
+                    // Rprintf("r %8.6g, a %8.6g, a2 %8.6g, r0w %8.6g, p %8.6g \n",
+                    //    r, a, a2, r0w, kernelp[j * kn + k]);
                 }
                 // BVT kernel 
                 else if (kerneltype == 3) {   
@@ -524,7 +514,7 @@ void fillkernelp (
                         kernelp[j * kn + k] = b / M_PI / a2 / pow(1 + r2/a2, b+1) * cellarea;
                     }
                     else {
-                        kernelp[j * kn + k] = 1 - pow(a2 / (a2 + r0*r0), b);
+                        kernelp[j * kn + k] = 1 - pow(a2 / (a2 + r0w*r0w), b);
                     }
                 }
                 
@@ -536,9 +526,9 @@ void fillkernelp (
                 // RDE or RDEzi kernel 
                 else if (kerneltype == 8 || kerneltype == 14) {  
                     if (r>0)
-                        kernelp[j * kn + k] =  exp(-r/a) / a / 2 / M_PI / r * cellarea;
+                        kernelp[j * kn + k] =  std::exp(-r/a) / a / 2 / M_PI / r * cellarea;
                     else {
-                        kernelp[j * kn + k] =  (1 - exp(-r0/a));
+                        kernelp[j * kn + k] =  (1 - std::exp(-r0w/a));
                     }
                 }
                 
@@ -549,14 +539,14 @@ void fillkernelp (
                         kernelp[j * kn + k] =  boost::math::pdf(gam, r) / 2 / M_PI / r * cellarea;
                     }
                     else {
-                        kernelp[j * kn + k] =  boost::math::cdf(gam, r0);
+                        kernelp[j * kn + k] =  boost::math::cdf(gam, r0w);
                     }
                 }
                 
                 // RDL kernel 
                 else if (kerneltype == 10) {  
-                    double mu = log(a); 
-                    double s = sqrt(log(1 + 1/b));
+                    double mu = std::log(a); 
+                    double s = std::sqrt(std::log(1 + 1/b));
                     // 2021-10-06 catch bad input 
                     if (std::isinf(s)) {
                         kernelp[j * kn + k] = 1/kn;    // uniform
@@ -567,7 +557,7 @@ void fillkernelp (
                             kernelp[j * kn + k] = boost::math::pdf(ln,r) / 2 / M_PI / r * cellarea;
                         }
                         else {
-                            kernelp[j * kn + k] = boost::math::cdf(ln, r0);
+                            kernelp[j * kn + k] = boost::math::cdf(ln, r0w);
                         }
                     }
                 }
@@ -702,16 +692,16 @@ void fillkernelp (
 
 // [[Rcpp::export]]
 Rcpp::NumericVector fillkernelcpp (
-        const  Rcpp::IntegerMatrix kernel, 
-        int    kerneltype, 
-        bool   sparsekernel,
-        double cellsize,
-        double r0,
-        int    jj,
+        const Rcpp::IntegerMatrix kernel, 
+        const int    kerneltype, 
+        const bool   sparsekernel,
+        const double cellsize,
+        const double r0,
+        const int    jj,
         const  std::string fnname,
         const  Rcpp::IntegerVector moveargsi, 
         const  Rcpp::NumericVector &moveargs,
-        bool   normalize
+        const bool   normalize
 ) 
 {
     

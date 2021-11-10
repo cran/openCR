@@ -1,85 +1,80 @@
-#include <Rcpp.h>
-#include <RcppParallel.h>
 #include "utils.h"
-
-using namespace Rcpp;
-using namespace RcppParallel;
 
 //==============================================================================
 // 2018-11-12 deleted pmix argument
 // 2019-05-06 revised movement algorithm
 // 2019-05-19 combined prw and prwmulti; use binomN == -2 for multi
 
-struct Somesecrhistories : public Worker {
+struct Somesecrhistories : public RcppParallel::Worker {
     
     // input data
-    int   x;
-    int   type;
-    int   mm;
-    int   nc;
-    int   binomN;
-    int   CJSp1; 
-    int   grain;
-    const RVector<double> intervals;
-    const RVector<int>    cumss;
-    const RVector<int>    w;
-    const RVector<int>    fi;
-    const RVector<int>    li;
-    const RVector<double> gk; 
-    const RMatrix<double> openval;
-    const RVector<int>    PIA;
-    const RVector<int>    PIAJ;
-    const RMatrix<double> Tsk;
-    const RMatrix<double> h;
-    const RMatrix<int>    hindex;
-    int                   movementcode;
-    bool                  sparsekernel;
-    bool                  anchored;
-    int                   edgecode;
-    const std::string     usermodel;
-    const RVector<int>    moveargsi;
-    const RMatrix<int>    kernel;
-    const RMatrix<int>    mqarray;
+    const int   x;
+    const int   type;
+    const int   mm;
+    const int   nc;
+    const int   binomN;
+    const int   CJSp1; 
+    const int   grain;
+    const RcppParallel::RVector<double> intervals;
+    const RcppParallel::RVector<int>    cumss;
+    const RcppParallel::RVector<int>    w;
+    const RcppParallel::RVector<int>    fi;
+    const RcppParallel::RVector<int>    li;
+    const RcppParallel::RVector<double> gk; 
+    const RcppParallel::RMatrix<double> openval;
+    const RcppParallel::RVector<int>    PIA;
+    const RcppParallel::RVector<int>    PIAJ;
+    const RcppParallel::RMatrix<double> Tsk;
+    const RcppParallel::RMatrix<double> h;
+    const RcppParallel::RMatrix<int>    hindex;
+    const int                           movementcode;
+    const bool                          sparsekernel;
+    const bool                          anchored;
+    const int                           edgecode;
+    const std::string                   usermodel;
+    const RcppParallel::RVector<int>    moveargsi;
+    const RcppParallel::RMatrix<int>    kernel;
+    const RcppParallel::RMatrix<int>    mqarray;
     
-    double                cellsize;   
-    double                r0;    
-    int  kk, jj, kn, cc;
-    bool indiv;
+    const double cellsize;   
+    const double r0;    
     
-    int cjs;
-    int fillcode;
+    int    kk, jj, kn, cc;
+    bool   indiv;
+    int    cjs;
+    int    fillcode;
     std::vector<double> pdotbd;
     
     // output likelihoods
-    RVector<double> output;
+    RcppParallel::RVector<double> output;
     
     // Constructor to initialize an instance of Somehistories 
     // The RMatrix class can be automatically converted to from the Rcpp matrix type
     Somesecrhistories(
         int x, int type, int mm, int nc, int binomN,  int CJSp1, int grain,                    
-        const NumericVector intervals,
-        const IntegerVector cumss,
-        const IntegerVector w,
-        const IntegerVector fi, 
-        const IntegerVector li,
-        const NumericVector gk, 
-        const NumericMatrix openval,
-        const IntegerVector PIA,
-        const IntegerVector PIAJ, 
-        const NumericMatrix Tsk,
-        const NumericMatrix h,
-        const IntegerMatrix hindex, 
+        const Rcpp::NumericVector intervals,
+        const Rcpp::IntegerVector cumss,
+        const Rcpp::IntegerVector w,
+        const Rcpp::IntegerVector fi, 
+        const Rcpp::IntegerVector li,
+        const Rcpp::NumericVector gk, 
+        const Rcpp::NumericMatrix openval,
+        const Rcpp::IntegerVector PIA,
+        const Rcpp::IntegerVector PIAJ, 
+        const Rcpp::NumericMatrix Tsk,
+        const Rcpp::NumericMatrix h,
+        const Rcpp::IntegerMatrix hindex, 
         int   movementcode,
         bool  sparsekernel,
         bool  anchored,
         int   edgecode,
         std::string usermodel,
-        const IntegerVector moveargsi,
-        const IntegerMatrix kernel,
-        const IntegerMatrix mqarray,
+        const Rcpp::IntegerVector moveargsi,
+        const Rcpp::IntegerMatrix kernel,
+        const Rcpp::IntegerMatrix mqarray,
         double cellsize,
         double r0,
-        NumericVector output)    
+        Rcpp::NumericVector output)    
         : 
             x(x), type(type), mm(mm), nc(nc), binomN(binomN), CJSp1(CJSp1),  
             grain(grain),
@@ -257,7 +252,7 @@ struct Somesecrhistories : public Worker {
                     for (m=0; m<mm; m++) {
                         H = h(m, hindex(n,s));
                         if (H > fuzz)
-                            pjm[m] *= exp(-H);
+                            pjm[m] *= std::exp(-H);
                     }
                 }
                 // Captured in trap k on occasion s
@@ -270,7 +265,7 @@ struct Somesecrhistories : public Worker {
                             H = h(m, hindex(n,s));
                             gi  = i3(c, k, m, cc, kk);
                             // in this context gk is understood to be hazard hk
-                            pjm[m] *=  Tski * (1-exp(-H)) *  gk[gi] / H;
+                            pjm[m] *=  Tski * (1-std::exp(-H)) *  gk[gi] / H;
                         }
                     }
                 }
@@ -328,7 +323,7 @@ struct Somesecrhistories : public Worker {
                         if (m>=0) {
                             H = h(m, hindex(n,s));
                             if (H > fuzz)
-                                pw[q] *= exp(-H);
+                                pw[q] *= std::exp(-H);
                         }
                     }
                 }
@@ -344,7 +339,7 @@ struct Somesecrhistories : public Worker {
                                 H = h(m, hindex(n,s));
                                 gi  = i3(c, k, m, cc, kk);
                                 // in this context gk is understood to be hazard hk
-                                pw[q] *=  Tski * (1-exp(-H)) *  gk[gi] / H;
+                                pw[q] *=  Tski * (1-std::exp(-H)) *  gk[gi] / H;
                             }
                         }
                     }
@@ -386,11 +381,11 @@ struct Somesecrhistories : public Worker {
     double oneprwisecrcpp (int n) {
         double pdt;
         double pbd;
-        int j, m;
-        int b, minb, maxb;
-        int d, mind, maxd;
+        int    j, m;
+        int    b, minb, maxb;
+        int    d, mind, maxd;
         double prwi = 1.0;
-        int kernelreturncode = 1;
+        int    kernelreturncode = 1;
         double bz;
         double sumalpha;
         double prwm;
@@ -523,33 +518,40 @@ struct Somesecrhistories : public Worker {
 };
 
 // [[Rcpp::export]]
-NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
-    int binomN, int CJSp1, int grain, int ncores,
-    const NumericVector intervals, 
-    const IntegerVector cumss, 
-    const IntegerVector w,
-    const IntegerVector fi, 
-    const IntegerVector li,
-    const NumericVector gk, 
-    const NumericMatrix openval,
-    const IntegerVector PIA, 
-    const IntegerVector PIAJ, 
-    const NumericMatrix Tsk, 
-    const NumericMatrix h,
-    const IntegerMatrix hindex, 
-    int   movementcode,
-    bool  sparsekernel,
-    bool  anchored,
-    int   edgecode,
-    const std::string usermodel,
-    const IntegerVector moveargsi, 
-    const IntegerMatrix kernel,
-    const IntegerMatrix mqarray,
-    double cellsize,
-    double r0) {
+Rcpp::NumericVector allhistsecrparallelcpp (
+        const int x, 
+        const int type, 
+        const int mm, 
+        const int nc,
+        const int binomN, 
+        const int CJSp1, 
+        const int grain, 
+        const int ncores,
+        const Rcpp::NumericVector intervals, 
+        const Rcpp::IntegerVector cumss, 
+        const Rcpp::IntegerVector w,
+        const Rcpp::IntegerVector fi, 
+        const Rcpp::IntegerVector li,
+        const Rcpp::NumericVector gk, 
+        const Rcpp::NumericMatrix openval,
+        const Rcpp::IntegerVector PIA, 
+        const Rcpp::IntegerVector PIAJ, 
+        const Rcpp::NumericMatrix Tsk, 
+        const Rcpp::NumericMatrix h,
+        const Rcpp::IntegerMatrix hindex, 
+        const int   movementcode,
+        const bool  sparsekernel,
+        const bool  anchored,
+        const int   edgecode,
+        const std::string usermodel,
+        const Rcpp::IntegerVector moveargsi, 
+        const Rcpp::IntegerMatrix kernel,
+        const Rcpp::IntegerMatrix mqarray,
+        const double cellsize,
+        const double r0) {
     
-    NumericVector output(nc); 
-
+    Rcpp::NumericVector output(nc); 
+    
     // Construct and initialise
     Somesecrhistories somehist (
             x, type, mm, nc, binomN, CJSp1, 
@@ -565,7 +567,7 @@ NumericVector allhistsecrparallelcpp (int x, int type, int mm, int nc,
     
     if (ncores>1) {
         // Run operator() on multiple threads
-        parallelFor(0, nc, somehist, grain, ncores);
+        RcppParallel::parallelFor(0, nc, somehist, grain, ncores);
     }
     else {
         // for debugging avoid multithreading and allow R calls e.g. Rprintf

@@ -6,277 +6,277 @@
 using namespace Rcpp;
 
 // PCH1cpp
-NumericVector PCH1cpp(int type, int x, int nc, int jj, const IntegerVector cumss, int nmix, const NumericMatrix openval0, const IntegerVector PIA0, const IntegerVector PIAJ, const NumericVector intervals);
+Rcpp::NumericVector PCH1cpp(const int type, const int x, const int nc, const int jj, const Rcpp::IntegerVector cumss, int nmix, const Rcpp::NumericMatrix openval0, const Rcpp::IntegerVector PIA0, const Rcpp::IntegerVector PIAJ, const Rcpp::NumericVector intervals);
 RcppExport SEXP _openCR_PCH1cpp(SEXP typeSEXP, SEXP xSEXP, SEXP ncSEXP, SEXP jjSEXP, SEXP cumssSEXP, SEXP nmixSEXP, SEXP openval0SEXP, SEXP PIA0SEXP, SEXP PIAJSEXP, SEXP intervalsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< int >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
-    Rcpp::traits::input_parameter< int >::type jj(jjSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type cumss(cumssSEXP);
+    Rcpp::traits::input_parameter< const int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const int >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const int >::type jj(jjSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type cumss(cumssSEXP);
     Rcpp::traits::input_parameter< int >::type nmix(nmixSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type openval0(openval0SEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIA0(PIA0SEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIAJ(PIAJSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type openval0(openval0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIA0(PIA0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIAJ(PIAJSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type intervals(intervalsSEXP);
     rcpp_result_gen = Rcpp::wrap(PCH1cpp(type, x, nc, jj, cumss, nmix, openval0, PIA0, PIAJ, intervals));
     return rcpp_result_gen;
 END_RCPP
 }
 // PCH0secrjcpp
-NumericVector PCH0secrjcpp(int type, int x, int nc, int jj, const IntegerVector cumss, int kk, int mm, int cc0, const IntegerVector PIA0, const NumericVector gk0, int binomN, const NumericMatrix Tsk);
+Rcpp::NumericVector PCH0secrjcpp(const int type, const int x, const int nc, const int jj, const Rcpp::IntegerVector cumss, const int kk, const int mm, const int cc0, const Rcpp::IntegerVector PIA0, const Rcpp::NumericVector gk0, const int binomN, const Rcpp::NumericMatrix Tsk);
 RcppExport SEXP _openCR_PCH0secrjcpp(SEXP typeSEXP, SEXP xSEXP, SEXP ncSEXP, SEXP jjSEXP, SEXP cumssSEXP, SEXP kkSEXP, SEXP mmSEXP, SEXP cc0SEXP, SEXP PIA0SEXP, SEXP gk0SEXP, SEXP binomNSEXP, SEXP TskSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< int >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
-    Rcpp::traits::input_parameter< int >::type jj(jjSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type cumss(cumssSEXP);
-    Rcpp::traits::input_parameter< int >::type kk(kkSEXP);
-    Rcpp::traits::input_parameter< int >::type mm(mmSEXP);
-    Rcpp::traits::input_parameter< int >::type cc0(cc0SEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIA0(PIA0SEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type gk0(gk0SEXP);
-    Rcpp::traits::input_parameter< int >::type binomN(binomNSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type Tsk(TskSEXP);
+    Rcpp::traits::input_parameter< const int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const int >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const int >::type jj(jjSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type cumss(cumssSEXP);
+    Rcpp::traits::input_parameter< const int >::type kk(kkSEXP);
+    Rcpp::traits::input_parameter< const int >::type mm(mmSEXP);
+    Rcpp::traits::input_parameter< const int >::type cc0(cc0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIA0(PIA0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type gk0(gk0SEXP);
+    Rcpp::traits::input_parameter< const int >::type binomN(binomNSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type Tsk(TskSEXP);
     rcpp_result_gen = Rcpp::wrap(PCH0secrjcpp(type, x, nc, jj, cumss, kk, mm, cc0, PIA0, gk0, binomN, Tsk));
     return rcpp_result_gen;
 END_RCPP
 }
 // PCH1secrparallelcpp
-NumericVector PCH1secrparallelcpp(int x, int type, int grain, int ncores, bool individual, int jj, int mm, int nc, const IntegerVector cumss, const NumericMatrix openval0, const IntegerVector PIA0, const IntegerVector PIAJ, const NumericVector gk0, int binomN, const NumericMatrix Tsk, const NumericVector intervals, const IntegerVector moveargsi, int movementcode, bool sparsekernel, bool anchored, int edgecode, const std::string usermodel, const IntegerMatrix kernel, const IntegerMatrix mqarray, double cellsize, double r0);
+Rcpp::NumericVector PCH1secrparallelcpp(const int x, const int type, const int grain, const int ncores, const bool individual, const int jj, const int mm, const int nc, const Rcpp::IntegerVector cumss, const Rcpp::NumericMatrix openval0, const Rcpp::IntegerVector PIA0, const Rcpp::IntegerVector PIAJ, const Rcpp::NumericVector gk0, const int binomN, const Rcpp::NumericMatrix Tsk, const Rcpp::NumericVector intervals, const Rcpp::IntegerVector moveargsi, const int movementcode, const bool sparsekernel, const bool anchored, const int edgecode, const std::string usermodel, const Rcpp::IntegerMatrix kernel, const Rcpp::IntegerMatrix mqarray, const double cellsize, const double r0);
 RcppExport SEXP _openCR_PCH1secrparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP grainSEXP, SEXP ncoresSEXP, SEXP individualSEXP, SEXP jjSEXP, SEXP mmSEXP, SEXP ncSEXP, SEXP cumssSEXP, SEXP openval0SEXP, SEXP PIA0SEXP, SEXP PIAJSEXP, SEXP gk0SEXP, SEXP binomNSEXP, SEXP TskSEXP, SEXP intervalsSEXP, SEXP moveargsiSEXP, SEXP movementcodeSEXP, SEXP sparsekernelSEXP, SEXP anchoredSEXP, SEXP edgecodeSEXP, SEXP usermodelSEXP, SEXP kernelSEXP, SEXP mqarraySEXP, SEXP cellsizeSEXP, SEXP r0SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< int >::type grain(grainSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type individual(individualSEXP);
-    Rcpp::traits::input_parameter< int >::type jj(jjSEXP);
-    Rcpp::traits::input_parameter< int >::type mm(mmSEXP);
-    Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type cumss(cumssSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type openval0(openval0SEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIA0(PIA0SEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIAJ(PIAJSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type gk0(gk0SEXP);
-    Rcpp::traits::input_parameter< int >::type binomN(binomNSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type Tsk(TskSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type moveargsi(moveargsiSEXP);
-    Rcpp::traits::input_parameter< int >::type movementcode(movementcodeSEXP);
-    Rcpp::traits::input_parameter< bool >::type sparsekernel(sparsekernelSEXP);
-    Rcpp::traits::input_parameter< bool >::type anchored(anchoredSEXP);
-    Rcpp::traits::input_parameter< int >::type edgecode(edgecodeSEXP);
+    Rcpp::traits::input_parameter< const int >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const int >::type grain(grainSEXP);
+    Rcpp::traits::input_parameter< const int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< const bool >::type individual(individualSEXP);
+    Rcpp::traits::input_parameter< const int >::type jj(jjSEXP);
+    Rcpp::traits::input_parameter< const int >::type mm(mmSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type cumss(cumssSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type openval0(openval0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIA0(PIA0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIAJ(PIAJSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type gk0(gk0SEXP);
+    Rcpp::traits::input_parameter< const int >::type binomN(binomNSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type Tsk(TskSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type intervals(intervalsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type moveargsi(moveargsiSEXP);
+    Rcpp::traits::input_parameter< const int >::type movementcode(movementcodeSEXP);
+    Rcpp::traits::input_parameter< const bool >::type sparsekernel(sparsekernelSEXP);
+    Rcpp::traits::input_parameter< const bool >::type anchored(anchoredSEXP);
+    Rcpp::traits::input_parameter< const int >::type edgecode(edgecodeSEXP);
     Rcpp::traits::input_parameter< const std::string >::type usermodel(usermodelSEXP);
-    Rcpp::traits::input_parameter< const IntegerMatrix >::type kernel(kernelSEXP);
-    Rcpp::traits::input_parameter< const IntegerMatrix >::type mqarray(mqarraySEXP);
-    Rcpp::traits::input_parameter< double >::type cellsize(cellsizeSEXP);
-    Rcpp::traits::input_parameter< double >::type r0(r0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type mqarray(mqarraySEXP);
+    Rcpp::traits::input_parameter< const double >::type cellsize(cellsizeSEXP);
+    Rcpp::traits::input_parameter< const double >::type r0(r0SEXP);
     rcpp_result_gen = Rcpp::wrap(PCH1secrparallelcpp(x, type, grain, ncores, individual, jj, mm, nc, cumss, openval0, PIA0, PIAJ, gk0, binomN, Tsk, intervals, moveargsi, movementcode, sparsekernel, anchored, edgecode, usermodel, kernel, mqarray, cellsize, r0));
     return rcpp_result_gen;
 END_RCPP
 }
 // gethcpp
-List gethcpp(int nc1, int cc, int nmix, int nk, int ss, int mm, const IntegerVector PIA, const NumericMatrix Tsk, const NumericVector hk);
+Rcpp::List gethcpp(const int nc1, const int cc, const int nmix, const int nk, const int ss, const int mm, const Rcpp::IntegerVector PIA, const Rcpp::NumericMatrix Tsk, const Rcpp::NumericVector hk);
 RcppExport SEXP _openCR_gethcpp(SEXP nc1SEXP, SEXP ccSEXP, SEXP nmixSEXP, SEXP nkSEXP, SEXP ssSEXP, SEXP mmSEXP, SEXP PIASEXP, SEXP TskSEXP, SEXP hkSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type nc1(nc1SEXP);
-    Rcpp::traits::input_parameter< int >::type cc(ccSEXP);
-    Rcpp::traits::input_parameter< int >::type nmix(nmixSEXP);
-    Rcpp::traits::input_parameter< int >::type nk(nkSEXP);
-    Rcpp::traits::input_parameter< int >::type ss(ssSEXP);
-    Rcpp::traits::input_parameter< int >::type mm(mmSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIA(PIASEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type Tsk(TskSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type hk(hkSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc1(nc1SEXP);
+    Rcpp::traits::input_parameter< const int >::type cc(ccSEXP);
+    Rcpp::traits::input_parameter< const int >::type nmix(nmixSEXP);
+    Rcpp::traits::input_parameter< const int >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int >::type ss(ssSEXP);
+    Rcpp::traits::input_parameter< const int >::type mm(mmSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIA(PIASEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type Tsk(TskSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type hk(hkSEXP);
     rcpp_result_gen = Rcpp::wrap(gethcpp(nc1, cc, nmix, nk, ss, mm, PIA, Tsk, hk));
     return rcpp_result_gen;
 END_RCPP
 }
 // convolvemqcpp
-Rcpp::NumericVector convolvemqcpp(int j, int edgecode, const Rcpp::NumericMatrix mqarray, const Rcpp::NumericVector kernelp, Rcpp::NumericVector pjm);
+Rcpp::NumericVector convolvemqcpp(const int j, const int edgecode, const Rcpp::NumericMatrix mqarray, const Rcpp::NumericVector kernelp, const Rcpp::NumericVector pjm);
 RcppExport SEXP _openCR_convolvemqcpp(SEXP jSEXP, SEXP edgecodeSEXP, SEXP mqarraySEXP, SEXP kernelpSEXP, SEXP pjmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type j(jSEXP);
-    Rcpp::traits::input_parameter< int >::type edgecode(edgecodeSEXP);
+    Rcpp::traits::input_parameter< const int >::type j(jSEXP);
+    Rcpp::traits::input_parameter< const int >::type edgecode(edgecodeSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type mqarray(mqarraySEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type kernelp(kernelpSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pjm(pjmSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type pjm(pjmSEXP);
     rcpp_result_gen = Rcpp::wrap(convolvemqcpp(j, edgecode, mqarray, kernelp, pjm));
     return rcpp_result_gen;
 END_RCPP
 }
 // fillkernelcpp
-Rcpp::NumericVector fillkernelcpp(const Rcpp::IntegerMatrix kernel, int kerneltype, bool sparsekernel, double cellsize, double r0, int jj, const std::string fnname, const Rcpp::IntegerVector moveargsi, const Rcpp::NumericVector& moveargs, bool normalize);
+Rcpp::NumericVector fillkernelcpp(const Rcpp::IntegerMatrix kernel, const int kerneltype, const bool sparsekernel, const double cellsize, const double r0, const int jj, const std::string fnname, const Rcpp::IntegerVector moveargsi, const Rcpp::NumericVector& moveargs, const bool normalize);
 RcppExport SEXP _openCR_fillkernelcpp(SEXP kernelSEXP, SEXP kerneltypeSEXP, SEXP sparsekernelSEXP, SEXP cellsizeSEXP, SEXP r0SEXP, SEXP jjSEXP, SEXP fnnameSEXP, SEXP moveargsiSEXP, SEXP moveargsSEXP, SEXP normalizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type kernel(kernelSEXP);
-    Rcpp::traits::input_parameter< int >::type kerneltype(kerneltypeSEXP);
-    Rcpp::traits::input_parameter< bool >::type sparsekernel(sparsekernelSEXP);
-    Rcpp::traits::input_parameter< double >::type cellsize(cellsizeSEXP);
-    Rcpp::traits::input_parameter< double >::type r0(r0SEXP);
-    Rcpp::traits::input_parameter< int >::type jj(jjSEXP);
+    Rcpp::traits::input_parameter< const int >::type kerneltype(kerneltypeSEXP);
+    Rcpp::traits::input_parameter< const bool >::type sparsekernel(sparsekernelSEXP);
+    Rcpp::traits::input_parameter< const double >::type cellsize(cellsizeSEXP);
+    Rcpp::traits::input_parameter< const double >::type r0(r0SEXP);
+    Rcpp::traits::input_parameter< const int >::type jj(jjSEXP);
     Rcpp::traits::input_parameter< const std::string >::type fnname(fnnameSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type moveargsi(moveargsiSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type moveargs(moveargsSEXP);
-    Rcpp::traits::input_parameter< bool >::type normalize(normalizeSEXP);
+    Rcpp::traits::input_parameter< const bool >::type normalize(normalizeSEXP);
     rcpp_result_gen = Rcpp::wrap(fillkernelcpp(kernel, kerneltype, sparsekernel, cellsize, r0, jj, fnname, moveargsi, moveargs, normalize));
     return rcpp_result_gen;
 END_RCPP
 }
 // makegkcpp
-List makegkcpp(int cc, int kk, int mm, int detectfn, int sigmai, const NumericMatrix openval, const NumericMatrix traps, const NumericMatrix mask);
+Rcpp::List makegkcpp(const int cc, const int kk, const int mm, const int detectfn, const int sigmai, const Rcpp::NumericMatrix openval, const Rcpp::NumericMatrix traps, const Rcpp::NumericMatrix mask);
 RcppExport SEXP _openCR_makegkcpp(SEXP ccSEXP, SEXP kkSEXP, SEXP mmSEXP, SEXP detectfnSEXP, SEXP sigmaiSEXP, SEXP openvalSEXP, SEXP trapsSEXP, SEXP maskSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type cc(ccSEXP);
-    Rcpp::traits::input_parameter< int >::type kk(kkSEXP);
-    Rcpp::traits::input_parameter< int >::type mm(mmSEXP);
-    Rcpp::traits::input_parameter< int >::type detectfn(detectfnSEXP);
-    Rcpp::traits::input_parameter< int >::type sigmai(sigmaiSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type openval(openvalSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type traps(trapsSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type mask(maskSEXP);
+    Rcpp::traits::input_parameter< const int >::type cc(ccSEXP);
+    Rcpp::traits::input_parameter< const int >::type kk(kkSEXP);
+    Rcpp::traits::input_parameter< const int >::type mm(mmSEXP);
+    Rcpp::traits::input_parameter< const int >::type detectfn(detectfnSEXP);
+    Rcpp::traits::input_parameter< const int >::type sigmai(sigmaiSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type openval(openvalSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type traps(trapsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type mask(maskSEXP);
     rcpp_result_gen = Rcpp::wrap(makegkcpp(cc, kk, mm, detectfn, sigmai, openval, traps, mask));
     return rcpp_result_gen;
 END_RCPP
 }
 // makegkParallelcpp
-List makegkParallelcpp(int detectfn, int sigmai, int grain, int ncores, const NumericMatrix& openval, const NumericMatrix& traps, const NumericMatrix& mask);
+Rcpp::List makegkParallelcpp(const int detectfn, const int sigmai, const int grain, const int ncores, const Rcpp::NumericMatrix& openval, const Rcpp::NumericMatrix& traps, const Rcpp::NumericMatrix& mask);
 RcppExport SEXP _openCR_makegkParallelcpp(SEXP detectfnSEXP, SEXP sigmaiSEXP, SEXP grainSEXP, SEXP ncoresSEXP, SEXP openvalSEXP, SEXP trapsSEXP, SEXP maskSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type detectfn(detectfnSEXP);
-    Rcpp::traits::input_parameter< int >::type sigmai(sigmaiSEXP);
-    Rcpp::traits::input_parameter< int >::type grain(grainSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type openval(openvalSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type traps(trapsSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type mask(maskSEXP);
+    Rcpp::traits::input_parameter< const int >::type detectfn(detectfnSEXP);
+    Rcpp::traits::input_parameter< const int >::type sigmai(sigmaiSEXP);
+    Rcpp::traits::input_parameter< const int >::type grain(grainSEXP);
+    Rcpp::traits::input_parameter< const int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type openval(openvalSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type traps(trapsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type mask(maskSEXP);
     rcpp_result_gen = Rcpp::wrap(makegkParallelcpp(detectfn, sigmai, grain, ncores, openval, traps, mask));
     return rcpp_result_gen;
 END_RCPP
 }
 // makegkParalleldcpp
-List makegkParalleldcpp(int detectfn, int sigmai, int grain, int ncores, const NumericMatrix& openval, const NumericMatrix& distmat);
+Rcpp::List makegkParalleldcpp(const int detectfn, const int sigmai, const int grain, const int ncores, const Rcpp::NumericMatrix& openval, const Rcpp::NumericMatrix& distmat);
 RcppExport SEXP _openCR_makegkParalleldcpp(SEXP detectfnSEXP, SEXP sigmaiSEXP, SEXP grainSEXP, SEXP ncoresSEXP, SEXP openvalSEXP, SEXP distmatSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type detectfn(detectfnSEXP);
-    Rcpp::traits::input_parameter< int >::type sigmai(sigmaiSEXP);
-    Rcpp::traits::input_parameter< int >::type grain(grainSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type openval(openvalSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type distmat(distmatSEXP);
+    Rcpp::traits::input_parameter< const int >::type detectfn(detectfnSEXP);
+    Rcpp::traits::input_parameter< const int >::type sigmai(sigmaiSEXP);
+    Rcpp::traits::input_parameter< const int >::type grain(grainSEXP);
+    Rcpp::traits::input_parameter< const int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type openval(openvalSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type distmat(distmatSEXP);
     rcpp_result_gen = Rcpp::wrap(makegkParalleldcpp(detectfn, sigmai, grain, ncores, openval, distmat));
     return rcpp_result_gen;
 END_RCPP
 }
 // makelookupcpp
-List makelookupcpp(const NumericMatrix x);
+Rcpp::List makelookupcpp(const Rcpp::NumericMatrix x);
 RcppExport SEXP _openCR_makelookupcpp(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(makelookupcpp(x));
     return rcpp_result_gen;
 END_RCPP
 }
 // pradelloglikcpp
-NumericVector pradelloglikcpp(int type, const IntegerVector w, int nc, int jj, int nmix, const NumericMatrix openval, const IntegerVector PIAJ, const NumericVector intervals);
+Rcpp::NumericVector pradelloglikcpp(const int type, const Rcpp::IntegerVector w, const int nc, const int jj, const int nmix, const Rcpp::NumericMatrix openval, const Rcpp::IntegerVector PIAJ, const Rcpp::NumericVector intervals);
 RcppExport SEXP _openCR_pradelloglikcpp(SEXP typeSEXP, SEXP wSEXP, SEXP ncSEXP, SEXP jjSEXP, SEXP nmixSEXP, SEXP openvalSEXP, SEXP PIAJSEXP, SEXP intervalsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type w(wSEXP);
-    Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
-    Rcpp::traits::input_parameter< int >::type jj(jjSEXP);
-    Rcpp::traits::input_parameter< int >::type nmix(nmixSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type openval(openvalSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIAJ(PIAJSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
+    Rcpp::traits::input_parameter< const int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const int >::type jj(jjSEXP);
+    Rcpp::traits::input_parameter< const int >::type nmix(nmixSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type openval(openvalSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIAJ(PIAJSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type intervals(intervalsSEXP);
     rcpp_result_gen = Rcpp::wrap(pradelloglikcpp(type, w, nc, jj, nmix, openval, PIAJ, intervals));
     return rcpp_result_gen;
 END_RCPP
 }
 // allhistparallelcpp
-NumericVector allhistparallelcpp(int x, int type, int nc, int CJSp1, int grain, int ncores, const NumericVector intervals, const IntegerVector cumss, const IntegerVector w, const IntegerVector fi, const IntegerVector li, const NumericMatrix openval, const IntegerVector PIA, const IntegerVector PIAJ);
+Rcpp::NumericVector allhistparallelcpp(const int x, const int type, const int nc, const int CJSp1, const int grain, const int ncores, const Rcpp::NumericVector intervals, const Rcpp::IntegerVector cumss, const Rcpp::IntegerVector w, const Rcpp::IntegerVector fi, const Rcpp::IntegerVector li, const Rcpp::NumericMatrix openval, const Rcpp::IntegerVector PIA, const Rcpp::IntegerVector PIAJ);
 RcppExport SEXP _openCR_allhistparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP ncSEXP, SEXP CJSp1SEXP, SEXP grainSEXP, SEXP ncoresSEXP, SEXP intervalsSEXP, SEXP cumssSEXP, SEXP wSEXP, SEXP fiSEXP, SEXP liSEXP, SEXP openvalSEXP, SEXP PIASEXP, SEXP PIAJSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
-    Rcpp::traits::input_parameter< int >::type CJSp1(CJSp1SEXP);
-    Rcpp::traits::input_parameter< int >::type grain(grainSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type cumss(cumssSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type w(wSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type fi(fiSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type li(liSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type openval(openvalSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIA(PIASEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIAJ(PIAJSEXP);
+    Rcpp::traits::input_parameter< const int >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const int >::type CJSp1(CJSp1SEXP);
+    Rcpp::traits::input_parameter< const int >::type grain(grainSEXP);
+    Rcpp::traits::input_parameter< const int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type intervals(intervalsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type cumss(cumssSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type fi(fiSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type li(liSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type openval(openvalSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIA(PIASEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIAJ(PIAJSEXP);
     rcpp_result_gen = Rcpp::wrap(allhistparallelcpp(x, type, nc, CJSp1, grain, ncores, intervals, cumss, w, fi, li, openval, PIA, PIAJ));
     return rcpp_result_gen;
 END_RCPP
 }
 // allhistsecrparallelcpp
-NumericVector allhistsecrparallelcpp(int x, int type, int mm, int nc, int binomN, int CJSp1, int grain, int ncores, const NumericVector intervals, const IntegerVector cumss, const IntegerVector w, const IntegerVector fi, const IntegerVector li, const NumericVector gk, const NumericMatrix openval, const IntegerVector PIA, const IntegerVector PIAJ, const NumericMatrix Tsk, const NumericMatrix h, const IntegerMatrix hindex, int movementcode, bool sparsekernel, bool anchored, int edgecode, const std::string usermodel, const IntegerVector moveargsi, const IntegerMatrix kernel, const IntegerMatrix mqarray, double cellsize, double r0);
+Rcpp::NumericVector allhistsecrparallelcpp(const int x, const int type, const int mm, const int nc, const int binomN, const int CJSp1, const int grain, const int ncores, const Rcpp::NumericVector intervals, const Rcpp::IntegerVector cumss, const Rcpp::IntegerVector w, const Rcpp::IntegerVector fi, const Rcpp::IntegerVector li, const Rcpp::NumericVector gk, const Rcpp::NumericMatrix openval, const Rcpp::IntegerVector PIA, const Rcpp::IntegerVector PIAJ, const Rcpp::NumericMatrix Tsk, const Rcpp::NumericMatrix h, const Rcpp::IntegerMatrix hindex, const int movementcode, const bool sparsekernel, const bool anchored, const int edgecode, const std::string usermodel, const Rcpp::IntegerVector moveargsi, const Rcpp::IntegerMatrix kernel, const Rcpp::IntegerMatrix mqarray, const double cellsize, const double r0);
 RcppExport SEXP _openCR_allhistsecrparallelcpp(SEXP xSEXP, SEXP typeSEXP, SEXP mmSEXP, SEXP ncSEXP, SEXP binomNSEXP, SEXP CJSp1SEXP, SEXP grainSEXP, SEXP ncoresSEXP, SEXP intervalsSEXP, SEXP cumssSEXP, SEXP wSEXP, SEXP fiSEXP, SEXP liSEXP, SEXP gkSEXP, SEXP openvalSEXP, SEXP PIASEXP, SEXP PIAJSEXP, SEXP TskSEXP, SEXP hSEXP, SEXP hindexSEXP, SEXP movementcodeSEXP, SEXP sparsekernelSEXP, SEXP anchoredSEXP, SEXP edgecodeSEXP, SEXP usermodelSEXP, SEXP moveargsiSEXP, SEXP kernelSEXP, SEXP mqarraySEXP, SEXP cellsizeSEXP, SEXP r0SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< int >::type mm(mmSEXP);
-    Rcpp::traits::input_parameter< int >::type nc(ncSEXP);
-    Rcpp::traits::input_parameter< int >::type binomN(binomNSEXP);
-    Rcpp::traits::input_parameter< int >::type CJSp1(CJSp1SEXP);
-    Rcpp::traits::input_parameter< int >::type grain(grainSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type intervals(intervalsSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type cumss(cumssSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type w(wSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type fi(fiSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type li(liSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type gk(gkSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type openval(openvalSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIA(PIASEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type PIAJ(PIAJSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type Tsk(TskSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix >::type h(hSEXP);
-    Rcpp::traits::input_parameter< const IntegerMatrix >::type hindex(hindexSEXP);
-    Rcpp::traits::input_parameter< int >::type movementcode(movementcodeSEXP);
-    Rcpp::traits::input_parameter< bool >::type sparsekernel(sparsekernelSEXP);
-    Rcpp::traits::input_parameter< bool >::type anchored(anchoredSEXP);
-    Rcpp::traits::input_parameter< int >::type edgecode(edgecodeSEXP);
+    Rcpp::traits::input_parameter< const int >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const int >::type mm(mmSEXP);
+    Rcpp::traits::input_parameter< const int >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const int >::type binomN(binomNSEXP);
+    Rcpp::traits::input_parameter< const int >::type CJSp1(CJSp1SEXP);
+    Rcpp::traits::input_parameter< const int >::type grain(grainSEXP);
+    Rcpp::traits::input_parameter< const int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type intervals(intervalsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type cumss(cumssSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type fi(fiSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type li(liSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type gk(gkSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type openval(openvalSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIA(PIASEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type PIAJ(PIAJSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type Tsk(TskSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type h(hSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type hindex(hindexSEXP);
+    Rcpp::traits::input_parameter< const int >::type movementcode(movementcodeSEXP);
+    Rcpp::traits::input_parameter< const bool >::type sparsekernel(sparsekernelSEXP);
+    Rcpp::traits::input_parameter< const bool >::type anchored(anchoredSEXP);
+    Rcpp::traits::input_parameter< const int >::type edgecode(edgecodeSEXP);
     Rcpp::traits::input_parameter< const std::string >::type usermodel(usermodelSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type moveargsi(moveargsiSEXP);
-    Rcpp::traits::input_parameter< const IntegerMatrix >::type kernel(kernelSEXP);
-    Rcpp::traits::input_parameter< const IntegerMatrix >::type mqarray(mqarraySEXP);
-    Rcpp::traits::input_parameter< double >::type cellsize(cellsizeSEXP);
-    Rcpp::traits::input_parameter< double >::type r0(r0SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type moveargsi(moveargsiSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type mqarray(mqarraySEXP);
+    Rcpp::traits::input_parameter< const double >::type cellsize(cellsizeSEXP);
+    Rcpp::traits::input_parameter< const double >::type r0(r0SEXP);
     rcpp_result_gen = Rcpp::wrap(allhistsecrparallelcpp(x, type, mm, nc, binomN, CJSp1, grain, ncores, intervals, cumss, w, fi, li, gk, openval, PIA, PIAJ, Tsk, h, hindex, movementcode, sparsekernel, anchored, edgecode, usermodel, moveargsi, kernel, mqarray, cellsize, r0));
     return rcpp_result_gen;
 END_RCPP

@@ -1,8 +1,4 @@
 #include "utils.h"
-#include <Rcpp.h>
-#include <RcppParallel.h>
-
-using namespace Rcpp;
 
 //==============================================================================
 
@@ -25,15 +21,15 @@ int sumj (std::vector<int> &uv, int j, int k) {
 //--------------------------------------------------------------------------
 
 // [[Rcpp::export]]
-NumericVector pradelloglikcpp (
-        int    type,        // 20 = Pradel, 26 = Pradelg 
-        const IntegerVector w,           // counts (1:jj, 1:5) 
-        int    nc,          // number of capture histories 
-        int    jj,          // number of sessions 
-        int    nmix,        // number of mixtures 
-        const NumericMatrix openval,     // Parameter values - turnover 
-        const IntegerVector PIAJ,         // lookup which parameter combination to use n, J, mix 
-        const NumericVector intervals    // vector of jj-1 between-occasion intervals 
+Rcpp::NumericVector pradelloglikcpp (
+        const int    type,        // 20 = Pradel, 26 = Pradelg 
+        const Rcpp::IntegerVector w,           // counts (1:jj, 1:5) 
+        const int    nc,          // number of capture histories 
+        const int    jj,          // number of sessions 
+        const int    nmix,        // number of mixtures 
+        const Rcpp::NumericMatrix openval,     // Parameter values - turnover 
+        const Rcpp::IntegerVector PIAJ,         // lookup which parameter combination to use n, J, mix 
+        const Rcpp::NumericVector intervals    // vector of jj-1 between-occasion intervals 
 )
     
 { 
@@ -45,7 +41,7 @@ NumericVector pradelloglikcpp (
     int    x = 0;
     double prd;
     double BL = 0;
-    NumericVector value (2, 0.0);   
+    Rcpp::NumericVector value (2, 0.0);   
     
     // int    c, wxi;
     // double pmix[3];             latent class membership probability 
