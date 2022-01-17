@@ -152,7 +152,6 @@ open.loglikfn <- function (beta, dig = 3, betaw = 8, oneeval = FALSE, data)
             
             #####################################################################
             # Component 1: Probability of observed histories - all models
-            # if (is.null(cluster)) {
             if (data$details$R)
                 temp <- sapply(1:stratum$nc, onehistory, pmix = pmix)
             else

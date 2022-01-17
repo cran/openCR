@@ -669,11 +669,51 @@ Use the **secr** function `spotHeight(k)` to display cell values on the plot.
 
 ## Warnings
 
-1. The 'uncorrelated' option is not recommended. It discards information on the continuity of home ranges between primary sessions, and estimates may vary with the (often arbitrary) extent of the habitat mask.
+1. The independent option 'IND' (previously 'uncorrelated') is not recommended. It discards information on the continuity of home ranges between primary sessions, and estimates may vary with the (often arbitrary) extent of the habitat mask.
 
 2. Kernel-based movement models require extreme care. Definitive advice cannot yet be given on the safe use of these models. Long-distance movements will usually be poorly sampled and poorly modelled.
 
 3. User-defined functions cannot be used with multithreaded C++, so they will be slow to fit; always set `ncores = 1`.
+
+# Settlement models
+
+When one of the kernel models is used (`movementmodel` not 'static', 'IND' or 'INDzi') the movement model may be modified by weighting settlement according one or more local (mask) covariates. The weights are given by a new parameter 'settle'. By default the logarithm of 'settle' is a linear combination of mask covariates with no intercept. 'settle' may also vary by 
+
+* stratum
+* primary session
+* canned variables corresponding to coordinates x, y, xy, x2, y2 (see **secr**)
+
+The settlement model is invoked by setting `details = list(settlemodel = TRUE)`.
+
+This code compares a model with uniform settlement to one in which settlement varies 
+with the 'y' coordinate of the mask. The data are the ovenbird mistnetting data 
+compressed to a single occasion per year. 
+
+```{r settlementexample, eval = FALSE}
+ovenCHb <- reduce(ovenCHp, by = 'all', outputdetector = 'count')
+msk <- make.mask(traps(ovenCHp[[1]]), buffer = 500, spacing = 40, type = 'trapbuffer')
+# uniform settlement
+fit0 <- openCR.fit(ovenCHb, type = 'PLBsecrf', mask = msk, binomN = 1,
+  movementmodel = 'BVN', details = list(settlemodel = FALSE))
+# logarithmic N-S gradient in settlement
+fit1 <- openCR.fit(ovenCHb, type = 'PLBsecrf', mask = msk, binomN = 1,
+  movementmodel = 'BVN', details = list(settlemodel = TRUE), model = settle~y)
+```
+
+```{r loadsettlementresults, echo = FALSE}
+load('settlement.RData')
+```
+
+In this example there is **no** evidence for a N-S gradient in settlement. The intercept is removed automatically when the link function is the default ('log'), as shown in the resulting formula for
+'settle'.
+```{r settlementexampleresults}
+AIC(fit0, fit1)[,-6]
+coef(fit1)
+```
+
+The cumulative effect of differential settlement may be visualised with function `cumMove` by specifying a single mask covariate with values in the range 0 to 1.
+
+NOTE: Settlement models are a novelty in **openCR** 2.2.2 and their value is limited because survival and recruitment are *not* allowed to vary across space. The implementation may change. 
 
 # Derived parameters
 
@@ -864,14 +904,14 @@ Defaults for some arguments differ between `openCR.fit` and `secr.fit`. For `ope
 
 1. `trace = FALSE`
 2. By default the reported log likelihood and AIC do  not include the multinomial constant (`details$multinom = FALSE`)
-3. The default criterion for AIC.openCR is 'AIC', not 'AICc' as in **secr**.
+3. The default criterion for AIC() and modelAverage() is 'AIC', not 'AICc' as in **secr**.
 4. The maximum number of iterations used by openCR.fit() to maximize the likelihood defaults to 300 rather than 100. 
 
 `distribution` has been elevated to a full argument rather than merely a component of `details`. This argument describes the distribution of the  number of individuals detected (default distribution = "poisson") (see [here](#warning)).
 
 When `details$LLonly = TRUE`,  `openCR.fit` returns a vector with the log likelihood in position 1, followed by the named starting values of the coefficients (beta parameters) (`secr.fit` returns only the log likelihood).
 
-In **secr** the argument `CL` is used in `secr.fit` to switch between full- and conditional-likelihood models. In **openCR** conditional-likelihood models are given a separate `type` with the suffix CL (or see PLB alias).
+In **secr** the argument `CL` is used in `secr.fit` to switch between full- and conditional-likelihood models. In **openCR** conditional-likelihood models are given a separate `type` with the suffix CL (or use PLB alias).
 
 The predictor 't' is used in **secr** models to indicate a factor with one level for each *secondary* session. In **openCR** it is a synonym for 'session', i.e. a factor with one level for each *primary* session. This is consistent with the use of 't' in Lebreton et al. (1992) and makes for more compact model specification. In the unlikely event that you want to code a model with one level for each secondary session in **openCR**, use the 'timecov' argument.
 
@@ -886,13 +926,12 @@ These features of **secr** are not available in **openCR**
 1. Hybrid mixture models (hcov in **secr**)
 2. Groups (use strata, or CL and individual covariates, or see **marked**)
 3. Regression splines from **mgcv**
-4. Model averaging
-5. Density surfaces and other spatial density models
-6. Post-hoc probability density of activity centres (fxi in **secr**)
-7. Non-point detectors (polygon, polygonX etc. in **secr**)
-8. 'collate' function (`make.table` may do the job)
-9. Variable effort for *nonspatial* models (cf Efford, Borchers and Mowat 2013) (The 'usage' attribute of traps objects is applied in spatial **openCR** models).
-10. Negative binomial counts (binomN<0)
+4. Density surfaces and other spatial density models
+5. Post-hoc probability density of activity centres (fxi in **secr**)
+6. Non-point detectors (polygon, polygonX etc. in **secr**; discretize instead)
+7. 'collate' function (`make.table` may do the job)
+8. Variable effort for *nonspatial* models (cf Efford, Borchers and Mowat 2013) (The 'usage' attribute of traps objects is applied in *spatial* **openCR** models).
+9. Negative binomial counts (binomN<0)
 
 ## Relationship to other software
 
@@ -909,7 +948,7 @@ Table 11. Relationship of non-spatial **openCR** models to MARK model types
 | Pradel  | Pradlambda | Pradel (1996) |
 | Pradelg | Pradsen    | Pradel (1996) |
 
-The R package **marked** (Laake, Johnson and Conn 2013) also overlaps substantially with the non-spatial features of **openCR**. Its interface echoes **RMark** just as **openCR** echoes **secr**. **marked** has some fancy features for individual covariates and random effects, and promises fast processing of large datasets. **marked** 1.1.13 includes full-likelihood JSSA (POPAN) models parameterized in terms of entry probabilities (type JSSAb)[^footnote15], but not the other JSSA options in Table 3.
+The R package **marked** (Laake, Johnson and Conn 2013) also overlaps substantially with the non-spatial features of **openCR**. Its interface echoes **RMark** just as **openCR** echoes **secr**. **marked** has some fancy features for individual covariates and random effects, and promises fast processing of large datasets. **marked** 1.2.6 includes full-likelihood JSSA (POPAN) models parameterized in terms of entry probabilities (type JSSAb)[^footnote15], but not the other JSSA options in Table 3.
 
 [^footnote15]: dipper example in [openCR-examples.pdf][openCR-examples.pdf].
 
@@ -943,7 +982,7 @@ Efford, M. G. (2004) Density estimation in live-trapping
 studies. *Oikos* **106**, 598--610.
 
 Efford, M. G. (2021). secr: Spatially explicit capture--recapture models. R package version
-  4.4.8. https://CRAN.R-project.org/package=secr/
+  4.5.0. https://CRAN.R-project.org/package=secr/
   
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
   estimation by spatially explicit capture--recapture:

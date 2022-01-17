@@ -62,7 +62,7 @@ double pski ( int binomN,
     double result = 1.0;
     
     if (binomN == -1) {                              // binary proximity detectors : Bernoulli
-        if (abs(Tski-1) > 1e-10) {                   // effort not unity; adjust g 
+        if (std::abs(Tski-1) > 1e-10) {                   // effort not unity; adjust g 
             g = 1 - std::pow(1 - g, Tski);
         }
         if (count>0)                                 
@@ -85,10 +85,10 @@ double pski ( int binomN,
         }
     }
     else if (binomN == 1) {                          // count detectors : Binomial, size from Tsk
-        result = gbinom (count, round(Tski), g); 
+        result = gbinom (count, std::round(Tski), g); 
     }
     else if (binomN > 1) {                           // count detectors : Binomial, specified size 
-        if (abs(Tski-1) > 1e-10) {                   // effort not unity, adjust g 
+        if (std::abs(Tski-1) > 1e-10) {                   // effort not unity, adjust g 
             g = 1 - std::pow(1 - g, Tski);
         }
         result = gbinom (count, binomN, g);

@@ -17,6 +17,7 @@
 ## 2021-09-21 tidy .openCRstuff$movementmodels, add .openCRstuff$kernelmodels
 ## 2021-10-12 stdmovement
 ## 2021-11-03 openCR 2.2.0 
+
 ###############################################################################
 
 .openCRstuff <- new.env()
@@ -80,9 +81,7 @@
   'BVCzi'
   )                           
 
-.openCRstuff$movementmodels <- c(.openCRstuff$kernelmodels,
-  'uncorrelated', 'IND',    
-  'uncorrelatedzi','INDzi')
+.openCRstuff$movementmodels <- c(.openCRstuff$kernelmodels, 'IND', 'INDzi')
 
 stdmovement <- function (movementmodel) {
   ## transition to standardized codes
@@ -143,33 +142,22 @@ detectionfunctionnumber <- function (detname) {
 movecode <- function (movementmodel) {
   switch (movementmodel, 
     static         = 0, 
-    uncorrelated   = 1, 
     IND            = 1, 
-    normal         = 2, 
     BVN            = 2, 
-    exponential    = 3, 
     BVE            = 3, 
     user           = 4, 
-    t2D            = 5, 
     BVT            = 5,
-    uniform        = 6, 
     UNI            = 6, 
     annular        = 7, 
     annular2       = 8, 
     annularR       = 9, 
-    frE            = 10, 
     RDE            = 10, 
-    frG            = 11, 
     RDG            = 11, 
-    frL            = 12, 
     RDL            = 12, 
     BVNzi          = 13,
     BVEzi          = 14,
-    uniformzi      = 15,
     UNIzi          = 15,
-    frEzi          = 16,
     RDEzi          = 16,
-    uncorrelatedzi = 17,
     INDzi          = 17,
     BVN2           = 18,
     RDLS           = 19,
@@ -220,12 +208,12 @@ nparmove <- function (movementmodel) {
 edgemethodcode <- function (edgemethod) {
   if (is.null(edgemethod)) edgemethod <- 'none' 
   if (!edgemethod %in% c('none','wrap','truncate')) {
-    stop ("unrecognised edge method - should be 'none','wrap' or 'truncate'")
+    stop ("unrecognised edge method - should be 'none','wrap', or 'truncate'")
   }
   switch (edgemethod, 
-    none     = 0, 
-    wrap     = 1,
-    truncate = 2, 
+    none       = 0, 
+    wrap       = 1,
+    truncate   = 2, 
     0)
 }
 ################################################################################
@@ -800,6 +788,11 @@ makerealparameters <- function (design, beta, parindx, link, fixed) {
     Yp[design$parameterTable[,i]]   ## replicate as required
   }
   
+  ## turnover and detection parameters only
+  design$designMatrices$settle <- NULL
+  parindx$settle <- NULL 
+  link$settle    <- NULL 
+  
   ## construct matrix of parameter values
   nrealpar  <- length(design$designMatrices)
   pnames <- names(link)  ## should be complete!
@@ -813,6 +806,7 @@ makerealparameters <- function (design, beta, parindx, link, fixed) {
   temp <- sapply (names(parindx), modelfn)
   if (nrow(design$parameterTable)==1) temp <- t(temp)
   nrw <- nrow(temp)
+  
   ## make new matrix and insert columns in right place
   if (is.null(nrw)) stop ("bug in makerealparameters")
   temp2 <- as.data.frame(matrix(nrow = nrw, ncol = length(parindx)))
@@ -1332,4 +1326,3 @@ get.nmix <- function (model) {
   nmix
 }
 ###############################################################################
-

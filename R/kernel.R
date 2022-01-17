@@ -380,7 +380,7 @@ expected.d <- function(movementmodel, move.a, move.b, truncate = Inf,
     #    kernel object
     #    user kernel function g(r)
     #    character name of kernel model
-    
+
     # build kernel from fitted openCR model
     if (inherits(movementmodel, 'openCR')) {
         if (is.null(movementmodel$movementmodel))  {
@@ -411,35 +411,48 @@ expected.d <- function(movementmodel, move.a, move.b, truncate = Inf,
     }
     
     # mean not available
-    if (movementmodel %in% c('user')){ 
-        # warning ('expected distance not available for model : ', movementmodel)
-        return(NA)
+    if (!is.function(movementmodel)) {
+        if (movementmodel %in% c('user')){ 
+            # warning ('expected distance not available for model : ', movementmodel)
+            return(NA)
+        }
+        
+        if (movementmodel %in% 'static') {
+            return(0)
+        }
+        
+        # check remaining movement models recognised 
+        if (!(movementmodel %in% .openCRstuff$movementmodels)) {
+            warning ("unrecognised movement model")
+            return(NA)
+        }
+        
+        movementmodel <- stdmovement(movementmodel)
+        if (movementmodel %in% c('IND','INDzi')) {
+            if (missing(move.a)) move.a <- 0    # zero inflation
+            return(mean(as.matrix(dist(mask))) * (1-move.a))
+        }
     }
-    
-    if (movementmodel %in% 'static') {
-        return(0)
-    }
-
-    # check remaining movement models recognised 
-    if (!(movementmodel %in% .openCRstuff$movementmodels)) {
-        warning ("unrecognised movement model")
-        return(NA)
-    }
-    
-    movementmodel <- stdmovement(movementmodel)
-    if (movementmodel %in% c('IND','INDzi')) {
-        if (missing(move.a)) move.a <- 0    # zero inflation
-        return(mean(as.matrix(dist(mask))) * (1-move.a))
-    }
-    
     #--------------------------------------------------------------------------
     # force answer by integration over (0,truncate)
     if (is.finite(truncate) || is.function(movementmodel)) {
         
-    
         if (is.function(movementmodel)) {
             # user function is g(r), so inflate by 2 pi r
-            integrand <- function(r) 2 * pi * r^2 * movementmodel(r, move.a, move.b)
+            #----------------------------------------------------------------
+            # adjustment for truncation added 2021-11-10
+            integrand0 <- function(r) 2 * pi * r * movementmodel(r, move.a, move.b)
+            if (is.finite(integrand0(0)))
+                ptrunc <- try(integrate(integrand0, 0, truncate), silent = TRUE)
+            else 
+                ptrunc <- try(integrate(integrand0, min.d, truncate), silent = TRUE)
+            if (inherits(ptrunc, 'try-error'))
+                return(NA)
+            else
+                ptrunc <- ptrunc$value
+            #----------------------------------------------------------------
+            integrand <- function(r) 2 * pi * r^2 * movementmodel(r, move.a, move.b)/ptrunc
+            zeroinflated <- FALSE
         }
         else {
             zeroinflated <- grepl('zi', movementmodel)
@@ -454,6 +467,7 @@ expected.d <- function(movementmodel, move.a, move.b, truncate = Inf,
         if (inherits(integ, 'try-error'))
             return(NA)
         else {
+
             if (zeroinflated) {
                 bz <- if (movementmodel %in% c('IND','UNI')) move.a else move.b
                 if (bz>1) stop ("requested zero-inflation outside range 0-1")
@@ -463,9 +477,7 @@ expected.d <- function(movementmodel, move.a, move.b, truncate = Inf,
         }
     }
     #--------------------------------------------------------------------------
-    
     # otherwise use formula for untruncated expected distance
-    
     if (movementmodel %in% c('BVN'))
         move.a * (pi/2)^0.5         ## Nathan et al 2012 Table 15.1
     else if (movementmodel %in% c('BVE'))

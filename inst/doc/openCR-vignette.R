@@ -215,6 +215,23 @@ k <- make.kernel (movementmodel = 'BVN', spacing = 10, move.a = 40, clip = TRUE)
 plot(k, contour = TRUE)
 summary(k)
 
+## ----settlementexample, eval = FALSE----------------------------------------------------
+#  ovenCHb <- reduce(ovenCHp, by = 'all', outputdetector = 'count')
+#  msk <- make.mask(traps(ovenCHp[[1]]), buffer = 500, spacing = 40, type = 'trapbuffer')
+#  # uniform settlement
+#  fit0 <- openCR.fit(ovenCHb, type = 'PLBsecrf', mask = msk, binomN = 1,
+#    movementmodel = 'BVN', details = list(settlemodel = FALSE))
+#  # logarithmic N-S gradient in settlement
+#  fit1 <- openCR.fit(ovenCHb, type = 'PLBsecrf', mask = msk, binomN = 1,
+#    movementmodel = 'BVN', details = list(settlemodel = TRUE), model = settle~y)
+
+## ----loadsettlementresults, echo = FALSE------------------------------------------------
+load('settlement.RData')
+
+## ----settlementexampleresults-----------------------------------------------------------
+AIC(fit0, fit1)[,-6]
+coef(fit1)
+
 ## ----derived, cache = mycache-----------------------------------------------------------
 dipperCL <- openCR.fit(dipperCH, type = 'JSSAlCL', 
             model = list(lambda~t, phi~t))

@@ -81,7 +81,7 @@ struct Somehistories : public RcppParallel::Worker {
         else 
             minb = 1;
         maxb = fi[n];
-        mind = abs(li[n]);
+        mind = std::abs(li[n]);
         maxd = jj;
         if (li[n] < 0) maxd = mind; // possible censoring
         
@@ -150,11 +150,12 @@ Rcpp::NumericVector allhistparallelcpp (
         const Rcpp::IntegerVector PIAJ) {
     
     Rcpp::NumericVector output(nc); 
+    int jj = intervals.size()+1;
+    int cc = openval.nrow();
     
     // Construct and initialise
     Somehistories somehist (x, type, nc, CJSp1, 
-                            intervals.size()+1, openval.nrow(),
-                            intervals,
+                            jj, cc, intervals,
                             cumss, w, fi, li, openval, PIA, PIAJ, output);
     
     Rcpp::checkUserInterrupt();
