@@ -188,9 +188,7 @@ do.call(rbind, lapply(pred, '[[', 'phi'))
 
 ## ----dummy, eval = TRUE, cache = mycache------------------------------------------------
 fit0 <- openCR.fit(ovenCH, model = p~t)
-contr.none <- function(n) contrasts(factor(1:n), contrasts = FALSE)
-fitd <- openCR.fit(ovenCH, model = p ~ -1+t, 
-                   details = list(contrasts = list(t = contr.none)))
+fitd <- openCR.fit(ovenCH, model = p ~ -1+t)
 coef(fit0)
 coef(fitd)
 
@@ -259,10 +257,6 @@ AIC(fitnm,fitnr)
 #  # RCPP_PARALLEL_NUM_THREADS
 #  # recommended for quad-core Windows PC
 #  setNumThreads(7)
-
-## ----ucare------------------------------------------------------------------------------
-if (requireNamespace("R2ucare"))
-    ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
 
 ## ----figurefunctions, eval = FALSE------------------------------------------------------
 #  onemulti <- function(st = c(0,6,11,15), le = c(5,4,3,5), yb = 7, col=col1, outer = TRUE) {
