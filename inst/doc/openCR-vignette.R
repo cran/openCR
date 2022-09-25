@@ -258,6 +258,10 @@ AIC(fitnm,fitnr)
 #  # recommended for quad-core Windows PC
 #  setNumThreads(7)
 
+## ----ucare------------------------------------------------------------------------------
+if (requireNamespace("R2ucare"))
+    ucare.cjs(dipperCH, verbose = FALSE, by = 'sex')
+
 ## ----figurefunctions, eval = FALSE------------------------------------------------------
 #  onemulti <- function(st = c(0,6,11,15), le = c(5,4,3,5), yb = 7, col=col1, outer = TRUE) {
 #      col <- rep(col, le)
