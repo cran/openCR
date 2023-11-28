@@ -11,8 +11,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown} 
   \usepackage[utf8]{inputenc}
 ---
-\renewcommand{\vec}[1]{\mathbf{#1}}
-\newcommand{\bm}[1]{\mbox{\boldmath $#1$}}
 
 ```{r settings, echo = FALSE}
 mycache <- FALSE
@@ -402,7 +400,38 @@ Finite mixture likelihoods are prone to multimodality. Misleading estimates resu
 
 If age is modelled as a factor then it is useful to group older animals in a maximum age class ('maximumage'). 'minimumage', 'maximumage' and 'initialage' are optional components of the 'details' argument of `openCR.fit`. 'initialage' can name an individual covariate to avoid the assumption that all animals are the minimum age at first detection.
 
-The agecov argument of `openCR.fit` may be used to specify a recoding of numerical age, analogous to the sessioncov argument of `secr.fit`. Thus numerical ages may be bracketed into 'young', 'middle' and 'old'. The length of agecov should match the number of numerical ages (maximumage - minimumage + 1).
+Specify the details argument 'agebreaks' to group numeric ages into age classes. Breaks are used with the `cut` function to generate a factor from the numeric ages; the `cut` argument 'right' is set to FALSE to include the lower limit in each age class. Extreme ages are shrunk to the interval ['minimumage', 'maximumage'] before grouping, so these arguments must be compatible with 'agebreaks' (e.g., 'maximumage' >= lower bound of oldest group). Check the grouping by applying it to the matrix of numeric ages in your data. For example,
+```{r ageclass}
+agebrk <- c(0, 2, Inf)
+
+# construct matrix of numeric ages (animal x secondary session)
+age <- age.matrix(join(ovenCH), maximumage = 2, unborn = NA)
+
+# tabulate the grouped ages
+aclass <- cut(age, breaks = agebrk, right = FALSE)
+table(age, aclass)
+```
+The notation [0,2) indicates ages in the interval $0 \le \mbox{age} < 2$. The numbers in older groups include animals never seen again and possibly dead.
+
+This example illustrates how to use grouped ages in a model. The data are an undocumented non-spatial selection from the same brushtail possum study as OVpossumCH (trapping in February, June and September, 1980--1988, known-age females only; interval in years). The individual covariate 'age' records the age of each possum at first capture, in years.
+```{r fakeage, eval = TRUE}
+# retrieve capthist object
+datadir <- system.file('extdata', package = 'openCR')
+CH <- readRDS(paste0(datadir,'/poss8088F.RDS'))
+
+# model with grouped ages; any maximumage>=6 OK
+fit <- openCR.fit(CH, model = list(phi ~ age), details = list(
+  agebreaks = c(0,2,4,6,Inf), initialage = 'age', maximumage = 6))
+
+# show results for first session only, as no time effect fitted
+# levels of age grouping factor are stored in 'design' object
+newdat <- data.frame(age = fit$design$agelevels)
+predict(fit, newdata =  newdat)$phi
+```
+
+If 'agebreaks' is omitted then the default uses bins of width 1 time unit from 'minimumage' up to, but not including, 'maximumage', with an extra bin for 'maximumage' and above (7 bins [0,1),...,[6,Inf) in this example).
+
+The older 'agecov' mechanism is limited to sampling sessions separated by one time unit and is deprecated from 2.2.6.
 
 For a quadratic relationship with age, specify an additive model with both Age and Age2 terms (e.g., model = phi ~ Age + Age2).
 
@@ -808,6 +837,16 @@ AIC(fitnm,fitnr)
 ```
 In the longer term, better maximizers are needed.
 
+### Step into infeasible parameter space
+
+The Newton-Raphson algorithm typically takes a large step in parameter space after a few iterations, and the resulting log-likelihood may be undefined (NA). Recovery is usually automatic, but sometimes maximization gets stuck at this point. From 2.2.6 it is possible to control the step size with the details argument 'stepmax'. The default stepmax is generally 1000 on the link scale; and often stepmax = 2 works just as well:
+
+
+```{r stepmax, cache = mycache}
+fitnr2 <- openCR.fit(ovenCH, type = 'JSSAlCL', model = list(phi ~ t, lambda~t),
+    details = list(stepmax = 2))
+```
+
 ### Number of iterations {#iterlim}
 
 Exceeding the iteration limit of `nlm` results in code 4. The default number of iterations was increased to 300 in **openCR** 2.1.0 from the previous default of 100. Each iteration in `nlm` completes one evaluation of the gradient of the likelihood function, and requires multiple likelihood evaluations. For many parameters 300 iterations may still not be enough: increase it with the details argument `control` (e.g., `details = list(control = list(iterlim = 500))`). See the help for `optim` for the relevant control settings of other maximizers such as 'Nelder-Mead'.
@@ -836,7 +875,7 @@ Spatial models are slow to fit. Consider these options
 setNumThreads(7)
 ```
 
-The `grain size' tuning parameter (see [RcppParallel](https://rcppcore.github.io/RcppParallel/)) may be varied with details$grain, but it seems to have little effect. 
+The `grain size' tuning parameter (see [RcppParallel](https://rcppcore.github.io/RcppParallel/)) may be varied with `details$grain`, but it seems to have little effect. 
 
 # Extras
 
@@ -987,7 +1026,7 @@ Efford, M. G. (2022a) secr: Spatially explicit capture--recapture models.
   
 Efford, M. G. (2022b) Efficient discretization of movement kernels
   for spatiotemporal capture--recapture. 
-  *Journal of Agricultural, Biological and Environmental Statistics* In press.
+  *Journal of Agricultural, Biological and Environmental Statistics* **27**, 641--651.
   https://doi.org/10.1007/s13253-022-00503-4
 
 Efford, M. G., Borchers D. L. and Byrom, A. E. (2009) Density
@@ -1006,9 +1045,7 @@ Efford, M. G. and Fewster, R. M. (2013) Estimating population size by
 Efford, M. G. and Schofield, M. R. (2020) A spatial open-population 
   capture--recapture model. *Biometrics* **76**, 392--402.
 
-Efford, M. G. and Schofield, M. R. (2022) A review of movement models in 
-  open population capture--recapture. *Methods in Ecology and Evolution* In press.
-  https://doi.org/10.1111/2041-210X.13947
+Efford, M. G. and Schofield, M. R. (2022) A review of movement models in open population capture--recapture. *Methods in Ecology and Evolution* **13**, 2106--2118. https://doi.org/10.1111/2041-210X.13947
 
 Ergon, T. and Gardner, B. (2014) Separating mortality and emigration: modelling 
   space use, dispersal and survival with robust-design spatial 

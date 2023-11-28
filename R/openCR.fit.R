@@ -32,10 +32,12 @@
 ## 2021-10-05 revamp of preferred aliases for movementmodel
 ## 2021-10-06 allow RDL
 ## 2021-11-30 completed settlement model
+## 2022-11-15 stepmax
+## 2023-03-29 details argument 'agebreaks'
 ################################################################################
 
 openCR.fit <- function (
-  capthist, 
+    capthist, 
   type          = "CJS", 
   model         = list(p~1, phi~1, sigma~1),
   distribution  = c("poisson", "binomial"), 
@@ -43,7 +45,7 @@ openCR.fit <- function (
   detectfn      = c('HHN','HHR','HEX','HAN','HCG','HVP', 'HPX'), 
   binomN        = 0, 
   movementmodel = c('static', 'BVN', 'BVE', 'BVT', 'RDE', 'RDG','RDL','IND', 
-                    'UNI', 'BVNzi', 'BVEzi', 'RDEzi', 'INDzi', 'UNIzi'),
+    'UNI', 'BVNzi', 'BVEzi', 'RDEzi', 'INDzi', 'UNIzi'),
   edgemethod    = c('truncate', 'wrap', 'none'), 
   kernelradius  = 30,          # 10 until 2.2.0
   sparsekernel  = TRUE,        # FALSE until 2.2.0
@@ -62,7 +64,7 @@ openCR.fit <- function (
   ncores        = NULL, 
   stratified    = FALSE, 
   ...)
-  
+
 {
   # Fit open population capture recapture model
   #
@@ -86,6 +88,7 @@ openCR.fit <- function (
   #########################################################################
   ## Use input 'details' to override various defaults
   defaultdetails <- list(
+    agebreaks = NULL,
     autoini = NULL, 
     CJSp1 = FALSE, 
     contrasts = NULL, 
@@ -106,8 +109,10 @@ openCR.fit <- function (
     log = '',
     dummyvariablecoding = NULL,
     anchored = FALSE,
-    r0 = 1/sqrt(pi),      # effective radius of zero cell in movement kernel
-    settlemodel = FALSE   # TRUE if differential settlement to be modelled
+    r0 = 1/sqrt(pi),       # effective radius of zero cell in movement kernel
+    settlemodel = FALSE,   # TRUE if differential settlement to be modelled
+    userdist = NULL,
+    stepmax = NULL
   )
   
   if (is.logical(details$hessian)) {
@@ -116,6 +121,9 @@ openCR.fit <- function (
   if (!is.null(details$kernelradius)) {
     warning ("kernelradius is now full argument of openCR.fit; value in details ignored")
   }
+  if (!is.null(agecov)) {
+    warning("details 'agebreaks' is preferred to 'agecov' for most purposes")
+  }
   
   ##
   details <- replace (defaultdetails, names(details), details)
@@ -123,6 +131,15 @@ openCR.fit <- function (
   if (details$LLonly)  details$trace <- FALSE
   if (details$R) ncores <- 1    ## force 2018-11-12
   if (!is.null(ncores) && (ncores == 1)) details$grain <- -1
+  if (is.null(details$agebreaks)) {
+    details$agebreaks <- c(details$minimumage:details$maximumage,Inf)
+  }
+  else {
+    if (details$minimumage > details$agebreaks[1])
+      stop("agebreaks not compatible with minimumage = ", details$minimumage)
+    if (details$maximumage < tail(details$agebreaks,2)[1])
+      stop("agebreaks not compatible with maximumage = ", details$maximumage)
+  }
   anchored <- details$anchored
   
   ##############################################
@@ -188,8 +205,13 @@ openCR.fit <- function (
     stop (type, " not currently available")
   secr <- grepl('secr', type)
   if (secr) {
-    if (is.null(mask))
+    if (is.null(mask)) {
       stop("requires valid mask")
+    }
+    if (is.null(details$userdist) & inherits(mask, 'linearmask')) {
+      warning ("using Euclidean distances with linear mask")
+    }
+    
     if (ms(mask)) {
       if (!stratified) {
         mask <- mask[[1]]
@@ -228,9 +250,9 @@ openCR.fit <- function (
       
       movementmodel <- stdmovement(movementmodel)
       if (details$r0 <= 0 && movementmodel %in% c('RDG','RDL','RDLS','BVC','RDE')) {
-          warning ("cannot use zero value for r0 with movement model ", movementmodel, 
-              "; setting r0 to 1/sqrt(pi)");
-          details$r0 <- 1/sqrt(pi)
+        warning ("cannot use zero value for r0 with movement model ", movementmodel, 
+          "; setting r0 to 1/sqrt(pi)");
+        details$r0 <- 1/sqrt(pi)
       }
       
       
@@ -446,6 +468,7 @@ openCR.fit <- function (
     initialage = details$initialage,
     minimumage = details$minimumage,
     maximumage = details$maximumage,
+    agebreaks  = details$agebreaks,
     CJSp1      = details$CJSp1
   )
   allvars <- unlist(lapply(model, all.vars))
@@ -467,6 +490,7 @@ openCR.fit <- function (
       initialage = details$initialage,
       minimumage = details$minimumage,
       maximumage = details$maximumage,
+      agebreaks  = details$agebreaks,
       CJSp1      = details$CJSp1)
   }
   else {
@@ -506,7 +530,7 @@ openCR.fit <- function (
     attr(design$designMatrices$settle, 'dimmaskdesign') <- attr(dframe, 'dimmaskdesign')
     
   }
-
+  
   ############################
   # Parameter mapping (general)
   #############################
@@ -546,7 +570,12 @@ openCR.fit <- function (
       ring2 <- r >= (k2-0.5)
       kernel <- kernel[origin | ring1 | ring2, ]
     }
-    if (sparsekernel) {
+    
+    if (inherits(mask, 'linearmask')) {
+      kernel <- linearisekernel (kernel, mask) 
+      sparsekernel <- FALSE
+    }
+    else if (sparsekernel) {
       tol <- 1e-8
       ok <- 
         abs(kernel$x) < tol |
@@ -555,6 +584,7 @@ openCR.fit <- function (
         abs(kernel$x + kernel$y) < tol
       kernel <- kernel[ok,]
     }
+    
   }
   else {
     kernel <- mqarray <- matrix(0,1,2)  ## default
@@ -615,7 +645,12 @@ openCR.fit <- function (
   J <- sum(intervals(ch1)>0)+1
   msk1 <- if (stratified) mask[[details$initialstratum]] else mask
   freq <- covariates(ch1)$freq
-  marea <- if (is.null(msk1)) NA else maskarea(msk1)
+  msize <- if (is.null(msk1)) 
+    NA 
+  else if (inherits(msk1, "linearmask"))
+    masklength(msk1)
+  else
+    maskarea(msk1)
   ncf <- if (!is.null(freq)) sum(freq) else nrow(ch1)
   
   if (any(is.na(start)) | is.list(start)) {
@@ -634,11 +669,11 @@ openCR.fit <- function (
       g = 0.2,   # random temporary emigration parameter
       # tau = 1/(details$M+1),
       BN = 20,
-      BD = (ncf + 1) / marea,
-      D = (ncf + 1) / marea,
+      BD = (ncf + 1) / msize,
+      D = (ncf + 1) / msize,
       N = ncf + 1,
       superN = ncf*(1-distrib) + 20,   ## use N-n for binomial 2018-03-12
-      superD = (ncf + 20) / marea,
+      superD = (ncf + 20) / msize,
       sigma =  rpsv,
       z = 2,
       move.a = if (secr) (if (movementmodel %in% c('annular', 'UNIzi','INDzi', 'UNIzi')) 0.4 else rpsv) else 0.6,    # increased rpsv/2 to rpsv 2021-04-11
@@ -650,7 +685,6 @@ openCR.fit <- function (
     
     getdefault <- function (par) transform (default[[par]], link[[par]])
     defaultstart <- rep(0, NP)
-    
     startindx <- parindx
     if (ndvc==0) {
       startindx <- lapply(startindx, '[', 1)   ## only first
@@ -789,8 +823,9 @@ openCR.fit <- function (
         class (CH) <- 'capthist'
         traps(CH) <- traps(capthist)
       }
-      distmat <- getdistmat (traps(CH), mask, detectfn == 20)
-      cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
+      distmat <- getdistmat (traps(CH), mask, details$userdist, detectfn == 20)
+      # cellsize <- attr(mask,'area')^0.5 * 100   ## metres, equal mask cellsize
+      cellsize <- spacing(mask)   ## allows linearmask
       if (!(movementmodel %in% c('static','IND','INDzi'))) {
         mqarray <- mqsetup (mask, kernel, cellsize, edgecode)  
       }
@@ -890,6 +925,7 @@ openCR.fit <- function (
       betaw    = betaw,
       hessian  = tolower(details$hessian)=='auto')
     if (!is.null(details$control) && is.list(details$control)) args <- c(args, details$control)
+    if (!is.null(details$stepmax)) args <- c(args, stepmax = details$stepmax)
     this.fit <- do.call (nlm, args)
     this.fit$par <- this.fit$estimate     # copy for uniformity
     this.fit$value <- this.fit$minimum    # copy for uniformity

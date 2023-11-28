@@ -11,7 +11,7 @@
 openCR.design(capthist, models, type, naive = FALSE, stratumcov = NULL, 
     sessioncov = NULL, timecov = NULL, agecov = NULL, 
     dframe = NULL, contrasts = NULL, initialage = 0, 
-    minimumage = 0, maximumage = 1, CJSp1 = FALSE, ...)
+    minimumage = 0, maximumage = 1, agebreaks = NULL, CJSp1 = FALSE, ...)
 
 }
 
@@ -31,6 +31,7 @@ openCR.design(capthist, models, type, naive = FALSE, stratumcov = NULL,
   \item{initialage}{numeric or character (name of individual covariate containing initial ages)}
   \item{minimumage}{numeric; ages younger than minimum are truncated up}
   \item{maximumage}{numeric; ages older than maximum are truncated down}
+  \item{agebreaks}{numeric vector of age-class limits}
   \item{CJSp1}{logical; if TRUE detection is modelled on first primary session in CJS models}
   \item{\dots}{ other arguments passed to the \R function \code{\link{model.matrix}} }
 }
@@ -65,7 +66,7 @@ The \code{initialage} and \code{maximumage} arguments are usually passed via the
 \code{openCR.fit} `details' argument.
 
 \code{agecov} may be used to group ages. It should have length (or number of rows) 
-equal to \code{maximumage} + 1.
+equal to \code{maximumage} + 1. Alternatively, age classes may be defined with the argument \code{agebreaks}; this is preferred from openCR 2.2.6.
 
 }
 
@@ -91,6 +92,10 @@ equal to \code{maximumage} + 1.
     probability (validlevels["phi",J]). Also, validlevels["b",1] is
     FALSE with type = "JSSA..." because of the constraint that entry
     parameters sum to one. }
+    
+  \item{individual}{ TRUE if uses individual variate(s)}  
+  
+  \item{agelevels}{levels for age factor (cut numeric ages) if `age' in model}
 
   }
 

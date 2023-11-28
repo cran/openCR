@@ -190,6 +190,9 @@ parameter appears in both models then the first is used.
 
 \tabular{lll}{
 Component \tab Default \tab Description \cr
+
+\code{agebreaks} \tab minimumage:maximumage \tab Limits of age classes (vector passed to \code{\link{cut}}) \cr
+
 \code{autoini} \tab 1 \tab Number of the session used to determine 
 initial values of D, lambda0 and sigma (secr types only) \cr
 
@@ -237,6 +240,10 @@ slower functions in native R (useful for debugging; not all models) \cr
 
 \code{squeeze} \tab TRUE \tab  Apply \code{\link{squeeze}} to capthist before analysis. Non-spatial models fit faster, because histories often non-unique.\cr
 
+\code{userdist} \tab NULL \tab Function to compute distances (see \pkg{secr}) \cr
+
+\code{stepmax} \tab NULL \tab stepmax argument of \code{\link[stats]{nlm}} (step on link scale) \cr
+
 }
 
 If \code{method = "Newton-Raphson"} then \code{\link[stats]{nlm}} is
@@ -256,6 +263,10 @@ scaled values represent redundant parameters - in my experience with
 simple JSSA models a threshold of 0.00001 seems effective.
 
 [There is an undocumented option to fix specific `beta' parameters.]
+
+Numeric ages may be grouped into age classes by providing `agebreaks'. 
+In models, ~age then refers to the age-class factor. See the 
+\href{../doc/openCR-vignette.pdf}{vignette} for more detail.
 
 }
 
@@ -297,7 +308,7 @@ Otherwise, an object of class `openCR' with components
   \item{parindx }{list with one component for each real parameter giving
     the indices of the `beta' parameters associated with each real
     parameter}  
-  \item{intervals}{intervals between primary sessions}
+  \item{primaryintervals}{intervals between primary sessions}
   \item{vars }{vector of unique variable names in \code{model} }
   \item{betanames }{names of beta parameters}
   \item{realnames }{names of fitted (real) parameters }

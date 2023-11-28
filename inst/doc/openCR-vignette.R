@@ -109,6 +109,30 @@ c(secr = fit_secr$proctime, openCR = fit_openCR$proctime)
 # compare maximised log likelihoods
 c(secr.logLik = logLik(fit_secr), openCR.logLik = logLik(fit_openCR) + logmultinom(captdata))
 
+## ----ageclass---------------------------------------------------------------------------
+agebrk <- c(0, 2, Inf)
+
+# construct matrix of numeric ages (animal x secondary session)
+age <- age.matrix(join(ovenCH), maximumage = 2, unborn = NA)
+
+# tabulate the grouped ages
+aclass <- cut(age, breaks = agebrk, right = FALSE)
+table(age, aclass)
+
+## ----fakeage, eval = TRUE---------------------------------------------------------------
+# retrieve capthist object
+datadir <- system.file('extdata', package = 'openCR')
+CH <- readRDS(paste0(datadir,'/poss8088F.RDS'))
+
+# model with grouped ages; any maximumage>=6 OK
+fit <- openCR.fit(CH, model = list(phi ~ age), details = list(
+  agebreaks = c(0,2,4,6,Inf), initialage = 'age', maximumage = 6))
+
+# show results for first session only, as no time effect fitted
+# levels of age grouping factor are stored in 'design' object
+newdat <- data.frame(age = fit$design$agelevels)
+predict(fit, newdata =  newdat)$phi
+
 ## ----makedf, cache = mycache------------------------------------------------------------
 makedf.b <- function (ch, spatial = FALSE, nmix = 1, naive = FALSE) {
   R <- 1 # assume single stratum
@@ -252,6 +276,10 @@ fitnm <- openCR.fit(ovenCH, type = 'JSSAlCL', model = list(phi ~ t, lambda~t),
                     method = "Nelder-Mead", details = list(control = list(maxit = 2000)),
                     start = fitnr)
 AIC(fitnm,fitnr)
+
+## ----stepmax, cache = mycache-----------------------------------------------------------
+fitnr2 <- openCR.fit(ovenCH, type = 'JSSAlCL', model = list(phi ~ t, lambda~t),
+    details = list(stepmax = 2))
 
 ## ----ncores, eval = FALSE---------------------------------------------------------------
 #  # RCPP_PARALLEL_NUM_THREADS
